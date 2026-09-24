@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: trekking_camping_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: trekking_camping_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: kyanh3305
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

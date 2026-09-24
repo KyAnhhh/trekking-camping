@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-bean-definition-overriding: true # Cho phép Spring Boot tự động kết nối các Bean RAG
+
+  application:
+    name: trekking-camping-backend
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Cấu hình Gemini API cho Chat Model
+  ai:
+    openai:
+      api-key: ${GEMINI_API_KEY}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        options:
+          model: gemini-1.5-flash
+          temperature: 0.3
+      # TẮT EMBEDDING CỦA OPENAI ĐỂ TRÁNH LỖI CALL ENDPOINT
+      embedding:
+        enabled: false
