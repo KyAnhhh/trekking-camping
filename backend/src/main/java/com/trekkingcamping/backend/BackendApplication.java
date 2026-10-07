@@ -1,16 +1,16 @@
 package com.trekkingcamping.backend;
 
-import io.github.cdimascio.dotenv.Dotenv;
+import com.trekkingcamping.backend.config.LocalEnvironment;
+
+import org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {OpenAiAutoConfiguration.class}, scanBasePackages = "com.trekkingcamping.backend")
 public class BackendApplication {
 
     public static void main(String[] args) {
-        // Tự động nạp các biến từ file .env vào System Properties trước khi Spring Boot khởi động
-        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
-        dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+        LocalEnvironment.load();
 
         SpringApplication.run(BackendApplication.class, args);
     }

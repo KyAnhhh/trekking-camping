@@ -24,6 +24,10 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
         <!-- 1. Spring Boot Core & Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -64,19 +68,19 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- 4. Spring AI OpenAI Starter (Dùng làm Chat Model gọi Gemini API) -->
+        <!-- 4. Spring AI OpenAI Starter -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- 5. Spring AI Transformers (BẮT BUỘC THÊM: Tạo Embedding Local miễn phí & 100% không lỗi API) -->
+        <!-- 5. Spring AI Transformers -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-transformers-spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- 6. Spring AI Pgvector Store (Lưu vector vào Neon.tech) -->
+        <!-- 6. Spring AI Pgvector Store -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-pgvector-store-spring-boot-starter</artifactId>
@@ -86,7 +90,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -95,24 +99,22 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 8. Testing -->
+        <!-- 8. Testing & Env -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-		<!-- Dotenv cho phép Spring Boot tự đọc file .env local -->
-        <dependency>
-            <groupId>io.github.cdimascio</groupId>
-            <artifactId>dotenv-java</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-		
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>3.0.0</version>
         </dependency>
     </dependencies>
 
@@ -141,6 +143,25 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

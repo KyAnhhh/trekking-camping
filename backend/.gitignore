@@ -35,3 +35,4 @@ build/
 #### Mac ###
 *.log
 .env
+uploads/

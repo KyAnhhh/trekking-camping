@@ -1,4 +1,10 @@
 server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
   port: 8080
 
 spring:
@@ -23,15 +29,15 @@ spring:
       hibernate:
         format_sql: true
 
-  # Cấu hình Gemini API cho Chat Model
-  ai:
-    openai:
-      api-key: ${GEMINI_API_KEY}
-      base-url: https://generativelanguage.googleapis.com/v1beta/openai
-      chat:
-        options:
-          model: gemini-1.5-flash
-          temperature: 0.3
-      # TẮT EMBEDDING CỦA OPENAI ĐỂ TRÁNH LỖI CALL ENDPOINT
-      embedding:
-        enabled: false
+jwt:
+  secret: ${JWT_SECRET:}
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  models: ${GEMINI_MODELS:}
+
+vnpay:
+  tmn-code: ${VNPAY_TMN_CODE}
+  hash-secret: ${VNPAY_HASH_SECRET}
+  payment-url: ${VNPAY_PAYMENT_URL}
+  return-url: ${VNPAY_RETURN_URL:http://localhost:8080/api/payments/vnpay/return}
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:5173}
