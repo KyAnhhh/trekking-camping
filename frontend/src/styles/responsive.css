@@ -1,0 +1,751 @@
+@media (min-width: 1600px) {
+  .hero {
+    max-width: 1560px;
+    margin-inline: auto;
+  }
+}
+@media (max-width: 1200px) {
+  .main-nav {
+    gap: 17px;
+  }
+  .nav-account {
+    margin-left: 0;
+  }
+  .user-label {
+    display: none;
+  }
+  .hero {
+    min-height: 600px;
+  }
+  .hero-content {
+    padding-block: 75px 100px;
+  }
+  .admin-sidebar {
+    width: 226px;
+    padding-inline: 18px;
+  }
+  .admin-workspace {
+    margin-left: 226px;
+  }
+  .admin-content {
+    padding: 30px;
+  }
+  .admin-topbar {
+    padding-inline: 30px;
+  }
+  .admin-detail-grid,
+  .knowledge-layout {
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 18px;
+  }
+  .admin-detail-grid .panel,
+  .knowledge-layout .panel {
+    padding: 22px;
+  }
+  .admin-item-list article {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 1024px) {
+  .container {
+    width: calc(100% - 48px);
+  }
+  .nav-shell {
+    min-height: 80px;
+  }
+  .main-nav {
+    gap: 15px;
+  }
+  .main-nav > a {
+    font-size: 0.68rem;
+  }
+  .brand {
+    font-size: 1rem;
+  }
+  .brand-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .tour-grid {
+    gap: 18px;
+  }
+  .tour-card-body {
+    padding: 18px;
+  }
+  .tour-card h3 {
+    font-size: 1.1rem;
+  }
+  .hero-footnote {
+    display: none;
+  }
+  .section {
+    padding-block: 64px;
+  }
+  .approach-grid {
+    gap: 45px;
+  }
+  .ai-banner {
+    flex-wrap: wrap;
+    padding: 30px;
+  }
+  .ai-banner-icon {
+    display: none;
+  }
+  .ai-banner > .btn {
+    margin-left: 0;
+  }
+  .detail-layout,
+  .booking-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 26px;
+  }
+  .booking-summary {
+    padding: 22px;
+  }
+  .departure-list > div {
+    flex-wrap: wrap;
+  }
+  .departure-list .btn {
+    margin-left: 35px;
+  }
+  .chat-page {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 30px;
+  }
+  .chat-intro h1 {
+    font-size: 3rem;
+  }
+  .auth-form {
+    padding: 30px;
+  }
+  .filter-bar {
+    flex-wrap: wrap;
+  }
+  .filter-bar .search-field {
+    flex-basis: 100%;
+  }
+  .filter-bar > label:not(.search-field) {
+    flex: 1;
+  }
+  .admin-page-heading {
+    flex-wrap: wrap;
+  }
+  .admin-two-col,
+  .admin-detail-grid,
+  .knowledge-layout {
+    grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    gap: 15px;
+  }
+  .stat-card {
+    padding: 20px;
+  }
+  .stat-card > span {
+    align-items: start;
+  }
+  .stat-card > span svg {
+    display: none;
+  }
+  .list-toolbar {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 800px) {
+  .main-nav {
+    display: none;
+    position: absolute;
+    top: 79px;
+    left: 0;
+    right: 0;
+    padding: 20px 24px;
+    background: #fff;
+    box-shadow: 0 15px 25px #163d2c10;
+    border-bottom: 1px solid var(--line);
+  }
+  .main-nav.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+  .main-nav > a {
+    font-size: 0.85rem;
+    padding-block: 12px;
+  }
+  .main-nav > a.active::after {
+    display: none;
+  }
+  .nav-account {
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    margin-top: 8px;
+  }
+  .user-label {
+    display: block;
+    max-width: none;
+    flex: 1;
+  }
+  .mobile-toggle {
+    display: inline-flex;
+  }
+  .hero {
+    margin: 12px 12px 0;
+    border-radius: 16px;
+    min-height: 565px;
+  }
+  .hero-content {
+    padding-block: 70px 95px;
+  }
+  .hero h1 {
+    font-size: 3.5rem;
+  }
+  .hero .eyebrow {
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+  }
+  .hero-description {
+    font-size: 0.8rem;
+  }
+  .trip-search {
+    gap: 15px;
+    padding: 21px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .trip-search > .btn {
+    grid-column: 1/-1;
+  }
+  .trip-search label + label {
+    padding-left: 15px;
+  }
+  .tour-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+  }
+  .experience-card {
+    min-height: 320px;
+  }
+  .experience-card > div {
+    left: 20px;
+    right: 30px;
+    bottom: 20px;
+  }
+  .experience-card h3 {
+    font-size: 1.4rem;
+  }
+  .experience-card .eyebrow {
+    font-size: 0.5rem;
+  }
+  .experience-card p {
+    font-size: 0.7rem;
+    padding-right: 18px;
+  }
+  .experience-arrow {
+    right: 15px;
+    bottom: 25px;
+  }
+  .approach-grid {
+    grid-template-columns: 1fr;
+  }
+  .principles {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+  }
+  .principles article {
+    flex-direction: column;
+  }
+  .principles article > svg {
+    width: 22px;
+  }
+  .principles h3 {
+    font-size: 0.95rem;
+  }
+  .principles p {
+    font-size: 0.73rem;
+  }
+  .footer-top {
+    gap: 26px;
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+  .detail-layout,
+  .booking-layout {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .booking-summary {
+    position: static;
+  }
+  .detail-cover {
+    height: 320px;
+  }
+  .bookings-list {
+    grid-template-columns: 1fr;
+  }
+  .auth-layout {
+    grid-template-columns: 0.8fr 1fr;
+  }
+  .auth-story > div {
+    left: 25px;
+  }
+  .auth-story h2 {
+    font-size: 1.9rem;
+  }
+  .chat-page {
+    grid-template-columns: 1fr;
+    padding-top: 28px;
+  }
+  .chat-intro {
+    display: none;
+  }
+  .chat-page-window {
+    height: calc(100dvh - 140px);
+    min-height: 480px;
+  }
+  .admin-sidebar {
+    display: none;
+    top: 73px;
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    width: 260px;
+    box-shadow: 15px 0 25px #12342219;
+  }
+  .admin-sidebar.is-open {
+    display: flex;
+    transform: translateX(0);
+  }
+  .admin-sidebar > .brand {
+    display: none;
+  }
+  .sidebar-label {
+    margin-top: 0;
+  }
+  .admin-mobile-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 17px 24px;
+    height: 73px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    z-index: 41;
+  }
+  .admin-workspace {
+    margin-left: 0;
+  }
+  .admin-topbar {
+    min-height: 58px;
+    padding: 14px 24px;
+  }
+  .admin-content {
+    padding: 28px 24px;
+  }
+  .admin-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 580px) {
+  .container {
+    width: calc(100% - 36px);
+  }
+  h1 {
+    font-size: 2.2rem;
+  }
+  h2 {
+    font-size: 1.75rem;
+  }
+  .section {
+    padding-block: 52px;
+  }
+  .page-space {
+    padding-block: 25px 50px;
+  }
+  .page-heading {
+    margin: 18px 0 28px;
+  }
+  .page-heading p:last-child {
+    font-size: 0.8rem;
+  }
+  .nav-shell {
+    min-height: 73px;
+  }
+  .main-nav {
+    top: 72px;
+    padding-inline: 18px;
+  }
+  .hero {
+    min-height: 565px;
+  }
+  .hero .container {
+    width: calc(100% - 40px);
+  }
+  .hero-content {
+    padding-top: 53px;
+  }
+  .hero .eyebrow {
+    font-size: 0.5rem;
+    letter-spacing: 0.09em;
+    gap: 6px;
+  }
+  .tiny-line {
+    width: 15px;
+    margin-right: 0;
+  }
+  .hero h1 {
+    font-size: clamp(2.5rem, 9.5vw, 3.3rem);
+    margin: 26px 0 23px;
+  }
+  .hero-description {
+    font-size: 0.78rem;
+    max-width: 290px;
+    line-height: 1.95;
+  }
+  .hero .btn {
+    font-size: 0.76rem;
+  }
+  .hero-photo {
+    object-position: 60%;
+  }
+  .hero-shade {
+    background:
+      linear-gradient(90deg, #0d231bbd, #0d231b55), linear-gradient(0deg, #0d231b80, transparent);
+  }
+  .search-dock {
+    margin-top: -62px;
+  }
+  .trip-search {
+    padding: 21px;
+    gap: 17px;
+    grid-template-columns: 1fr;
+  }
+  .trip-search label + label {
+    padding: 16px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .trip-search > .btn {
+    min-height: 46px;
+  }
+  .section-heading {
+    flex-direction: column;
+    align-items: start;
+    gap: 18px;
+    margin-bottom: 26px;
+  }
+  .section-heading p:last-child {
+    font-size: 0.77rem;
+  }
+  .section-heading .text-link {
+    font-size: 0.77rem;
+  }
+  .mobile-only {
+    display: initial;
+  }
+  .desktop-only {
+    display: none;
+  }
+  .tour-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .tour-card-body {
+    padding: 22px;
+  }
+  .tour-card h3 {
+    font-size: 1.25rem;
+  }
+  .tour-image {
+    aspect-ratio: 1.6;
+  }
+  .tour-summary {
+    min-height: 0;
+  }
+  .experience-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .experience-card {
+    min-height: 320px;
+  }
+  .experience-card > div {
+    left: 24px;
+    bottom: 27px;
+  }
+  .experience-card h3 {
+    font-size: 1.65rem;
+  }
+  .experience-card .eyebrow {
+    font-size: 0.55rem;
+  }
+  .experience-card p {
+    font-size: 0.77rem;
+  }
+  .principles {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  .principles article {
+    flex-direction: row;
+    gap: 18px;
+  }
+  .principles h3 {
+    font-size: 1rem;
+  }
+  .principles p {
+    font-size: 0.77rem;
+  }
+  .ai-banner {
+    padding: 30px 24px;
+    margin-bottom: 50px;
+    gap: 24px;
+  }
+  .ai-banner h2 {
+    font-size: 1.65rem;
+  }
+  .ai-banner > .btn {
+    width: 100%;
+  }
+  .site-footer {
+    padding-top: 38px;
+  }
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding-bottom: 30px;
+  }
+  .footer-top > div:first-child {
+    grid-column: 1/-1;
+  }
+  .footer-top h3 {
+    font-size: 0.73rem;
+    margin-bottom: 18px;
+  }
+  .footer-top > div > a:not(.brand) {
+    font-size: 0.7rem;
+  }
+  .footer-bottom {
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 92px;
+  }
+  .filter-bar {
+    padding: 14px;
+    gap: 10px;
+  }
+  .filter-bar > label:not(.search-field) {
+    flex-basis: calc(50% - 10px);
+  }
+  .filter-bar select {
+    font-size: 0.72rem;
+  }
+  .results-heading {
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+  }
+  .results-heading .text-link {
+    font-size: 0.74rem;
+  }
+  .detail-heading h1 {
+    font-size: 2rem;
+  }
+  .detail-meta {
+    gap: 12px 18px;
+    font-size: 0.72rem;
+  }
+  .detail-cover {
+    height: 260px;
+    margin-bottom: 25px;
+  }
+  .detail-tabs {
+    gap: 22px;
+  }
+  .detail-tabs a {
+    font-size: 0.72rem;
+  }
+  .detail-section {
+    padding-block: 27px;
+  }
+  .detail-section h2 {
+    font-size: 1.5rem;
+  }
+  .detail-section p {
+    font-size: 0.8rem;
+  }
+  .departure-list > div > svg {
+    display: none;
+  }
+  .departure-list .btn {
+    margin-left: 0;
+    width: 100%;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .panel {
+    padding: 23px 20px;
+  }
+  .booking-card {
+    padding: 22px;
+  }
+  .booking-card-top,
+  .booking-card-bottom {
+    flex-wrap: wrap;
+  }
+  .booking-card h2 {
+    font-size: 1.25rem;
+  }
+  .auth-layout {
+    display: block;
+    margin-block: 25px 45px;
+  }
+  .auth-story {
+    display: none;
+  }
+  .auth-form {
+    padding: 28px 23px;
+  }
+  .auth-form h1 {
+    font-size: 1.9rem;
+  }
+  .chat-widget {
+    right: 16px;
+    bottom: 16px;
+    gap: 10px;
+  }
+  .chat-trigger {
+    width: 50px;
+    height: 50px;
+    justify-content: center;
+    padding: 12px;
+  }
+  .chat-trigger span {
+    display: none;
+  }
+  .chat-popup {
+    width: min(380px, calc(100vw - 32px));
+    height: min(550px, calc(100dvh - 95px));
+  }
+  .chat-page {
+    width: calc(100% - 24px);
+    padding-top: 15px;
+    padding-bottom: 25px;
+  }
+  .chat-page-window {
+    height: calc(100dvh - 107px);
+    min-height: 440px;
+    border-radius: 13px;
+  }
+  .chat-page-header {
+    padding: 15px;
+  }
+  .chat-messages {
+    padding: 20px 12px;
+  }
+  .chat-bubble {
+    font-size: 0.74rem;
+    padding: 12px;
+  }
+  .chat-composer {
+    margin-inline: 12px;
+    padding: 8px;
+  }
+  .chat-composer input {
+    font-size: 0.7rem;
+  }
+  .chat-suggestions {
+    padding-inline: 12px;
+  }
+  .chat-disclaimer {
+    padding-inline: 14px;
+    font-size: 0.55rem;
+  }
+  .admin-content {
+    padding: 26px 18px;
+  }
+  .admin-mobile-bar {
+    padding-inline: 18px;
+  }
+  .admin-topbar {
+    padding-inline: 18px;
+    font-size: 0.64rem;
+  }
+  .admin-topbar .status-badge {
+    font-size: 0.55rem;
+  }
+  .admin-page-heading {
+    gap: 20px;
+  }
+  .admin-page-heading h1 {
+    font-size: 1.8rem;
+  }
+  .admin-page-heading p:last-child {
+    font-size: 0.74rem;
+  }
+  .admin-page-heading > .heading-icon {
+    display: none;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .stat-card {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 18px;
+  }
+  .stat-card > svg {
+    grid-row: 1;
+    width: 22px;
+  }
+  .stat-card > strong {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 2rem;
+    padding: 0;
+  }
+  .stat-card > span {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 0.76rem;
+  }
+  .admin-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .list-toolbar .search-field {
+    width: 100%;
+  }
+  .segmented-tabs {
+    gap: 6px;
+  }
+  .segmented-tabs button {
+    padding: 10px 12px;
+    font-size: 0.7rem;
+  }
+  th,
+  td {
+    padding: 14px 13px;
+    min-width: 120px;
+  }
+  .modal-content {
+    padding: 23px;
+  }
+  .not-found {
+    padding-block: 65px;
+  }
+  .not-found h1 {
+    font-size: 2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

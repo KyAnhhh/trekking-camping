@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+:root {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  color: #17291f;
+  background: #fff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --forest: #163d2c;
+  --forest-hover: #22543e;
+  --sage: #78926f;
+  --lime: #d9ec9a;
+  --mist: #f3f6f0;
+  --ink: #17291f;
+  --muted: #647168;
+  --line: #e0e7dd;
+  --danger: #a6362c;
+  --radius: 18px;
+  --shadow: 0 12px 36px #163d2c0b;
+}

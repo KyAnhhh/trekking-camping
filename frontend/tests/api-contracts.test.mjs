@@ -1,0 +1,203 @@
+import { test, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+import { build } from "esbuild";
+import { fileURLToPath } from "node:url";
+
+// Bundle the real API modules with Vite's existing esbuild dependency; no HTTP server is used.
+const bundle = await build({
+  stdin: {
+    contents: `
+      export { default as client } from './src/api/axiosClient.js';
+      export { authService } from './src/api/authService.js';
+      export { tourApi } from './src/api/tourService.js';
+      export { bookingService } from './src/api/bookingService.js';
+      export { paymentService } from './src/api/paymentService.js';
+      export { chatService } from './src/api/chatService.js';
+      export { guideService } from './src/api/guideService.js';
+      export { adminService } from './src/api/adminService.js';
+      export { formatDifficulty } from './src/utils/tour.js';
+    `,
+    resolveDir: fileURLToPath(new URL("../", import.meta.url)),
+  },
+  bundle: true,
+  write: false,
+  format: "esm",
+  platform: "browser",
+  define: { "import.meta.env": "{}" },
+});
+const api = await import(
+  "data:text/javascript;base64," +
+    Buffer.from(bundle.outputFiles[0].text).toString("base64")
+);
+const storage = new Map();
+globalThis.localStorage = {
+  getItem: (key) => storage.get(key) ?? null,
+  setItem: (key, value) => storage.set(key, value),
+  removeItem: (key) => storage.delete(key),
+};
+globalThis.window = new EventTarget();
+let request;
+beforeEach(() => {
+  storage.clear();
+  api.client.defaults.adapter = async (config) => {
+    request = config;
+    return {
+      data: { code: 1000, data: [] },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config,
+    };
+  };
+});
+
+test("auth and booking services use the server paths and preserve booking payload", async () => {
+  await api.authService.login({
+    email: "user@example.test",
+    password: "test-only",
+  });
+  assert.equal(request.url, "/api/auth/login");
+  assert.equal(request.method, "post");
+  await api.authService.register({
+    fullName: "Traveler",
+    email: "user@example.test",
+  });
+  assert.equal(request.url, "/api/auth/register");
+  assert.equal(JSON.parse(request.data).fullName, "Traveler");
+  const payload = { scheduleId: 42, numberOfPax: 2, contactName: "Traveler" };
+  await api.bookingService.createBooking(payload);
+  assert.equal(request.url, "/api/bookings");
+  assert.deepEqual(JSON.parse(request.data), payload);
+  await api.bookingService.getMyBookings();
+  assert.equal(request.url, "/api/bookings/my-bookings");
+});
+
+test("chat carries the server session across turns", async () => {
+  await api.chatService.sendMessage(
+    "Còn tour nào phù hợp?",
+    "session-from-server",
+  );
+  assert.equal(request.url, "/api/chat");
+  assert.deepEqual(JSON.parse(request.data), {
+    message: "Còn tour nào phù hợp?",
+    sessionId: "session-from-server",
+  });
+});
+
+test("guide assignment uses codes and roles; image upload stays multipart", async () => {
+  await api.guideService.importGuides(new Blob(["[]"], { type: "application/json" }));
+  assert.equal(request.url, "/api/admin/guides/import");
+  assert.equal(request.method, "post");
+  assert.ok(request.data instanceof FormData);
+  assert.equal(await request.data.get("file").text(), "[]");
+  const team = [{ guideCode: "HDV_01", role: "LEAD" }];
+  await api.guideService.assign(7, team);
+  assert.equal(request.method, "put");
+  assert.equal(request.url, "/api/admin/schedules/7/guides");
+  assert.deepEqual(JSON.parse(request.data), team);
+  await api.guideService.bookingTeam(8, false);
+  assert.equal(request.url, "/api/bookings/8/guides");
+  await api.guideService.bookingTeam(8, true);
+  assert.equal(request.url, "/api/admin/bookings/8/guides");
+  await api.guideService.upload(2, new Blob(["image"], { type: "image/png" }));
+  assert.equal(request.url, "/api/admin/guides/2/avatar");
+  assert.ok(request.data instanceof FormData);
+  await api.guideService.profile(2);
+  assert.equal(request.url, "/api/guides/2");
+});
+
+test("recovery, logout, tour import and images preserve API contracts", async () => {
+  await api.authService.logout();
+  assert.equal(request.url, "/api/auth/logout");
+  assert.equal(request.method, "post");
+  await api.authService.forgotPassword("test@example.test");
+  assert.equal(request.url, "/api/auth/forgot-password");
+  assert.deepEqual(JSON.parse(request.data), { email: "test@example.test" });
+  await api.authService.resetPassword("synthetic-token", "synthetic-password");
+  assert.equal(request.url, "/api/auth/reset-password");
+  assert.equal(JSON.parse(request.data).token, "synthetic-token");
+  await api.tourApi.importTours(new Blob(["[]"], { type: "application/json" }));
+  assert.equal(request.url, "/api/admin/tours/import");
+  assert.ok(request.data instanceof FormData);
+  await api.tourApi.uploadImage(
+    1,
+    new Blob(["fixture"], { type: "image/png" }),
+  );
+  assert.equal(request.url, "/api/tours/1/images");
+  assert.ok(request.data instanceof FormData);
+  await api.tourApi.setCover(1, 2);
+  assert.equal(request.url, "/api/tours/1/images/2/cover");
+  assert.equal(request.method, "post");
+  await api.tourApi.deleteImage(1, 2);
+  assert.equal(request.url, "/api/tours/1/images/2");
+  assert.equal(request.method, "delete");
+});
+
+test("booking management and payment use protected server endpoints and server amount", async () => {
+  await api.bookingService.getDetail(7);
+  assert.equal(request.url, "/api/bookings/7");
+  await api.bookingService.cancel(7);
+  assert.equal(request.url, "/api/bookings/7/cancel");
+  assert.equal(request.method, "post");
+  await api.bookingService.getDetail(7, true);
+  assert.equal(request.url, "/api/admin/bookings/7");
+  await api.bookingService.cancel(7, true);
+  assert.equal(request.url, "/api/admin/bookings/7/cancel");
+  await api.bookingService.confirm(7);
+  assert.equal(request.url, "/api/admin/bookings/7/confirm");
+  await api.bookingService.getAll();
+  assert.equal(request.url, "/api/admin/bookings");
+  await api.paymentService.start(7);
+  assert.equal(request.url, "/api/payments/vnpay/start");
+  assert.deepEqual(JSON.parse(request.data), { bookingId: 7 });
+  await api.paymentService.refresh("VN-order");
+  assert.equal(request.url, "/api/payments/vnpay/VN-order/refresh");
+  assert.equal(request.method, "post");
+  await api.paymentService.refresh("MM-order");
+  assert.equal(request.url, "/api/payments/momo/MM-order/refresh");
+  assert.equal(request.method, "post");
+});
+
+test("knowledge uses multipart file and exact filename query", async () => {
+  await api.adminService.syncTours();
+  assert.equal(request.url, "/api/chat/ingest-tours");
+  assert.equal(request.method, "post");
+  await api.adminService.uploadFile(
+    new Blob(["guide"], { type: "text/plain" }),
+  );
+  assert.equal(request.url, "/api/admin/knowledge/upload");
+  assert.ok(request.data instanceof FormData);
+  assert.equal(await request.data.get("file").text(), "guide");
+  await api.adminService.deleteFile("cẩm nang.txt");
+  assert.equal(request.method, "delete");
+  assert.equal(request.url, "/api/admin/knowledge/delete");
+  assert.deepEqual(request.params, { fileName: "cẩm nang.txt" });
+});
+
+test("401 expires auth without deleting unrelated storage; login errors do not log out", async () => {
+  storage.set("token", "test-token");
+  storage.set("role", "ROLE_USER");
+  storage.set("unrelated", "keep");
+  let expired = 0;
+  const onExpired = () => expired++;
+  window.addEventListener("auth:expired", onExpired);
+  api.client.defaults.adapter = async (config) => {
+    assert.equal(config.headers.Authorization, "Bearer test-token");
+    throw { response: { status: 401 }, config };
+  };
+  await assert.rejects(api.authService.login({}));
+  assert.equal(expired, 0);
+  await assert.rejects(api.bookingService.getMyBookings());
+  assert.equal(expired, 1);
+  assert.equal(storage.has("token"), false);
+  assert.equal(storage.get("unrelated"), "keep");
+  window.removeEventListener("auth:expired", onExpired);
+});
+
+test("numeric difficulty levels from Backend map to filter labels", () => {
+  assert.deepEqual([1, 2, 3].map(api.formatDifficulty), [
+    "Dễ",
+    "Trung Bình",
+    "Mạo Hiểm",
+  ]);
+});
