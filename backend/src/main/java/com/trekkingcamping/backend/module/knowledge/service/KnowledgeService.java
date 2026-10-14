@@ -44,7 +44,8 @@ public class KnowledgeService {
             throw new IllegalArgumentException("Tài liệu phải được mã hóa UTF-8.");
         }
         if (content.isBlank()) throw new IllegalArgumentException("Tài liệu không có nội dung.");
-        var document = new Document(content, Map.of("filename", filename, "source_file", filename));
+        var document = new Document(content, Map.of("filename", filename, "source_file", filename,
+                "ingested_at",java.time.Instant.now().toString(),"source_type","ADMIN_UPLOAD"));
         var chunks = new TokenTextSplitter().apply(List.of(document));
         if (chunks.isEmpty()) throw new IllegalArgumentException("Không tìm thấy nội dung để nạp.");
         lockFile(filename);

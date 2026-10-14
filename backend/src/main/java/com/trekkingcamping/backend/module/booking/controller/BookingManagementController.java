@@ -42,6 +42,11 @@ public class BookingManagementController {
         return response(service.confirm(email, id));
     }
 
+    @PostMapping("/api/admin/bookings/{id}/complete")
+    public ApiResponse<BookingDetailDto> complete(@AuthenticationPrincipal String email, @PathVariable Long id) {
+        return response(service.complete(email, id));
+    }
+
     private <T> ApiResponse<T> response(T data) {
         ApiResponse<T> result = new ApiResponse<>();
         result.setData(data);

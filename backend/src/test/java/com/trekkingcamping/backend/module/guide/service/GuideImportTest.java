@@ -82,7 +82,7 @@ class GuideImportTest {
 
     @Test void currentPreparedGuideFileMatchesImporter() throws Exception {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        byte[] bytes = Files.readAllBytes(Path.of("../docs/demo-data/guides.json"));
+        byte[] bytes = Files.readAllBytes(Path.of(getClass().getResource("/fixtures/guides.json").toURI()));
         int expected = new ObjectMapper().readTree(bytes).size();
         assertEquals(expected, importer.importFile(new MockMultipartFile("file", "guides.json", "application/json", bytes)).count());
     }

@@ -71,7 +71,8 @@ public class DataIngestionService {
                 contentBuilder.append("Thiết bị nhà tour cung cấp/cho thuê:\n");
                 for (TourGear g : gears) {
                     contentBuilder.append("- ").append(g.getGearName())
-                            .append(Boolean.TRUE.equals(g.getIsProvided()) ? " (Đi kèm)" : " (Thuê thêm; kiểm tra giá trên trang tour)")
+                            .append(Boolean.TRUE.equals(g.getIsProvided()) ? " (Đi kèm)" :
+                                    g.getRentalPrice()!=null && g.getRentalPrice().signum()>0 ? " (Thuê thêm; kiểm tra giá trên trang tour)" : " (Tự chuẩn bị; chưa xác nhận dịch vụ cho thuê)")
                             .append("\n");
                 }
             }
@@ -79,9 +80,11 @@ public class DataIngestionService {
             // Tạo Document AI với Metadata
             Document doc = new Document(
                     contentBuilder.toString(),
-                    Map.of("tour_id", tour.getId(), "slug", tour.getSlug(), "category", "TOUR_INFO")
+                    Map.of("tour_id", tour.getId(), "slug", tour.getSlug(), "category", "TOUR_INFO",
+                            "tour_updated_at", java.util.Objects.toString(tour.getUpdatedAt(),""),
+                            "ingested_at",java.time.Instant.now().toString())
             );
-            documents.add(doc);
+            documents.addAll(new org.springframework.ai.transformer.splitter.TokenTextSplitter().apply(List.of(doc)));
         }
 
         // Only replace generated tour documents; user-uploaded TXT knowledge is preserved.
@@ -90,6 +93,6 @@ public class DataIngestionService {
             vectorStore.add(documents);
         }
 
-        return documents.size();
+        return tours.size();
     }
 }

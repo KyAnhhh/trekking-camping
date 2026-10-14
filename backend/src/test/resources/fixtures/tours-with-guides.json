@@ -1,0 +1,149 @@
+[
+  {
+    "tour": {
+      "title": "Tour kiểm thử 1",
+      "slug": "test-tour-1",
+      "location": "Địa điểm giả lập",
+      "durationDays": 1,
+      "durationNights": 0,
+      "difficultyLevel": 1,
+      "pricePerPax": 1000000,
+      "maxCapacity": 10
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Ngày 1",
+        "description": "Lịch trình kiểm thử"
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2030-01-01",
+        "returnDate": "2030-01-01",
+        "availableSlots": 10,
+        "guideAssignments": [
+          {
+            "guideCode": "TEST_HDV_01",
+            "role": "LEAD"
+          }
+        ]
+      },
+      {
+        "departureDate": "2030-01-11",
+        "returnDate": "2030-01-11",
+        "availableSlots": 10,
+        "guideAssignments": [
+          {
+            "guideCode": "TEST_HDV_01",
+            "role": "LEAD"
+          }
+        ]
+      }
+    ],
+    "gears": []
+  },
+  {
+    "tour": {
+      "title": "Tour kiểm thử 2",
+      "slug": "test-tour-2",
+      "location": "Địa điểm giả lập",
+      "durationDays": 2,
+      "durationNights": 1,
+      "difficultyLevel": 2,
+      "pricePerPax": 1000000,
+      "maxCapacity": 10
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Ngày 1",
+        "description": "Lịch trình kiểm thử"
+      },
+      {
+        "dayNumber": 2,
+        "title": "Ngày 2",
+        "description": "Lịch trình kiểm thử"
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2030-01-01",
+        "returnDate": "2030-01-02",
+        "availableSlots": 10,
+        "guideAssignments": [
+          {
+            "guideCode": "TEST_HDV_02",
+            "role": "LEAD"
+          }
+        ]
+      },
+      {
+        "departureDate": "2030-01-11",
+        "returnDate": "2030-01-12",
+        "availableSlots": 10,
+        "guideAssignments": [
+          {
+            "guideCode": "TEST_HDV_02",
+            "role": "LEAD"
+          }
+        ]
+      }
+    ],
+    "gears": []
+  },
+  {
+    "tour": {
+      "title": "Tour kiểm thử 3",
+      "slug": "test-tour-3",
+      "location": "Địa điểm giả lập",
+      "durationDays": 3,
+      "durationNights": 2,
+      "difficultyLevel": 3,
+      "pricePerPax": 1000000,
+      "maxCapacity": 10
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Ngày 1",
+        "description": "Lịch trình kiểm thử"
+      },
+      {
+        "dayNumber": 2,
+        "title": "Ngày 2",
+        "description": "Lịch trình kiểm thử"
+      },
+      {
+        "dayNumber": 3,
+        "title": "Ngày 3",
+        "description": "Lịch trình kiểm thử"
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2030-01-01",
+        "returnDate": "2030-01-03",
+        "availableSlots": 10,
+        "guideAssignments": [
+          {
+            "guideCode": "TEST_HDV_03",
+            "role": "LEAD"
+          }
+        ]
+      },
+      {
+        "departureDate": "2030-01-11",
+        "returnDate": "2030-01-13",
+        "availableSlots": 10,
+        "guideAssignments": [
+          {
+            "guideCode": "TEST_HDV_03",
+            "role": "LEAD"
+          }
+        ]
+      }
+    ],
+    "gears": []
+  }
+]

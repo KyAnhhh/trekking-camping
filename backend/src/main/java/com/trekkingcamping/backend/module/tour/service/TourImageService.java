@@ -28,6 +28,11 @@ public class TourImageService {
         var tour = tours.findById(tourId).filter(t -> Boolean.TRUE.equals(t.getIsActive())).orElseThrow(this::notFound);
         return images.findByTourIdOrderByIsCoverDescIdAsc(tour.getId()).stream().map(ImageDto::from).toList();
     }
+    @Transactional(readOnly = true)
+    public List<ImageDto> adminList(Long tourId) {
+        tours.findById(tourId).orElseThrow(this::notFound);
+        return images.findByTourIdOrderByIsCoverDescIdAsc(tourId).stream().map(ImageDto::from).toList();
+    }
     @Transactional(rollbackFor = Exception.class)
     public ImageDto upload(Long tourId, MultipartFile file) throws IOException {
         var tour = tours.findByIdForUpdate(tourId).orElseThrow(this::notFound);

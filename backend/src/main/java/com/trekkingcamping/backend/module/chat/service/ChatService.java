@@ -49,6 +49,8 @@ public class ChatService {
         else log.info("AI chat configured with models: {}", gemini.getModels());
     }
 
+    /** Legacy internal adapter. HTTP chat must use ChatAssistant + ChatSessions for ownership and write guards. */
+    @Deprecated
     public ChatResponseDto processChat(ChatRequestDto request) {
         if (request.getMessage() == null || request.getMessage().isBlank() || request.getMessage().length() > 4000) {
             throw new IllegalArgumentException("Câu hỏi phải có từ 1 đến 4000 ký tự.");
@@ -122,6 +124,9 @@ public class ChatService {
                 Nếu danh mục bị giới hạn, không khẳng định đây là toàn bộ tour. Nếu thiếu dữ liệu hãy nói rõ.
                 Khi nhu cầu chưa rõ, hỏi thêm ngân sách, thời gian và thể lực. Lịch trình tự đề xuất phải ghi rõ
                 là gợi ý, không phải lịch trình đã xác nhận của nhà tổ chức. Không khẳng định đã đặt tour hay giữ chỗ.
+                Khi có câu hỏi về bệnh lý, không chẩn đoán, kê thuốc/đổi thuốc hoặc xác nhận đủ sức khỏe đi tour.
+                Nêu yêu cầu hành trình từ dữ liệu công khai, đề nghị trao đổi với nhà tổ chức và chuyên gia y tế
+                phù hợp. Không yêu cầu người dùng gửi hồ sơ bệnh án trong chat; khai báo riêng tư nằm ở booking.
 
                 [THÔNG TIN DỮ LIỆU THỰC TẾ]
                 %s
@@ -133,6 +138,75 @@ public class ChatService {
                 """.formatted(context, historyBuilder.toString());
 
         // 5. Gọi Gemini API với cơ chế Fallback
+        String botReply = generateReply(fullPrompt, false);
+        ChatMessage botMsg = new ChatMessage();
+        botMsg.setSessionId(sessionId);
+        botMsg.setSender("BOT");
+        botMsg.setMessage(botReply);
+        chatMessageRepository.saveAll(List.of(userMsg, botMsg));
+
+        return new ChatResponseDto(sessionId, botReply);
+    }
+
+    public String generateStructured(String prompt) { return generateReply(prompt, true); }
+
+    private String generateReply(String fullPrompt, boolean structured) {
+        return generateReply(fullPrompt,structured,Map.of(),ChatService::extractReply);
+    }
+
+    /** Read-only tool loop. The caller supplies an allowlisted dispatcher; no write tool is exposed. */
+    public String converse(String system,String prompt,List<Map<String,Object>> declarations,
+            java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher) {
+        var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        List<Object> contents=new ArrayList<>();
+        contents.add(Map.of("role","user","parts",List.of(Map.of("text",prompt))));
+        for(int round=0;round<3;round++) {
+            if(Thread.currentThread().isInterrupted())throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,"Lượt chat đã hết thời gian chờ.");
+            try {
+                if(json.writeValueAsString(contents).length()>60000)
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,"Câu hỏi cần quá nhiều dữ liệu. Vui lòng thu hẹp tour hoặc hỏi từng nhóm ý.");
+            } catch(com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalStateException(e); }
+            Map<String,Object> extra=new HashMap<>();
+            extra.put("contents",contents);
+            extra.put("systemInstruction",Map.of("parts",List.of(Map.of("text",system))));
+            extra.put("tools",List.of(Map.of("functionDeclarations",declarations)));
+            if(round==2)extra.put("toolConfig",Map.of("functionCallingConfig",Map.of("mode","NONE")));
+            String body=generateReply(prompt,false,extra,response -> {
+                try { return json.writeValueAsString(response); } catch(Exception e) { return null; }
+            });
+            try {
+                var root=json.readTree(body);var candidate=root.path("candidates").path(0);var content=candidate.path("content");
+                List<Object> results=new ArrayList<>();
+                int count=0;
+                for(var part:content.path("parts")) {
+                    if(!part.has("functionCall"))continue;
+                    if(round==2 || ++count>3)throw new IllegalArgumentException();
+                    var call=part.get("functionCall");String name=call.path("name").asText();
+                    if(!call.path("args").isObject())throw new IllegalArgumentException();
+                    Map<String,Object> args=json.convertValue(call.get("args"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
+                    Object result=dispatcher.apply(name,args);
+                    Map<String,Object> functionResponse=new HashMap<>();functionResponse.put("name",name);
+                    functionResponse.put("response",Map.of("result",result));
+                    if(call.hasNonNull("id")) functionResponse.put("id",call.get("id").asText());
+                    results.add(Map.of("functionResponse",functionResponse));
+                }
+                if(results.isEmpty()) {
+                    String answer=extractReply(json.convertValue(root,Map.class));
+                    if(answer==null || !"STOP".equals(candidate.path("finishReason").asText("STOP")))throw new IllegalArgumentException();
+                    return answer;
+                }
+                // Preserve the complete model content, including thought signatures required by Gemini.
+                contents.add(json.convertValue(content,Map.class));
+                contents.add(Map.of("role","user","parts",results));
+            } catch(ResponseStatusException e) { throw e; }
+            catch(Exception e) { throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"AI trả về thao tác chưa hợp lệ. Chưa tạo booking; vui lòng thử lại."); }
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"AI chưa hoàn tất câu trả lời. Vui lòng thử lại.");
+    }
+
+    private String generateReply(String fullPrompt, boolean structured,Map<String,Object> extra,
+            java.util.function.Function<Map<?,?>,String> extract) {
+        if (gemini.configurationIssue() != null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         String botReply = null;
         ResponseStatusException failure = new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                 "Gemini chưa trả về nội dung trả lời. Vui lòng thử lại hoặc diễn đạt lại câu hỏi.");
@@ -140,15 +214,19 @@ public class ChatService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("x-goog-api-key", gemini.getApiKey());
-        Map<String, Object> requestBody = Map.of(
+        Map<String, Object> requestBody = new HashMap<>(Map.of(
                 "contents", List.of(
                         Map.of("parts", List.of(Map.of("text", fullPrompt)))
                 )
-        );
+        ));
+        if (structured) requestBody.put("generationConfig", Map.of("responseMimeType", "application/json"));
+        else requestBody.put("generationConfig",Map.of("maxOutputTokens",4096));
+        requestBody.putAll(extra);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         List<String> candidates = new ArrayList<>(gemini.getModels());
         for (int attempt = 0; attempt < gemini.getMaxAttempts() && !candidates.isEmpty(); attempt++) {
+            if(Thread.currentThread().isInterrupted())throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,"Lượt chat đã hết thời gian chờ.");
             String modelName = candidates.remove(0);
             // Retry only transient failures, after trying the other configured models.
             if (attempt > 0) {
@@ -167,7 +245,7 @@ public class ChatService {
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                             "AI không thể trả lời nội dung này. Vui lòng diễn đạt lại câu hỏi.");
                 }
-                botReply = extractReply(response.getBody());
+                botReply = extract.apply(response.getBody());
                 if (botReply != null) break;
                 failure = new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                         "Gemini trả về phản hồi không có nội dung. Vui lòng thử lại hoặc diễn đạt lại câu hỏi.");
@@ -200,14 +278,7 @@ public class ChatService {
             throw failure;
         }
 
-        // 6. Lưu câu trả lời của Bot vào DB
-        ChatMessage botMsg = new ChatMessage();
-        botMsg.setSessionId(sessionId);
-        botMsg.setSender("BOT");
-        botMsg.setMessage(botReply);
-        chatMessageRepository.saveAll(List.of(userMsg, botMsg));
-
-        return new ChatResponseDto(sessionId, botReply);
+        return botReply;
     }
 
     private static String extractReply(Map<?, ?> body) {

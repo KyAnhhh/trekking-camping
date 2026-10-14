@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 
 class DemoDataTest {
     @Test void preparedFilesMatchActualImporterAndGuideScheduleContracts() throws Exception {
-        Path dir = Path.of("../docs/demo-data");
+        Path dir = Path.of(getClass().getResource("/fixtures").toURI());
         ObjectMapper json = new ObjectMapper().findAndRegisterModules();
         var profiles = json.readValue(Files.readAllBytes(dir.resolve("guides.json")), com.trekkingcamping.backend.module.guide.dto.GuideDtos.Edit[].class);
         Set<String> codes = new HashSet<>();

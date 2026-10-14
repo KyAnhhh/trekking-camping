@@ -7,6 +7,12 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tour_schedules")
 public class TourSchedule {
+    @Column(name="pickup_at") private LocalDateTime pickupAt;
+    @Column(name="pickup_point",length=500) private String pickupPoint;
+    public LocalDateTime getPickupAt() { return pickupAt; }
+    public void setPickupAt(LocalDateTime value) { pickupAt=value; }
+    public String getPickupPoint() { return pickupPoint; }
+    public void setPickupPoint(String value) { pickupPoint=value; }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

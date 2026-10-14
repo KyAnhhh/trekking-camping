@@ -3,6 +3,12 @@ package com.trekkingcamping.backend.module.tour.dto;
 import java.time.LocalDate;
 
 public class CreateScheduleRequestDto {
+    private java.time.LocalDateTime pickupAt;
+    private String pickupPoint;
+    public java.time.LocalDateTime getPickupAt() { return pickupAt; }
+    public void setPickupAt(java.time.LocalDateTime value) { pickupAt=value; }
+    public String getPickupPoint() { return pickupPoint; }
+    public void setPickupPoint(String value) { pickupPoint=value; }
     private LocalDate departureDate;
     private LocalDate returnDate;
     private Integer availableSlots;

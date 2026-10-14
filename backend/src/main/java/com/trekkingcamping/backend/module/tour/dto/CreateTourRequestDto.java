@@ -3,6 +3,9 @@ package com.trekkingcamping.backend.module.tour.dto;
 import java.math.BigDecimal;
 
 public class CreateTourRequestDto {
+    private com.trekkingcamping.backend.module.tour.entity.AdventureProfile adventureProfile;
+    public com.trekkingcamping.backend.module.tour.entity.AdventureProfile getAdventureProfile() { return adventureProfile; }
+    public void setAdventureProfile(com.trekkingcamping.backend.module.tour.entity.AdventureProfile value) { adventureProfile = value; }
     private String title;
     private String slug;
     private String location;

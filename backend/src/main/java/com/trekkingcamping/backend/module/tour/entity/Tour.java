@@ -7,6 +7,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tours")
 public class Tour {
+    @Embedded
+    private AdventureProfile adventureProfile;
+    public AdventureProfile getAdventureProfile() { return adventureProfile; }
+    public void setAdventureProfile(AdventureProfile value) { adventureProfile = value; }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

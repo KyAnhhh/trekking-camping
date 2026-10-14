@@ -42,6 +42,7 @@ public class TourChatContext {
             row.put("tourId", tour.getId()); row.put("title", tour.getTitle());
             row.put("url", "/tours/" + tour.getSlug()); row.put("location", tour.getLocation());
             row.put("difficulty", tour.getDifficultyLevel()); row.put("days", tour.getDurationDays());
+            row.put("adventureProfile",tour.getAdventureProfile());
             row.put("nights", tour.getDurationNights()); row.put("pricePerPaxVnd", tour.getPricePerPax());
             row.put("moreSchedules", open.size() > 3);
             row.put("schedules", open.stream().limit(3).map(s -> Map.of(

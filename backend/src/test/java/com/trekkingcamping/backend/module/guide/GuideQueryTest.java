@@ -18,7 +18,8 @@ class GuideQueryTest {
         try (var factory = new MetadataSources(registry).addAnnotatedClass(Guide.class).addAnnotatedClass(ScheduleGuide.class)
                 .addAnnotatedClass(Tour.class).addAnnotatedClass(TourSchedule.class).buildMetadata().buildSessionFactory();
              var session = factory.openSession()) {
-            for (var repo : new Class<?>[]{GuideRepository.class, ScheduleGuideRepository.class}) {
+            for (var repo : new Class<?>[]{GuideRepository.class, ScheduleGuideRepository.class,
+                    com.trekkingcamping.backend.module.tour.repository.TourScheduleRepository.class}) {
                 for (var method : repo.getMethods()) {
                     Query query = method.getAnnotation(Query.class);
                     if (query != null) assertDoesNotThrow(() -> session.createQuery(query.value(), Object.class), method.getName());

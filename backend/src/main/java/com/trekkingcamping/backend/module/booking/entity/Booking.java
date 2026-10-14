@@ -20,8 +20,12 @@ import lombok.Setter;
 @NoArgsConstructor 
 @AllArgsConstructor
 @Entity
-@Table(name = "bookings")
+@Table(name = "bookings", indexes=@Index(name="idx_booking_participation_deadline",columnList="status,participation_deadline"))
 public class Booking {
+    // Null denotes a legacy booking created before the participation workflow.
+    @Column(name="participation_status") private String participationStatus;
+    @Column(name="participation_revision") private Long participationRevision;
+    @Column(name="participation_deadline") private LocalDateTime participationDeadline;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

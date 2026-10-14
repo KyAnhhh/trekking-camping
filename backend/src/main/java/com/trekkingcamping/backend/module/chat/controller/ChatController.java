@@ -6,17 +6,28 @@ import com.trekkingcamping.backend.module.chat.dto.ChatResponseDto;
 import com.trekkingcamping.backend.module.chat.service.ChatService;
 import com.trekkingcamping.backend.module.chat.service.DataIngestionService;
 import org.springframework.web.bind.annotation.*;
+import com.trekkingcamping.backend.module.chat.service.ChatAssistant;
+import com.trekkingcamping.backend.module.chat.service.ChatSessions;
+import com.trekkingcamping.backend.module.chat.service.ChatBookingService;
+import com.trekkingcamping.backend.module.chat.service.ChatRateLimit;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
 
-    private final ChatService chatService;
+    private final ChatAssistant chatService;
+    private final ChatSessions sessions;
+    private final ChatBookingService bookings;
+    private final ChatRateLimit limits;
     private final DataIngestionService dataIngestionService;
 
-    public ChatController(ChatService chatService, DataIngestionService dataIngestionService) {
+    public ChatController(ChatAssistant chatService, DataIngestionService dataIngestionService,
+            ChatSessions sessions,ChatBookingService bookings,ChatRateLimit limits) {
         this.chatService = chatService;
         this.dataIngestionService = dataIngestionService;
+        this.sessions=sessions;this.bookings=bookings;this.limits=limits;
     }
 
     // API nạp dữ liệu Tour từ DB vào Vector Store
@@ -30,10 +41,34 @@ public class ChatController {
 
     // API nhắn tin với AI Chatbot RAG
     @PostMapping
-    public ApiResponse<ChatResponseDto> chat(@RequestBody ChatRequestDto request) {
-        ChatResponseDto chatResponse = chatService.processChat(request);
-        ApiResponse<ChatResponseDto> response = new ApiResponse<>();
-        response.setData(chatResponse);
+    public ApiResponse<ChatAssistant.Answer> chat(@RequestBody ChatRequestDto request,@AuthenticationPrincipal String email,HttpServletRequest http) {
+        limits.check(http.getRemoteAddr(),"chat",20);
+        ApiResponse<ChatAssistant.Answer> response = new ApiResponse<>();
+        response.setData(chatService.chat(request,email));
         return response;
+    }
+
+    @PostMapping("/sessions")
+    public ApiResponse<ChatSessions.Credentials> createSession(@AuthenticationPrincipal String email,HttpServletRequest http) {
+        limits.check(http.getRemoteAddr(),"sessions",10);
+        var r=new ApiResponse<ChatSessions.Credentials>();r.setData(sessions.create(email));return r;
+    }
+    public record HistoryRequest(String sessionId,String sessionToken) {}
+    public record Message(String sender,String message) {}
+    @PostMapping("/history")
+    public ApiResponse<java.util.List<Message>> history(@RequestBody HistoryRequest input,@AuthenticationPrincipal String email,HttpServletRequest http) {
+        limits.check(http.getRemoteAddr(),"history",60);
+        var r=new ApiResponse<java.util.List<Message>>();r.setData(sessions.history(input.sessionId(),input.sessionToken(),email).stream()
+                .map(m -> new Message(m.getSender(),m.getMessage())).toList());return r;
+    }
+    @PostMapping("/booking-drafts")
+    public ApiResponse<ChatBookingService.Quote> draft(@RequestBody ChatBookingService.Prepare input,@AuthenticationPrincipal String email,HttpServletRequest http) {
+        limits.check(http.getRemoteAddr(),"drafts",20);
+        var r=new ApiResponse<ChatBookingService.Quote>();r.setData(bookings.prepare(email,input));return r;
+    }
+    @PostMapping("/booking-drafts/{id}/confirm")
+    public ApiResponse<com.trekkingcamping.backend.module.booking.dto.BookingResponseDto> confirm(@PathVariable String id,
+            @RequestBody ChatBookingService.Confirm input,@AuthenticationPrincipal String email) {
+        var r=new ApiResponse<com.trekkingcamping.backend.module.booking.dto.BookingResponseDto>();r.setData(bookings.confirm(email,id,input));return r;
     }
 }

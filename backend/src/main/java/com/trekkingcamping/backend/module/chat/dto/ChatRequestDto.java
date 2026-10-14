@@ -1,6 +1,9 @@
 package com.trekkingcamping.backend.module.chat.dto;
 
 public class ChatRequestDto {
+    private String sessionToken;
+    public String getSessionToken() { return sessionToken; }
+    public void setSessionToken(String token) { sessionToken=token; }
     private String sessionId;
     private String message;
 

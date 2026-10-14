@@ -102,10 +102,18 @@ public class GuideService {
     @Transactional(readOnly = true)
     public List<Schedule> publicSchedules(Long tourId) {
         tours.findById(tourId).filter(t -> Boolean.TRUE.equals(t.getIsActive())).orElseThrow(this::notFound);
+        return scheduleRows(tourId);
+    }
+    @Transactional(readOnly = true)
+    public List<Schedule> adminSchedules(Long tourId) {
+        tours.findById(tourId).orElseThrow(this::notFound);
+        return scheduleRows(tourId);
+    }
+    private List<Schedule> scheduleRows(Long tourId) {
         var rows = schedules.findByTourId(tourId);
         var grouped = members(rows.stream().map(TourSchedule::getId).toList());
         return rows.stream().map(s -> new Schedule(s.getId(), s.getDepartureDate(), s.getReturnDate(), s.getAvailableSlots(),
-                s.getStatus(), s.getGuideName(), grouped.getOrDefault(s.getId(), List.of()))).toList();
+                s.getStatus(), s.getGuideName(), grouped.getOrDefault(s.getId(), List.of()),s.getPickupAt(),s.getPickupPoint())).toList();
     }
     @Transactional(readOnly = true)
     public Team team(Long scheduleId) {

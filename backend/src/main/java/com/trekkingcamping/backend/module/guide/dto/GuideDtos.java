@@ -16,7 +16,7 @@ public final class GuideDtos {
     public record Assignment(String guideCode, String role) {}
     public record Member(PublicProfile guide, String role) {}
     public record Schedule(Long id, LocalDate departureDate, LocalDate returnDate, Integer availableSlots,
-                           String status, String guideName, List<Member> guides) {}
+                           String status, String guideName, List<Member> guides,java.time.LocalDateTime pickupAt,String pickupPoint) {}
     public record Team(List<Member> guides, String legacyGuideName, String legacyGuidePhone) {}
     public record Contact(PublicProfile guide, String role, String phone) {}
     public record BookingTeam(List<Contact> guides, String legacyGuideName, String legacyGuidePhone) {}

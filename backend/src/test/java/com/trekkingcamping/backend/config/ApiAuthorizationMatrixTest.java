@@ -56,10 +56,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Real controllers, security chain and JWT signatures; business services and DB are mocked. */
 @WebMvcTest(controllers = {AuthController.class, AccountRecoveryController.class,
+        com.trekkingcamping.backend.module.user.controller.AccountController.class,
+        com.trekkingcamping.backend.module.planner.controller.PlannerController.class,
+        com.trekkingcamping.backend.module.review.controller.ReviewController.class,
+        com.trekkingcamping.backend.module.tour.controller.TourManagementController.class,
         com.trekkingcamping.backend.module.guide.controller.GuideController.class,
         com.trekkingcamping.backend.module.guide.controller.BookingGuideController.class,
         TourImportController.class, TourImageController.class, UserController.class, TourController.class,
         BookingController.class, BookingManagementController.class, MomoPaymentController.class,
+        com.trekkingcamping.backend.module.booking.controller.ParticipationController.class,
         ChatController.class, IngestionController.class, KnowledgeController.class},
         excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class,
         properties = {"jwt.secret=", "logging.level.root=ERROR", "debug=false"})
@@ -69,6 +74,11 @@ class ApiAuthorizationMatrixTest {
     @Autowired JwtTokenProvider tokens;
     @MockBean UserRepository users;
     @MockBean UserService userService;
+    @MockBean com.trekkingcamping.backend.module.user.service.AccountService accountService;
+    @MockBean com.trekkingcamping.backend.module.planner.service.PlannerService plannerService;
+    @MockBean com.trekkingcamping.backend.module.planner.service.PlanStore planStore;
+    @MockBean com.trekkingcamping.backend.module.review.service.ReviewService reviewService;
+    @MockBean com.trekkingcamping.backend.module.tour.service.TourManagementService tourManagement;
     @MockBean AccountRecoveryService recovery;
     @MockBean TourImportService tourImport;
     @MockBean TourImageService tourImages;
@@ -79,8 +89,13 @@ class ApiAuthorizationMatrixTest {
     @MockBean com.trekkingcamping.backend.module.guide.service.GuideImportService guideImport;
     @MockBean BookingService bookingService;
     @MockBean BookingManagementService bookingManagement;
+    @MockBean com.trekkingcamping.backend.module.booking.service.ParticipationService participation;
     @MockBean MomoPaymentService momoPayment;
     @MockBean ChatService chatService;
+    @MockBean com.trekkingcamping.backend.module.chat.service.ChatAssistant assistant;
+    @MockBean com.trekkingcamping.backend.module.chat.service.ChatSessions chatSessions;
+    @MockBean com.trekkingcamping.backend.module.chat.service.ChatBookingService chatBookings;
+    @MockBean com.trekkingcamping.backend.module.chat.service.ChatRateLimit chatLimits;
     @MockBean DataIngestionService tourIngestion;
     @MockBean IngestionService ingestionService;
     @MockBean KnowledgeService knowledgeService;
@@ -91,6 +106,32 @@ class ApiAuthorizationMatrixTest {
 
     static Stream<Arguments> accessMatrix() {
         var endpoints = List.of(
+                new Endpoint("POST", "/api/chat/sessions", "PUBLIC"),
+                new Endpoint("POST", "/api/chat/history", "PUBLIC"),
+                new Endpoint("POST", "/api/chat/booking-drafts", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/chat/booking-drafts/demo/confirm", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/bookings/1/participation", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/bookings/1/participation", "AUTHENTICATED"),
+                new Endpoint("DELETE", "/api/bookings/1/participation", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/admin/bookings/1/participation", "ADMIN"),
+                new Endpoint("POST", "/api/admin/bookings/1/participation/review", "ADMIN"),
+                new Endpoint("GET", "/api/account", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/account", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/account/password", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/plans", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/plans", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/plans/1", "AUTHENTICATED"),
+                new Endpoint("DELETE", "/api/plans/1", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/tours/1/reviews", "PUBLIC"),
+                new Endpoint("GET", "/api/bookings/1/review", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/bookings/1/review", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/admin/bookings/1/complete", "ADMIN"),
+                new Endpoint("GET", "/api/admin/tours", "ADMIN"),
+                new Endpoint("GET", "/api/admin/tours/test-tour", "ADMIN"),
+                new Endpoint("GET", "/api/admin/tours/1/images", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/tours/1", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/tours/1/active", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/tours/1/schedules/1", "ADMIN"),
                 new Endpoint("GET", "/api/admin/guides", "ADMIN"),
                 new Endpoint("POST", "/api/admin/guides", "ADMIN"),
                 new Endpoint("POST", "/api/admin/guides/import", "ADMIN"),
@@ -155,7 +196,7 @@ class ApiAuthorizationMatrixTest {
             request = request(HttpMethod.valueOf(endpoint.method()), endpoint.path());
             if ("POST".equals(endpoint.method())) request.contentType("application/json")
                     .content(endpoint.path().equals("/api/payments/momo/start") ? "{\"bookingId\":1}" : "{}");
-            if ("PUT".equals(endpoint.method())) request.contentType("application/json").content(endpoint.path().contains("/schedules/") ? "[]" : "{}");
+            if ("PUT".equals(endpoint.method())) request.contentType("application/json").content(endpoint.path().endsWith("/guides") ? "[]" : "{}");
         }
         when(knowledgeService.deleteKnowledgeByFileName("guide.txt")).thenReturn(true);
         var bookingRow = new com.trekkingcamping.backend.module.booking.dto.BookingResponseDto(1L, "test", "Tour", "tour", 10L, null, null, 1, null, "PENDING", null);
@@ -172,7 +213,8 @@ class ApiAuthorizationMatrixTest {
         if (expected != 200) {
             verifyNoInteractions(userService, tourService, bookingService, chatService,
                     tourIngestion, ingestionService, knowledgeService, bookingManagement, momoPayment,
-                    recovery, tourImport, tourImages, imageStorage, guideService, guideImages, guideImport);
+                    recovery, tourImport, tourImages, imageStorage, guideService, guideImages, guideImport,
+                    accountService, plannerService, planStore, reviewService, tourManagement);
         }
         if (expected == 200 && endpoint.path().equals("/api/bookings")) {
             verify(bookingService).createBooking(eq("actor@example.test"), any());

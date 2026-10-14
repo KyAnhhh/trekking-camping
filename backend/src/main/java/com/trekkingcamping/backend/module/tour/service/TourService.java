@@ -54,6 +54,7 @@ public class TourService {
         tour.setInsuranceInfo(request.getInsuranceInfo());
         tour.setEmergencyHotline(request.getEmergencyHotline());
         tour.setRequiredGear(request.getRequiredGear());
+        tour.setAdventureProfile(request.getAdventureProfile());
 
         return tourRepository.save(tour);
     }
@@ -135,14 +136,17 @@ public class TourService {
     // --- XỬ LÝ SCHEDULE (LỊCH KHỞI HÀNH) ---
     @Transactional
     public TourSchedule addSchedule(Long tourId, CreateScheduleRequestDto request) {
-        Tour tour = tourRepository.findById(tourId)
+        Tour tour = tourRepository.findByIdForUpdate(tourId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Tour với ID: " + tourId));
 
         TourSchedule schedule = new TourSchedule();
         TourValidation.schedule(request, tour.getMaxCapacity());
+        if (java.time.temporal.ChronoUnit.DAYS.between(request.getDepartureDate(), request.getReturnDate()) != tour.getDurationDays() - 1)
+            throw new IllegalArgumentException("Ngày về phải khớp thời lượng tour.");
         schedule.setTour(tour);
         schedule.setDepartureDate(request.getDepartureDate());
         schedule.setReturnDate(request.getReturnDate());
+        schedule.setPickupAt(request.getPickupAt()); schedule.setPickupPoint(request.getPickupPoint());
         schedule.setAvailableSlots(request.getAvailableSlots() != null ? request.getAvailableSlots() : tour.getMaxCapacity());
         schedule.setGuideName(request.getGuideName());
         schedule.setGuidePhone(request.getGuidePhone());

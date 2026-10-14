@@ -36,6 +36,8 @@ public class BookingService {
     @Transactional
     public BookingResponseDto createBooking(String email, BookingRequestDto dto) {
         User user = requireUser(email);
+        if(dto.getMedicalConditions()!=null && !dto.getMedicalConditions().isBlank())
+            throw new IllegalArgumentException("Thông tin sức khỏe cần gửi qua khai báo riêng tư sau khi tạo đơn; không nhập trong yêu cầu đặt chỗ.");
         if (dto.getScheduleId() == null || dto.getScheduleId() <= 0
                 || dto.getNumberOfPax() == null || dto.getNumberOfPax() <= 0) {
             throw new IllegalArgumentException("Vui lòng chọn lịch khởi hành và số người hợp lệ.");
@@ -88,6 +90,9 @@ public class BookingService {
                 .emergencyContactPhone(dto.getEmergencyContactPhone())
                 .specialRequirements(dto.getSpecialRequirements())
                 .status("PENDING") // PENDING -> CONFIRMED / CANCELLED
+                .participationStatus("INCOMPLETE")
+                .participationRevision(0L)
+                .participationDeadline(ParticipationGate.deadline(schedule.getDepartureDate(),48))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();

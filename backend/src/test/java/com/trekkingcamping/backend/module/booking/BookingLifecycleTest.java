@@ -184,4 +184,23 @@ class BookingLifecycleTest {
     private void assertStatus(int code, org.junit.jupiter.api.function.Executable action) {
         assertEquals(code, assertThrows(ResponseStatusException.class, action).getStatusCode().value());
     }
+    @Test void newParticipationGateBlocksPaymentAndManualConfirmation() {
+        booking.setParticipationStatus("REVIEW_REQUIRED");
+        assertStatus(409,()->store.prepare(user.getEmail(),1L,"VNPAY_SANDBOX"));
+        assertTrue(history.isEmpty()); user.getRole().setName("ROLE_ADMIN");
+        assertStatus(409,()->management.confirm(user.getEmail(),1L));
+        booking.setParticipationStatus("READY");
+        assertEquals("PENDING",store.prepare(user.getEmail(),1L,"VNPAY_SANDBOX").status());
+    }
+    @Test void lateSuccessAfterParticipationInvalidationRequiresReconciliation() {
+        booking.setParticipationStatus("READY");
+        var attempt=store.prepare(user.getEmail(),1L,"VNPAY_SANDBOX");
+        booking.setParticipationStatus("NEEDS_CONTACT");
+        assertEquals("REFUND_REQUIRED",store.applyVnpayResult(attempt.orderId(),attempt.amount(),true,false,attempt.orderInfo()).status());
+        assertEquals("PENDING",booking.getStatus());
+    }
+    @Test void expiredNewHoldCannotCreateAnotherPayment() {
+        booking.setParticipationStatus("READY"); booking.setParticipationDeadline(LocalDateTime.now().minusMinutes(1));
+        assertStatus(409,()->store.prepare(user.getEmail(),1L,"VNPAY_SANDBOX")); assertTrue(history.isEmpty());
+    }
 }

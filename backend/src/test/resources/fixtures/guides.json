@@ -1,0 +1,23 @@
+[
+  {
+    "code": "TEST_HDV_01",
+    "fullName": "Hướng dẫn viên kiểm thử 1",
+    "bio": "Dữ liệu giả lập chỉ dùng cho kiểm thử.",
+    "experienceSince": 2020,
+    "active": true
+  },
+  {
+    "code": "TEST_HDV_02",
+    "fullName": "Hướng dẫn viên kiểm thử 2",
+    "bio": "Dữ liệu giả lập chỉ dùng cho kiểm thử.",
+    "experienceSince": 2020,
+    "active": true
+  },
+  {
+    "code": "TEST_HDV_03",
+    "fullName": "Hướng dẫn viên kiểm thử 3",
+    "bio": "Dữ liệu giả lập chỉ dùng cho kiểm thử.",
+    "experienceSince": 2020,
+    "active": true
+  }
+]

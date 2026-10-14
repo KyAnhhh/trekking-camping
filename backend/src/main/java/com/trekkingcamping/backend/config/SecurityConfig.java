@@ -46,6 +46,7 @@ public class SecurityConfig {
                 // 2. Public API Chatbot & Auth
                 .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/chat").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat/sessions", "/api/chat/history").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 // The gateway authenticates this callback with HMAC, not a user's JWT.
                 .requestMatchers(HttpMethod.POST, "/api/payments/momo/ipn").permitAll()

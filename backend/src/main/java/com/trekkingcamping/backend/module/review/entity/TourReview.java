@@ -22,7 +22,7 @@ public class TourReview {
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "booking_id")
+    @JoinColumn(name = "booking_id", unique = true)
     private Booking booking;
 
     private Integer rating;

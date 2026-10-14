@@ -83,6 +83,7 @@ public class BookingManagementService {
         Booking booking = bookings.findByIdForUpdate(id).orElseThrow(this::notFound);
         if ("CONFIRMED".equals(booking.getStatus())) return detail(booking);
         if (!"PENDING".equals(booking.getStatus())) throw conflict("Chỉ xác nhận đơn đang chờ.");
+        if (!ParticipationGate.ready(booking)) throw conflict("Chưa hoàn tất xem xét yêu cầu tham gia.");
         if (!beforeDeparture(booking)) throw conflict("Lịch khởi hành đã đến hạn.");
         if (!fullyPaid(booking, payments.findByBookingIdOrderByIdDesc(id))) {
             throw conflict("Đơn chưa được đối soát đủ tiền thanh toán.");
@@ -99,6 +100,22 @@ public class BookingManagementService {
         return detail(booking);
     }
 
+    @Transactional
+    public BookingDetailDto complete(String email, Long id) {
+        requireAdmin(email);
+        Booking booking = bookings.findByIdForUpdate(id).orElseThrow(this::notFound);
+        if ("COMPLETED".equals(booking.getStatus())) return detail(booking);
+        if (!"CONFIRMED".equals(booking.getStatus()) || booking.getSchedule().getReturnDate() == null
+                || !booking.getSchedule().getReturnDate().isBefore(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")))
+                || !fullyPaid(booking, payments.findByBookingIdOrderByIdDesc(id))) {
+            throw conflict("Chỉ hoàn thành đơn đã xác nhận, đủ tiền và đã qua ngày kết thúc tour.");
+        }
+        booking.setStatus("COMPLETED");
+        booking.setUpdatedAt(LocalDateTime.now());
+        bookings.save(booking);
+        return detail(booking);
+    }
+
     private BookingDetailDto detail(Booking booking) {
         List<PaymentTransaction> transactions = payments.findByBookingIdOrderByIdDesc(booking.getId());
         boolean active = List.of("PENDING", "CONFIRMED").contains(booking.getStatus()) && beforeDeparture(booking);
@@ -110,7 +127,8 @@ public class BookingManagementService {
                 transactions.stream().map(PaymentResponseDto::from).toList(),
                 active && !pendingPayment && !hasCapturedPayment(transactions),
                 "PENDING".equals(booking.getStatus()) && beforeDeparture(booking)
-                        && scheduleAvailable && fullyPaid(booking, transactions));
+                        && scheduleAvailable && ParticipationGate.ready(booking) && fullyPaid(booking, transactions),
+                booking.getParticipationStatus(), booking.getParticipationDeadline());
     }
 
     private boolean fullyPaid(Booking booking, List<PaymentTransaction> transactions) {

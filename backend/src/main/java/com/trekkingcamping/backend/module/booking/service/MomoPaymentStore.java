@@ -44,6 +44,7 @@ public class MomoPaymentStore {
         Booking booking = bookings.findByIdForUpdate(bookingId).orElseThrow(this::notFound);
         entityManager.refresh(booking);
         authorize(booking, user, false);
+        ParticipationGate.requirePayment(booking);
         if (!"PENDING".equals(booking.getStatus()) || !beforeDeparture(booking)) {
             throw conflict("Chỉ thanh toán đơn đang chờ và chưa đến ngày khởi hành.");
         }
@@ -131,6 +132,7 @@ public class MomoPaymentStore {
             var schedule = schedules.findByIdForUpdate(booking.getSchedule().getId()).orElseThrow(this::notFound);
             entityManager.refresh(schedule);
             boolean fulfill = "PENDING".equals(booking.getStatus()) && beforeDeparture(booking) && !alreadyPaid
+                    && ParticipationGate.ready(booking)
                     && Set.of("OPEN", "FULL").contains(schedule.getStatus())
                     && Boolean.TRUE.equals(schedule.getTour().getIsActive());
             payment.setStatus(fulfill ? "SUCCESS" : "REFUND_REQUIRED");

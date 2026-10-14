@@ -73,6 +73,19 @@ class ChatFailureTest {
     }
 
     @Test
+    void plannerRequestsJsonWithoutReadingOrWritingChatHistory() {
+        server.expect(anything())
+                .andExpect(jsonPath("$.generationConfig.responseMimeType").value("application/json"))
+                .andExpect(jsonPath("$.contents[0].parts[0].text").value("planner-test"))
+                .andRespond(withSuccess("""
+                        {"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}]}
+                        """, MediaType.APPLICATION_JSON));
+        assertEquals("{}", service.generateStructured("planner-test"));
+        verifyNoInteractions(repository);
+        server.verify();
+    }
+
+    @Test
     void visibleTextPartsAreCombinedAndThoughtsAreExcluded() {
         server.expect(anything())
                 .andExpect(jsonPath("$.contents[0].parts[0].text",
