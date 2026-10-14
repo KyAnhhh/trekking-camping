@@ -1,0 +1,74 @@
+[
+  {
+    "tour": {
+      "title": "[MÔ PHỎNG] Đồi thông thử nghiệm 2N1Đ",
+      "slug": "mo-phong-doi-thong-du-thong-so-202610",
+      "location": "Khu vực giả lập của đồ án",
+      "durationDays": 2,
+      "durationNights": 1,
+      "difficultyLevel": 2,
+      "pricePerPax": 1500000,
+      "maxCapacity": 12,
+      "summary": "Tour giả lập hoàn toàn để kiểm thử Tour Summary, radar, khai báo tham gia và thanh toán sandbox. Không có chuyến đi thực tế.",
+      "description": "Toàn bộ địa điểm, số liệu hành trình, thời gian tiếp cận y tế, giá và lịch đón trong bản ghi này là dữ liệu tổng hợp phục vụ kiểm thử. Không liên quan đến tuyến hoặc đơn vị tổ chức có thật. Không dùng làm tư vấn đi tour thực tế.",
+      "requiredGear": "Kịch bản mô phỏng: giày, ba lô, bình nước, áo mưa và đèn cá nhân.",
+      "safetyTips": "Chỉ kiểm thử trên đồ án; thông số và phương án y tế không có giá trị sử dụng thực địa.",
+      "insuranceInfo": "Mô phỏng; không có hợp đồng bảo hiểm.",
+      "emergencyHotline": null,
+      "adventureProfile": {
+        "distanceKm": 12,
+        "maxAltitudeM": 900,
+        "totalAscentM": 450,
+        "activeHoursPerDay": 5,
+        "medicalAccessHours": 2,
+        "medicalAccessNotes": "GIẢ LẬP: từ điểm giữa tuyến đến trạm hỗ trợ A hư cấu bằng đi bộ và xe trung chuyển trong điều kiện mô phỏng khô ráo. 2 giờ là giá trị kiểm thử, không phải thời gian cứu hộ thực tế.",
+        "recommendedMonths": "1,2,3,4,11,12",
+        "pickupNotes": "Chỉ kiểm thử: có mặt trước thời điểm đón mô phỏng 15 phút.",
+        "assemblyPoint": "Điểm tập kết A — địa điểm hư cấu",
+        "customersPerGuide": 4,
+        "participationRequirements": "Kịch bản mô phỏng: khai báo đủ thành viên, xác nhận thông tin, trao đổi nhu cầu hỗ trợ với admin. Chỉ khi được xem xét mới mở thanh toán thử nghiệm; không phải phê duyệt sức khỏe.",
+        "sourceNote": "Dữ liệu tổng hợp do trợ lý tạo để kiểm thử phần mềm theo yêu cầu đồ án, không có nguồn thực địa. Ngày xác minh là ngày kiểm tra cấu trúc dữ liệu giả lập.",
+        "verifiedOn": "2026-10-08"
+      }
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Mô phỏng tập kết và lên bãi trại",
+        "description": "Kịch bản kiểm thử: đón đoàn, phổ biến thông tin, đi tuyến giả lập và nghỉ tại trại A."
+      },
+      {
+        "dayNumber": 2,
+        "title": "Mô phỏng trở về",
+        "description": "Kịch bản kiểm thử: thu dọn trại, kết thúc tuyến và trả khách ở điểm đón giả lập."
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2026-11-21",
+        "returnDate": "2026-11-22",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": "2026-11-21T06:30:00",
+        "pickupPoint": "Điểm đón thử nghiệm A — địa chỉ hư cấu, không đến thực tế"
+      }
+    ],
+    "gears": [
+      {
+        "gearName": "Lều mô phỏng",
+        "isProvided": true,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Túi ngủ mô phỏng",
+        "isProvided": true,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Giày cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      }
+    ]
+  }
+]

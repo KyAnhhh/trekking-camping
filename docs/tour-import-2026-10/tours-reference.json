@@ -1,0 +1,242 @@
+[
+  {
+    "tour": {
+      "title": "[THAM KHẢO ĐỒ ÁN] Bidoup Núi Bà 2N1Đ",
+      "slug": "tham-khao-bidoup-nui-ba-2n1d-202610",
+      "location": "Lâm Đồng",
+      "durationDays": 2,
+      "durationNights": 1,
+      "difficultyLevel": 2,
+      "pricePerPax": 2900000,
+      "maxCapacity": 12,
+      "summary": "Dữ liệu tham khảo đồ án, không phải tour mở bán. Khám phá rừng nguyên sinh và hành trình lên đỉnh Bidoup, nghỉ đêm giữa thiên nhiên.",
+      "description": "Khám phá rừng nguyên sinh và hành trình lên đỉnh Bidoup, nghỉ đêm giữa thiên nhiên.\nTuyến/thời lượng tham khảo: https://toongadventure.com/tour/bidoup/\nGiá, sức chứa 12 khách, ngày khởi hành và mức độ khó 1–3 là cấu hình mô phỏng của đồ án, không phải báo giá hoặc lịch mở bán của đơn vị nguồn. Hai ngày trong hệ thống là hai ngày hoạt động tại điểm đến; chặng xe đêm đi/về không được tính thêm vào durationDays. Không đại diện hay liên kết bán tour với đơn vị nguồn.",
+      "requiredGear": "Danh sách chuẩn bị dự kiến cho đồ án: giày có độ bám, ba lô cá nhân, áo mưa, bình nước, đồ giữ ấm và đèn cá nhân. Xác nhận trang bị theo tuyến trước vận hành.",
+      "safetyTips": "Quy trình mô phỏng: trao đổi yêu cầu hỗ trợ với người phụ trách trước chuyến đi; đi theo đoàn; xác nhận lại lộ trình và điều kiện thời tiết. Chưa có phương án vận hành thực tế được duyệt.",
+      "insuranceInfo": "Dữ liệu đồ án; chưa có hợp đồng bảo hiểm hoặc quyền lợi bảo hiểm được xác nhận.",
+      "emergencyHotline": null,
+      "adventureProfile": {
+        "distanceKm": 27,
+        "maxAltitudeM": 2287,
+        "totalAscentM": null,
+        "activeHoursPerDay": null,
+        "medicalAccessHours": null,
+        "medicalAccessNotes": "Trang nguồn ghi 3,5 giờ nhưng chưa nêu đủ điểm xuất phát, cơ sở y tế, phương tiện và điều kiện; chưa dùng làm ước tính của tour.",
+        "recommendedMonths": "1,2,3,4,5,6,7,8,9,10,11,12",
+        "pickupNotes": "Giờ đón tại TP.HCM chưa xác nhận: phần tổng quan và lịch chi tiết trên nguồn không thống nhất. Xác nhận trước khi thêm giờ/địa chỉ vào lịch.",
+        "assemblyPoint": "Lâm Đồng",
+        "customersPerGuide": 4,
+        "participationRequirements": "Yêu cầu của kịch bản đồ án: người đặt hoàn thành khai báo từng thành viên và trao đổi nhu cầu hỗ trợ trước khi admin xem xét. Đây không phải tiêu chuẩn sức khỏe của nhà tổ chức và không xác nhận đủ điều kiện y khoa.",
+        "sourceNote": "Nguồn tham khảo: https://toongadventure.com/tour/bidoup/ . Ngày xác minh là ngày đối chiếu trang công khai, không phải xác nhận thực địa. Tổng quan ghi 7 giờ/ngày, lịch chi tiết ghi 8 và 7 giờ; chưa xác nhận cách tính ngày vận động dài nhất. Chênh lệch 1.400 m chưa xác định là độ cao leo lên tích lũy. Yêu cầu tham gia là kịch bản đồ án.",
+        "verifiedOn": "2026-10-08"
+      }
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Lên đỉnh Bidoup",
+        "description": "Đi bộ qua rừng, tham quan cây Pơ Mu và lên đỉnh; nghỉ tại bãi trại."
+      },
+      {
+        "dayNumber": 2,
+        "title": "Rời rừng về Đà Lạt",
+        "description": "Đi qua rừng thông, trở về điểm trung chuyển."
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2026-11-14",
+        "returnDate": "2026-11-15",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": null,
+        "pickupPoint": null
+      },
+      {
+        "departureDate": "2026-11-28",
+        "returnDate": "2026-11-29",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": null,
+        "pickupPoint": null
+      }
+    ],
+    "gears": [
+      {
+        "gearName": "Giày trekking cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Ba lô cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Áo mưa cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      }
+    ]
+  },
+  {
+    "tour": {
+      "title": "[THAM KHẢO ĐỒ ÁN] Lảo Thẩn 2N1Đ",
+      "slug": "tham-khao-lao-than-2n1d-202610",
+      "location": "Lào Cai",
+      "durationDays": 2,
+      "durationNights": 1,
+      "difficultyLevel": 3,
+      "pricePerPax": 3100000,
+      "maxCapacity": 12,
+      "summary": "Dữ liệu tham khảo đồ án, không phải tour mở bán. Trekking vùng Y Tý, nghỉ tại lán và khám phá cảnh quan trên đỉnh Lảo Thẩn.",
+      "description": "Trekking vùng Y Tý, nghỉ tại lán và khám phá cảnh quan trên đỉnh Lảo Thẩn.\nTuyến/thời lượng tham khảo: https://toongadventure.com/tour/trekking-lao-than-2/\nGiá, sức chứa 12 khách, ngày khởi hành và mức độ khó 1–3 là cấu hình mô phỏng của đồ án, không phải báo giá hoặc lịch mở bán của đơn vị nguồn. Hai ngày trong hệ thống là hai ngày hoạt động tại điểm đến; chặng xe đêm đi/về không được tính thêm vào durationDays. Không đại diện hay liên kết bán tour với đơn vị nguồn.",
+      "requiredGear": "Danh sách chuẩn bị dự kiến cho đồ án: giày có độ bám, ba lô cá nhân, áo mưa, bình nước, đồ giữ ấm và đèn cá nhân. Xác nhận trang bị theo tuyến trước vận hành.",
+      "safetyTips": "Quy trình mô phỏng: trao đổi yêu cầu hỗ trợ với người phụ trách trước chuyến đi; đi theo đoàn; xác nhận lại lộ trình và điều kiện thời tiết. Chưa có phương án vận hành thực tế được duyệt.",
+      "insuranceInfo": "Dữ liệu đồ án; chưa có hợp đồng bảo hiểm hoặc quyền lợi bảo hiểm được xác nhận.",
+      "emergencyHotline": null,
+      "adventureProfile": {
+        "distanceKm": 14,
+        "maxAltitudeM": 2860,
+        "totalAscentM": null,
+        "activeHoursPerDay": null,
+        "medicalAccessHours": null,
+        "medicalAccessNotes": "Nguồn ghi 4,5 giờ, chưa đủ điều kiện ước tính để áp dụng; cần xác nhận riêng phương án tiếp cận y tế.",
+        "recommendedMonths": "9,10,11,12,1,2,3,4,5",
+        "pickupNotes": "Chương trình tham khảo xuất phát từ Hà Nội, trung chuyển qua Sa Pa. Chưa ấn định địa chỉ và giờ đón cho lịch mô phỏng.",
+        "assemblyPoint": "Lào Cai",
+        "customersPerGuide": null,
+        "participationRequirements": "Yêu cầu của kịch bản đồ án: người đặt hoàn thành khai báo từng thành viên và trao đổi nhu cầu hỗ trợ trước khi admin xem xét. Đây không phải tiêu chuẩn sức khỏe của nhà tổ chức và không xác nhận đủ điều kiện y khoa.",
+        "sourceNote": "Nguồn tham khảo: https://toongadventure.com/tour/trekking-lao-than-2/ . Ngày xác minh là ngày đối chiếu trang công khai, không phải xác nhận thực địa. Tổng quan ghi 7,5 giờ/ngày, lịch chi tiết ghi 6 giờ mỗi ngày; để trống giờ vận động. Chênh lệch 965 m chưa xác định là độ cao leo lên tích lũy. Chưa có tỷ lệ khách/guide. Yêu cầu tham gia là kịch bản đồ án.",
+        "verifiedOn": "2026-10-08"
+      }
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Y Tý đến lán nghỉ",
+        "description": "Từ khu vực Y Tý đi bộ lên lán và nghỉ đêm."
+      },
+      {
+        "dayNumber": 2,
+        "title": "Lên đỉnh và trở về",
+        "description": "Lên đỉnh Lảo Thẩn, quay lại lán lấy hành lý rồi xuống núi."
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2026-11-14",
+        "returnDate": "2026-11-15",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": null,
+        "pickupPoint": null
+      },
+      {
+        "departureDate": "2026-11-28",
+        "returnDate": "2026-11-29",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": null,
+        "pickupPoint": null
+      }
+    ],
+    "gears": [
+      {
+        "gearName": "Giày trekking cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Ba lô cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Áo mưa cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      }
+    ]
+  },
+  {
+    "tour": {
+      "title": "[THAM KHẢO ĐỒ ÁN] Thác K50 2N1Đ",
+      "slug": "tham-khao-thac-k50-2n1d-202610",
+      "location": "Gia Lai",
+      "durationDays": 2,
+      "durationNights": 1,
+      "difficultyLevel": 2,
+      "pricePerPax": 2600000,
+      "maxCapacity": 12,
+      "summary": "Dữ liệu tham khảo đồ án, không phải tour mở bán. Tham khảo chuyến khám phá thác K50 kết hợp trải nghiệm cộng đồng và hồ Vĩnh Sơn B.",
+      "description": "Tham khảo chuyến khám phá thác K50 kết hợp trải nghiệm cộng đồng và hồ Vĩnh Sơn B.\nTuyến/thời lượng tham khảo: https://toongadventure.com/tour/tour-thac-k50-thac-hang-en/\nGiá, sức chứa 12 khách, ngày khởi hành và mức độ khó 1–3 là cấu hình mô phỏng của đồ án, không phải báo giá hoặc lịch mở bán của đơn vị nguồn. Hai ngày trong hệ thống là hai ngày hoạt động tại điểm đến; chặng xe đêm đi/về không được tính thêm vào durationDays. Không đại diện hay liên kết bán tour với đơn vị nguồn.",
+      "requiredGear": "Danh sách chuẩn bị dự kiến cho đồ án: giày có độ bám, ba lô cá nhân, áo mưa, bình nước, đồ giữ ấm và đèn cá nhân. Xác nhận trang bị theo tuyến trước vận hành.",
+      "safetyTips": "Quy trình mô phỏng: trao đổi yêu cầu hỗ trợ với người phụ trách trước chuyến đi; đi theo đoàn; xác nhận lại lộ trình và điều kiện thời tiết. Chưa có phương án vận hành thực tế được duyệt.",
+      "insuranceInfo": "Dữ liệu đồ án; chưa có hợp đồng bảo hiểm hoặc quyền lợi bảo hiểm được xác nhận.",
+      "emergencyHotline": null,
+      "adventureProfile": {
+        "distanceKm": 9,
+        "maxAltitudeM": 1064,
+        "totalAscentM": null,
+        "activeHoursPerDay": null,
+        "medicalAccessHours": null,
+        "medicalAccessNotes": "Nguồn ghi 3 giờ nhưng chưa nêu đủ điểm xuất phát, cơ sở y tế và điều kiện áp dụng; chưa phải phương án cứu hộ đã xác nhận.",
+        "recommendedMonths": "1,2,3,4,5,6,7,8,9,10,11,12",
+        "pickupNotes": "Xác nhận lịch trung chuyển và điểm đón riêng. Nguồn có hai giờ xuất phát khác nhau, không tự chọn một giờ để nhập lịch.",
+        "assemblyPoint": "Gia Lai",
+        "customersPerGuide": null,
+        "participationRequirements": "Yêu cầu của kịch bản đồ án: người đặt hoàn thành khai báo từng thành viên và trao đổi nhu cầu hỗ trợ trước khi admin xem xét. Đây không phải tiêu chuẩn sức khỏe của nhà tổ chức và không xác nhận đủ điều kiện y khoa.",
+        "sourceNote": "Nguồn tham khảo: https://toongadventure.com/tour/tour-thac-k50-thac-hang-en/ . Ngày xác minh là ngày đối chiếu trang công khai, không phải xác nhận thực địa. Tổng quan ghi 6 giờ hoạt động/ngày, chi tiết ghi 2 giờ di chuyển/ngày: khác phạm vi đo, chưa ánh xạ vào ngày vận động dài nhất. Chênh lệch 700 m chưa xác định là độ cao leo lên tích lũy. Yêu cầu tham gia là kịch bản đồ án.",
+        "verifiedOn": "2026-10-08"
+      }
+    },
+    "itineraries": [
+      {
+        "dayNumber": 1,
+        "title": "Khám phá thác và về làng",
+        "description": "Tham quan thác K50 rồi về làng Đăk Asêl nghỉ đêm."
+      },
+      {
+        "dayNumber": 2,
+        "title": "Hồ Vĩnh Sơn B",
+        "description": "Tham quan hồ và trải nghiệm hoạt động theo chương trình trước khi trở về."
+      }
+    ],
+    "schedules": [
+      {
+        "departureDate": "2026-11-14",
+        "returnDate": "2026-11-15",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": null,
+        "pickupPoint": null
+      },
+      {
+        "departureDate": "2026-11-28",
+        "returnDate": "2026-11-29",
+        "availableSlots": 12,
+        "guideAssignments": [],
+        "pickupAt": null,
+        "pickupPoint": null
+      }
+    ],
+    "gears": [
+      {
+        "gearName": "Giày trekking cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Ba lô cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      },
+      {
+        "gearName": "Áo mưa cá nhân — tự chuẩn bị",
+        "isProvided": false,
+        "rentalPrice": 0
+      }
+    ]
+  }
+]
