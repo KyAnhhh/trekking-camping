@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   ArrowUpRight,
-  Compass,
   Leaf,
   MapPin,
   Mountain,
@@ -16,10 +15,18 @@ import useResource from '../../hooks/useResource';
 import TourCard from '../../components/tour/TourCard';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { landscape, campsite, forest } from '../../utils/tour';
+import { campsite, forest } from '../../utils/tour';
+import TimeHero from '../../components/home/TimeHero';
+import HomeReviews from '../../components/home/HomeReviews';
+import DestinationGrid from '../../components/tour/DestinationGrid';
+import Reveal from '../../components/common/Reveal';
+import TravelFaq from '../../components/common/TravelFaq';
+import useTimeTheme from '../../hooks/useTimeTheme';
+import '../../styles/home.css';
 const loadTours = async () => (await tourApi.getAllTours()).data.data;
 
 export default function Home() {
+  const { theme, mode, setMode } = useTimeTheme();
   const { data: tours, loading, error, reload } = useResource(loadTours);
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('');
@@ -32,41 +39,8 @@ export default function Home() {
     navigate('/tours?' + params);
   }
   return (
-    <>
-      <section className="hero">
-        <img
-          className="hero-photo"
-          src={landscape}
-          alt="Dãy núi trùng điệp dưới ánh sáng tự nhiên"
-          fetchPriority="high"
-        />
-        <div className="hero-shade" />
-        <div className="container hero-content">
-          <p className="eyebrow light">
-            <span className="tiny-line" /> NHỮNG CHUYẾN ĐI, NHỮNG KẾT NỐI MỚI
-          </p>
-          <h1>
-            Rời phố thị.
-            <br />
-            <span>Chạm thiên nhiên.</span>
-          </h1>
-          <p className="hero-description">
-            Băng qua những cánh rừng. Thức giấc giữa núi đồi.
-            <br className="desktop-only" /> Tìm hành trình dành riêng cho bước chân của bạn.
-          </p>
-          <Link className="btn btn-lime" to="/tours">
-            Khám phá những chuyến đi <ArrowUpRight size={20} />
-          </Link>
-          <div className="hero-footnote">
-            <Compass size={21} strokeWidth={1.3} />
-            <span>
-              Đi chậm một chút.
-              <br />
-              <strong>Thấy nhiều hơn.</strong>
-            </span>
-          </div>
-        </div>
-      </section>
+    <div className="home-page" data-time-theme={theme} data-theme-mode={mode}>
+      <TimeHero theme={theme} mode={mode} setMode={setMode} />
       <div className="container search-dock">
         <form className="trip-search" onSubmit={search}>
           <label>
@@ -96,10 +70,10 @@ export default function Home() {
           </button>
         </form>
       </div>
-      <section className="container section">
+      <Reveal className="container section">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">ĐI ĐÂU TIẾP THEO?</p>
+            <p className="eyebrow">TOUR ĐỂ BẠN BẮT ĐẦU KHÁM PHÁ</p>
             <h2>
               Mỗi cung đường,
               <br className="mobile-only" /> một câu chuyện.
@@ -135,8 +109,15 @@ export default function Home() {
             ))}
           </div>
         )}
-      </section>
-      <section className="experience-section">
+      </Reveal>
+      <Reveal className="container section" aria-labelledby="home-destinations">
+        <div className="section-heading">
+          <div><p className="eyebrow">ĐIỂM ĐẾN TRONG DANH SÁCH TOUR</p><h2 id="home-destinations">Tìm nơi bạn muốn dừng chân.</h2><p className="muted">Khám phá theo khu vực được công bố trên từng hành trình.</p></div>
+          <Link className="text-link" to="/destinations">Tất cả điểm đến <ArrowRight size={18} /></Link>
+        </div>
+        {loading ? <LoadingSpinner label="Đang tải điểm đến..." /> : error ? <p className="notice">Điểm đến sẽ xuất hiện khi danh sách tour tải thành công.</p> : <DestinationGrid tours={tours || []} limit={4} />}
+      </Reveal>
+      <Reveal className="experience-section">
         <div className="container section">
           <div className="section-heading">
             <div>
@@ -170,15 +151,15 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
-      <section className="container section">
+      </Reveal>
+      <Reveal className="container section">
         <div className="approach-grid">
           <div>
-            <p className="eyebrow">CHUẨN BỊ ĐỂ ĐI XA HƠN</p>
+            <p className="eyebrow">VÌ SAO TÌM TOUR CÙNG TREK & CAMP?</p>
             <h2>
-              Hành trình đẹp
+              Hiểu rõ hơn.
               <br />
-              bắt đầu từ sự sẵn sàng.
+              Chọn chủ động hơn.
             </h2>
             <Link className="text-link" to="/chat">
               Cùng chuẩn bị chuyến đi <ArrowRight size={18} />
@@ -188,28 +169,47 @@ export default function Home() {
             <article>
               <Mountain />
               <div>
-                <h3>Chọn đúng sức mình</h3>
-                <p>Xem độ khó, thời lượng và lịch trình trước khi quyết định.</p>
+                <h3>Thông tin hành trình cụ thể</h3>
+                <p>Đối chiếu độ khó, thời lượng và thông số được công bố trước khi quyết định.</p>
               </div>
             </article>
             <article>
               <TentTree />
               <div>
-                <h3>Mang theo điều cần thiết</h3>
+                <h3>Chuẩn bị theo từng tour</h3>
                 <p>Kiểm tra trang bị được cung cấp và những món đồ cần tự chuẩn bị.</p>
               </div>
             </article>
             <article>
               <Leaf />
               <div>
-                <h3>Trân trọng nơi mình đến</h3>
-                <p>Đi theo lối mòn, mang rác về và giữ không gian yên bình cho thiên nhiên.</p>
+                <h3>Bạn là người xác nhận</h3>
+                <p>AI hỗ trợ tìm hiểu; bạn kiểm tra lịch, giá và thông tin trước khi tạo đơn.</p>
               </div>
             </article>
           </div>
         </div>
-      </section>
-      <section className="container ai-banner">
+      </Reveal>
+      <Reveal className="container section" aria-labelledby="booking-steps-title">
+        <div className="section-heading"><div><p className="eyebrow">TỪ TÌM HIỂU ĐẾN ĐẶT CHỖ</p><h2 id="booking-steps-title">Từng bước, thật rõ ràng.</h2></div><Link className="text-link" to="/contact">Bạn cần hỗ trợ? <ArrowRight size={18} /></Link></div>
+        <ol className="booking-steps">
+          <li><span>01</span><h3>Chọn hành trình</h3><p>Xem lịch trình, độ khó, thông số và lịch khởi hành của tour bạn quan tâm.</p></li>
+          <li><span>02</span><h3>Kiểm tra & tạo đơn</h3><p>Đăng nhập, chọn số khách và xác nhận thông tin liên hệ cùng chi phí.</p></li>
+          <li><span>03</span><h3>Hoàn tất yêu cầu tham gia</h3><p>Khai báo theo yêu cầu của đơn và theo dõi kết quả xem xét từ người phụ trách.</p></li>
+          <li><span>04</span><h3>Theo dõi & chuẩn bị</h3><p>Thanh toán khi đủ điều kiện, kiểm tra trạng thái đơn và chuẩn bị cho ngày lên đường.</p></li>
+        </ol>
+      </Reveal>
+      <Reveal className="home-stories">
+        <div className="container section">
+          <div className="section-heading"><div><p className="eyebrow">GÓC NHÌN TỪ KHÁCH HÀNG</p><h2>Những chia sẻ sau hành trình.</h2><p className="muted">Đánh giá của các tour đang giới thiệu trên trang chủ.</p></div></div>
+          {!loading && !error && tours?.length ? <HomeReviews tours={tours} /> : <EmptyState title="Chưa có đánh giá để hiển thị" description="Hãy quay lại khi danh sách tour và chia sẻ của khách được cập nhật." />}
+        </div>
+      </Reveal>
+      <Reveal className="container section home-faq" aria-labelledby="home-faq-title">
+        <div><p className="eyebrow">TRƯỚC KHI BẠN QUYẾT ĐỊNH</p><h2 id="home-faq-title">Một vài điều<br />bạn có thể đang hỏi.</h2><Link className="text-link" to="/handbook">Đọc cẩm nang <ArrowRight size={18} /></Link></div>
+        <TravelFaq />
+      </Reveal>
+      <Reveal className="container ai-banner">
         <div className="ai-banner-icon">
           <Sparkles size={34} strokeWidth={1.3} />
         </div>
@@ -221,7 +221,7 @@ export default function Home() {
         <Link className="btn btn-lime" to="/chat">
           Bắt đầu trò chuyện <ArrowUpRight size={20} />
         </Link>
-      </section>
-    </>
+      </Reveal>
+    </div>
   );
 }

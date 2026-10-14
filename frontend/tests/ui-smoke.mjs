@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { checkExperience } from './experience-checks.mjs';
 // All API requests use fixtures; this suite never writes to the application database.
 const origin = process.env.UI_BASE_URL || "http://127.0.0.1:5174";
 const debugOrigin = process.env.CHROME_DEBUG_URL || "http://127.0.0.1:9222";
@@ -22,6 +23,10 @@ const pending = new Map();
 const errors = [],
   writes = [],
   results = [];
+const chatRows = [];
+let chatConfirmAttempts = 0;
+let failLogout = false;
+let reviewsFail = false, emptyTours = false;
 const send = (method, params = {}) =>
   new Promise((resolve, reject) => {
     const callId = ++id;
@@ -125,8 +130,10 @@ let bookings = [],
   failTours = false;
 let paymentHistory = [];
 let failPayment = false;
-const paymentOrder = "MM-00000000-0000-0000-0000-000000000001";
+const paymentOrder = "VN2030010100000000000000000000000000000000000001";
 const bookingDetail = (booking) => ({
+  participationStatus:
+    participation.status === "LEGACY" ? null : participation.status,
   booking,
   contactName: "Khách thử nghiệm",
   contactEmail: "traveler@example.test",
@@ -137,6 +144,24 @@ const bookingDetail = (booking) => ({
     paymentHistory.every((p) => p.status === "FAILED"),
   canConfirm: false,
 });
+let account = {
+  id: 1,
+  email: "traveler@example.test",
+  fullName: "Khách thử nghiệm",
+  phone: "0900000000",
+  role: "ROLE_USER",
+};
+let savedPlans = [],
+  postedReview = null;
+let participation = {
+  status: "LEGACY",
+  revision: 0,
+  deadline: null,
+  numberOfPax: 2,
+  declaration: null,
+  requirements: "Synthetic test requirements",
+  editable: false,
+};
 function api(request) {
   const url = new URL(request.url),
     path = url.pathname,
@@ -150,6 +175,147 @@ function api(request) {
   if (method !== "GET" && method !== "OPTIONS")
     writes.push({ path, method, payload });
   if (method === "OPTIONS") return { status: 204 };
+  if (/^\/api\/(admin\/)?bookings\/1\/participation(?:\/review)?$/.test(path)) {
+    if (method === "PUT") {
+      participation = {
+        ...participation,
+        status: "REVIEW_REQUIRED",
+        revision: participation.revision + 1,
+        declaration: { people: payload.people },
+      };
+    }
+    if (method === "POST") {
+      participation = {
+        ...participation,
+        status: payload.decision,
+        declaration: {...participation.declaration,reviewNote:payload.note},
+        revision: participation.revision + 1,
+      };
+    }
+    if (method === "DELETE") participation.declaration = null;
+    return { data: participation };
+  }
+  if (path === "/api/account") {
+    if (method === "PUT") account = { ...account, ...payload };
+    return { data: account };
+  }
+  if (path === "/api/account/password") return { data: null };
+  if (path === "/api/plans") {
+    if (method === "POST") {
+      const plan = {
+        id: 1,
+        title: "Hành trình kiểm thử",
+        createdAt: new Date().toISOString(),
+        content: {
+          request: payload,
+          quotedAt: new Date().toISOString(),
+          itinerary: {
+            title: "Hành trình kiểm thử",
+            summary: "Đi chậm và nghỉ ngơi phù hợp thể lực.",
+            tips: ["Kiểm tra điều kiện trước chuyến đi."],
+            days: Array.from({ length: payload.days }, (_, i) => ({
+              day: i + 1,
+              title: "Khám phá thiên nhiên",
+              morning: "Chuẩn bị và đi bộ",
+              afternoon: "Nghỉ ngơi",
+              evening: "Cắm trại",
+            })),
+          },
+          tours: [
+            {
+              tourId: 1,
+              scheduleId: 1,
+              title: tours[0].title,
+              url: "/tours/ta-nang-phan-dung/booking?schedule=1",
+              pricePerPerson: 2000000,
+              departureDate: future,
+              returnDate: later,
+              availableSlots: 8,
+            },
+          ],
+        },
+      };
+      savedPlans.push(plan);
+      return { data: plan };
+    }
+    return {
+      data: savedPlans.map(({ id, title, createdAt }) => ({
+        id,
+        title,
+        createdAt,
+      })),
+    };
+  }
+  if (/^\/api\/plans\/\d+$/.test(path)) {
+    const id = Number(path.split("/").at(-1));
+    if (method === "DELETE") {
+      savedPlans = savedPlans.filter((p) => p.id !== id);
+      return { data: null };
+    }
+    return { data: savedPlans.find((p) => p.id === id) };
+  }
+  if (/^\/api\/tours\/\d+\/reviews$/.test(path))
+    return reviewsFail ? { status: 503, message: 'Synthetic review failure' } : {
+      data: {
+        average: postedReview?.rating || 0,
+        total: postedReview ? 1 : 0,
+        items: postedReview ? [postedReview] : [],
+        page: 0,
+      },
+    };
+  if (path === "/api/bookings/1/review") {
+    if (method === "POST") {
+      postedReview = {
+        id: 1,
+        ...payload,
+        author: account.fullName,
+        verified: true,
+        createdAt: new Date().toISOString(),
+      };
+      return { data: postedReview };
+    }
+    return {
+      data: {
+        canReview: bookings[0]?.status === "COMPLETED" && !postedReview,
+        review: postedReview,
+        message: "Đánh giá mở sau khi hoàn thành.",
+      },
+    };
+  }
+  if (path === "/api/admin/bookings/1/complete") {
+    bookings[0].status = "COMPLETED";
+    return { data: bookingDetail(bookings[0]) };
+  }
+  if (path === "/api/admin/tours") return { data: tours };
+  if (/^\/api\/admin\/tours\/\d+\/images$/.test(path)) return { data: photos };
+  if (/^\/api\/admin\/tours\/\d+\/active$/.test(path)) {
+    const tour = tours.find((t) => t.id === Number(path.split("/").at(-2)));
+    tour.isActive = payload.active;
+    return { data: tour };
+  }
+  if (/^\/api\/admin\/tours\/\d+\/schedules\/\d+$/.test(path)) {
+    Object.assign(
+      schedules.find((s) => s.id === Number(path.split("/").at(-1))),
+      payload,
+    );
+    return { data: null };
+  }
+  if (/^\/api\/admin\/tours\/\d+$/.test(path) && method === "PUT") {
+    const tour = tours.find((t) => t.id === Number(path.split("/").at(-1)));
+    Object.assign(tour, payload);
+    return { data: tour };
+  }
+  if (/^\/api\/admin\/tours\/[^/]+$/.test(path) && method === "GET") {
+    const tour = tours.find((t) => t.slug === path.split("/").at(-1));
+    return {
+      data: {
+        tour: { ...tour, isActive: tour.isActive ?? true },
+        itineraries,
+        schedules,
+        gears,
+      },
+    };
+  }
   if (path === "/api/admin/guides") {
     if (method === "POST") {
       const row = {
@@ -214,6 +380,8 @@ function api(request) {
         legacyGuideName: schedules[0].guideName,
       },
     };
+  if (path === "/api/auth/logout" && failLogout)
+    return { status: 503, message: "Synthetic logout failure" };
   if (path === "/api/auth/logout" || path === "/api/auth/reset-password")
     return { data: null };
   if (path === "/api/auth/forgot-password")
@@ -255,7 +423,7 @@ function api(request) {
   if (path === "/api/tours" && method === "GET")
     return failTours
       ? { status: 500, message: "Lỗi kết nối thử nghiệm" }
-      : { data: tours };
+      : { data: emptyTours ? [] : tours };
   if (path === "/api/tours" && method === "POST") {
     const tour = { id: tours.length + 1, ...payload };
     tours.push(tour);
@@ -340,17 +508,17 @@ function api(request) {
     bookings[0].status = "CANCELLED";
     return { data: bookingDetail(bookings[0]) };
   }
-  if (path === "/api/payments/momo/start") {
+  if (path === "/api/payments/vnpay/start") {
     if (failPayment)
       return {
         status: 503,
-        message: "MoMo sandbox chưa được cấu hình tài khoản merchant.",
+        message: "VNPAY sandbox chưa được cấu hình tài khoản merchant.",
       };
     paymentHistory = [
       {
         id: 1,
         transactionCode: paymentOrder,
-        paymentMethod: "MOMO_SANDBOX",
+        paymentMethod: "VNPAY_SANDBOX",
         amount: bookings[0].totalAmount,
         status: "PENDING",
       },
@@ -360,11 +528,11 @@ function api(request) {
         bookingId: 1,
         orderId: paymentOrder,
         status: "PENDING",
-        payUrl: null,
+        paymentUrl: null,
       },
     };
   }
-  if (path === "/api/payments/momo/" + paymentOrder + "/refresh") {
+  if (path === "/api/payments/vnpay/" + paymentOrder + "/refresh") {
     paymentHistory[0].status = "SUCCESS";
     bookings[0].status = "CONFIRMED";
     return {
@@ -372,18 +540,33 @@ function api(request) {
         bookingId: 1,
         orderId: paymentOrder,
         status: "SUCCESS",
-        payUrl: null,
+        paymentUrl: null,
       },
     };
   }
-  if (path === "/api/chat")
+  if (path === "/api/chat/sessions") return { data: { sessionId: "ui-test-session", sessionToken: "ui-test-session-secret" } };
+  if (path === "/api/chat/history") return { data: chatRows };
+  if (path === "/api/chat/booking-drafts") return { data: {
+    draftId: payload.requestId, title: tours[0].title, departureDate: future, returnDate: later, people: payload.people,
+    unitPrice: tours[0].pricePerPax, totalAmount: tours[0].pricePerPax * payload.people,
+    expiresAt: new Date(Date.now() + 600000).toISOString(), contactName: "Test guest", contactEmail: "guest@example.test", contactPhone: "0900000000"
+  } };
+  if (/^\/api\/chat\/booking-drafts\/[^/]+\/confirm$/.test(path)) {
+    chatConfirmAttempts++;
+    return chatConfirmAttempts === 1 ? { status: 503, message: "Mock connection interrupted after commit" } : { data: { id: 99, bookingCode: "CHAT-TEST", status: "PENDING" } };
+  }
+  if (path === "/api/chat") {
+    chatRows.push({ sender: "USER", message: payload.message }, { sender: "BOT", message: "Test answer" });
     return {
       data: {
         reply:
           "Bạn có thể xem [tour Tà Năng](/tours/ta-nang-phan-dung) và kiểm tra trang bị trước chuyến đi.",
         sessionId: "ui-test-session",
+        sources: [{ id: "S1", label: "test-guide.txt", updatedAt: "2026-10-11" }],
+        tours: [{ tourId: 1, scheduleId: 10, title: tours[0].title, url: "/tours/ta-nang-phan-dung", departureDate: future, returnDate: later, availableSlots: 5, pricePerPerson: tours[0].pricePerPax }],
       },
     };
+  }
   return { status: 404, message: "Unmocked API: " + method + " " + path };
 }
 ws.addEventListener("message", async (event) => {
@@ -447,7 +630,7 @@ async function evaluate(expression) {
   return r.result.value;
 }
 async function wait(expression) {
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 200; i++) {
     if (await evaluate("Boolean(" + expression + ")")) return;
     await pause(100);
   }
@@ -467,6 +650,8 @@ async function viewport(width, height = 900) {
     deviceScaleFactor: 1,
     mobile: false,
   });
+  // Resize/media-query events close open menus; wait for layout and React to settle before clicking.
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
 }
 async function set(selector, value) {
   await evaluate(
@@ -527,14 +712,114 @@ try {
   await viewport(390, 844);
   await check("Home mobile");
   await shot("home-mobile");
-  await click(".mobile-toggle");
+  await checkExperience({ evaluate, wait, go, click, set, viewport, shot, check, send, pause, results,
+    fixtures: (value) => {
+      if ('reviewsFail' in value) reviewsFail = value.reviewsFail;
+      if ('emptyTours' in value) emptyTours = value.emptyTours;
+      if ('review' in value) postedReview = value.review;
+    },
+  });
+  await click(".header-menu-trigger");
   assert.equal(
     await evaluate(
-      "document.querySelector('.mobile-toggle').getAttribute('aria-expanded')",
+      "document.querySelector('.header-menu-trigger').getAttribute('aria-expanded')",
     ),
     "true",
   );
-  await click(".mobile-toggle");
+  await click(".header-menu-trigger");
+  // Header interactions use real keyboard input and mocked auth only.
+  await viewport(1440);
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('#main-navigation > a')].map(a=>a.textContent.trim())"),
+    ["Khám phá tour", "Điểm đến", "Lập lịch trình", "Cẩm nang", "Về chúng tôi", "Hỏi AI"]);
+  for (const [path, title] of [["handbook", "Chuẩn bị kỹ"], ["about", "Gần thiên nhiên hơn"]]) {
+    await viewport(1440);
+    await click(`#main-navigation a[href='/${path}']`);
+    await wait(`location.pathname === '/${path}' && document.querySelector('h1')?.textContent.includes('${title}')`);
+    assert.equal(await evaluate(`document.querySelector('#main-navigation a[href="/${path}"]').getAttribute('aria-current')`), "page");
+    await check(`${path} desktop navigation`);
+    await shot(`${path}-desktop`);
+    await go(`/${path}`);
+    assert.ok((await evaluate("document.querySelector('main').innerText")).includes(title));
+    await viewport(320);
+    await check(`${path} mobile reload`);
+    await shot(`${path}-mobile`);
+  }
+  await go("/handbook");
+  await click(".journal-index a[href='#soan-ba-lo']");
+  await pause(150);
+  assert.equal(await evaluate("document.querySelector('#soan-ba-lo').getBoundingClientRect().top >= document.querySelector('.site-header').getBoundingClientRect().bottom"), true);
+  await click(".header-menu-trigger");
+  await click("#main-navigation a[href='/about']");
+  await wait("location.pathname === '/about'");
+  assert.equal(await evaluate("document.querySelector('#main-navigation').classList.contains('is-open')"), false);
+  results.push("Full header links open public content, survive reload, and handbook anchors clear sticky header");
+  await go("/");
+  for (const width of [320, 375, 768, 1024, 1101, 1280, 1440]) {
+    await viewport(width);
+    await check(`Guest header ${width}px`);
+    if (width <= 1200) {
+      await click(".header-menu-trigger");
+      assert.equal(await evaluate("document.body.style.overflow"), "hidden");
+      assert.equal(await evaluate("document.activeElement.getAttribute('href')"), "/tours");
+      await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+      await wait("document.querySelector('.header-menu-trigger').getAttribute('aria-expanded') === 'false'");
+      assert.equal(await evaluate("document.activeElement.className"), "header-menu-trigger");
+      assert.equal(await evaluate("document.body.style.overflow"), "");
+    }
+  }
+  results.push("Mobile menu manages keyboard focus, Escape and scroll restoration");
+  await evaluate("localStorage.setItem('token','ui-test-token');localStorage.setItem('role','ROLE_USER');localStorage.setItem('username','very-long-account-name-for-responsive-header@example.test')");
+  await go("/");
+  await click(".header-account-trigger");
+  assert.equal(await evaluate("document.querySelector('#account-navigation a[href=\"/admin\"]') === null"), true);
+  assert.equal(await evaluate("document.activeElement.getAttribute('href')"), "/profile");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+  assert.equal(await evaluate("document.activeElement.getAttribute('href')"), "/my-bookings");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await wait("!document.querySelector('#account-navigation')");
+  assert.equal(await evaluate("document.activeElement.className"), "header-account-trigger");
+  results.push("User account menu contains private navigation without admin and supports Tab/Escape");
+  for (const width of [320, 375, 768, 1024, 1440]) {
+    await viewport(width);
+    await click(".header-account-trigger");
+    await check(`Account dropdown ${width}px`);
+    assert.equal(await evaluate("(()=>{const r=document.querySelector('#account-navigation').getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.bottom<=innerHeight})()"), true);
+    if (width === 320) await shot("header-account-mobile");
+    if (width === 1440) await shot("header-account-desktop");
+    await click(".header-account-trigger");
+  }
+  await viewport(375);
+  await click(".header-account-trigger");
+  await click(".header-menu-trigger");
+  assert.equal(await evaluate("document.querySelector('#account-navigation') === null"), true);
+  await click(".header-account-trigger");
+  assert.equal(await evaluate("document.querySelector('#main-navigation').classList.contains('is-open')"), false);
+  await click(".header-backdrop");
+  await wait("!document.querySelector('#account-navigation')");
+  results.push("Account/navigation menus are mutually exclusive and close on backdrop");
+  await click(".header-account-trigger");
+  failLogout = true;
+  await click(".account-dropdown-footer button");
+  await wait("document.querySelector('#account-navigation [role=alert]')");
+  assert.ok(await evaluate("localStorage.getItem('token')"));
+  failLogout = false;
+  await click(".account-dropdown-footer button");
+  await wait("document.querySelector('.header-login') && !document.querySelector('#account-navigation')");
+  assert.equal(await evaluate("localStorage.getItem('token')"), null);
+  results.push("Failed logout retains account with visible error; retry clears auth and closes dropdown");
+  for (const role of ["ADMIN", "ROLE_ADMIN"]) {
+    await evaluate(`localStorage.setItem('token','ui-test-token');localStorage.setItem('role',${JSON.stringify(role)});localStorage.setItem('username','admin@example.test')`);
+    await go("/");
+    await click(".header-account-trigger");
+    assert.equal(await evaluate("document.querySelector('#account-navigation a[href=\"/admin\"]') !== null"), true);
+    await click("#account-navigation a[href='/profile']");
+    await wait("location.pathname === '/profile'");
+    assert.equal(await evaluate("document.querySelector('#account-navigation') === null"), true);
+  }
+  results.push("Both admin role formats expose administration and navigation closes dropdown");
+  await evaluate("localStorage.clear()");
+  await go("/");
+  await viewport(390, 844);
   await go("/tours?difficulty=1");
   assert.equal(
     await evaluate("document.querySelectorAll('.tour-card').length"),
@@ -587,11 +872,11 @@ try {
   await click(".payment-summary .btn");
   await wait("document.querySelector('.payment-row')");
   assert.deepEqual(
-    writes.find((w) => w.path === "/api/payments/momo/start").payload,
+    writes.find((w) => w.path === "/api/payments/vnpay/start").payload,
     { bookingId: 1 },
   );
   await go(
-    "/payment/momo/return?orderId=" +
+    "/payment/vnpay/return?orderId=" +
       paymentOrder +
       "&resultCode=1006&amount=1",
   );
@@ -599,7 +884,7 @@ try {
     "document.querySelector('.payment-summary h2')?.textContent === 'Đã thanh toán'",
   );
   results.push(
-    "MoMo return uses backend result, not redirect amount or status",
+    "VNPAY return uses backend result, not redirect amount or status",
   );
   await go("/my-bookings/1");
   await wait("document.querySelector('.status-confirmed')");
@@ -620,6 +905,26 @@ try {
     "document.querySelectorAll('.chat-message').length === 3 && !document.querySelector('.typing-dots')",
   );
   await shot("chat-mobile");
+  await click(".chat-tour-card .btn");
+  await wait("document.querySelector('.chat-tour-card form')");
+  assert.equal(writes.filter((w) => w.path.endsWith('/confirm') && w.path.includes('booking-drafts')).length, 0);
+  assert.equal(await evaluate("document.querySelector('.chat-tour-card [type=submit]').disabled"), true);
+  await click(".chat-tour-card [type=checkbox]");
+  await evaluate("document.querySelector('.chat-tour-card form').requestSubmit()");
+  await wait("document.querySelector('.chat-tour-card .notice-error')");
+  assert.equal(await evaluate("document.querySelector('.chat-tour-card .btn-outline').disabled"), true);
+  await evaluate("document.querySelector('.chat-tour-card form').requestSubmit()");
+  await wait("document.querySelector('.chat-tour-card a[href=\"/my-bookings/99\"]')");
+  const confirmations = writes.filter((w) => w.path.includes('booking-drafts') && w.path.endsWith('/confirm'));
+  assert.equal(confirmations.length, 2);
+  assert.equal(confirmations[0].path, confirmations[1].path);
+  assert.deepEqual(confirmations[0].payload, confirmations[1].payload);
+  assert.equal(writes.find((w) => w.path === '/api/chat').payload.sessionToken, 'ui-test-session-secret');
+  assert.equal(JSON.stringify(writes.filter((w) => w.path === '/api/chat')).includes('guest@example.test'), false);
+  results.push('Chat quote requires confirmation; uncertain retry reuses draft and keeps contact data out of Gemini');
+  await viewport(320);
+  await check('Chat booking card 320px');
+  await viewport(390, 844);
   await set("#page-message", "Cần mang gì?");
   await evaluate("document.querySelector('.chat-composer').requestSubmit()");
   await wait(
@@ -678,7 +983,9 @@ try {
   await shot("guides-admin-desktop");
   await go("/admin/tours/ta-nang-phan-dung");
   await click(".segmented-tabs button:nth-child(2)");
-  await click(".admin-item-list .btn");
+  await evaluate(
+    "[...document.querySelectorAll('.admin-item-list button')].find(b => b.textContent.includes('Phân công')).click()",
+  );
   await wait("document.querySelector('dialog select')");
   await set("dialog select", "HDV_01");
   failAssignment = true;
@@ -913,6 +1220,202 @@ try {
     await go("/");
     await check("Home width " + width);
   }
+  await evaluate(
+    "localStorage.setItem('token','ui-test-token');localStorage.setItem('role','ROLE_USER');localStorage.setItem('username','traveler@example.test')",
+  );
+  await go("/profile");
+  await check("Profile desktop");
+  await set("input[autocomplete=name]", "Khách cập nhật");
+  await evaluate("document.querySelector('form').requestSubmit()");
+  await wait("document.querySelector('.notice-success')");
+  assert.equal(
+    writes.find((w) => w.path === "/api/account" && w.method === "PUT").payload
+      .fullName,
+    "Khách cập nhật",
+  );
+  await viewport(390, 844);
+  await check("Profile mobile");
+  await go("/planner");
+  await check("Planner empty mobile");
+  await set("[name=destination]", "Lâm Đồng");
+  await set("[name=startDate]", future);
+  await evaluate("document.querySelector('form').requestSubmit()");
+  await wait("document.querySelectorAll('.planner-days > li').length === 2");
+  assert.equal(writes.find((w) => w.path === "/api/plans").payload.days, 2);
+  await check("Planner result mobile");
+  await shot("planner-mobile");
+  await viewport(1440);
+  await check("Planner result desktop");
+  await go("/planner");
+  await click(".planner-saved .text-btn");
+  await wait("document.querySelector('.planner-days')");
+  results.push("Saved planner can be reopened after reload");
+  await click(".planner-saved .icon-btn");
+  await wait("document.querySelector('dialog[open]')");
+  await evaluate(
+    "document.querySelector('dialog .payment-actions .btn:not(.btn-outline)').click()",
+  );
+  await wait(
+    "!document.querySelector('dialog[open]') && !document.querySelector('.planner-saved li')",
+  );
+  results.push("Planner delete requires confirmation");
+  bookings[0].status = "COMPLETED";
+  bookings[0].returnDate = new Date(Date.now() - 86400000 * 2)
+    .toISOString()
+    .slice(0, 10);
+  await go("/my-bookings/1");
+  await wait("document.querySelector('.review-section textarea')");
+  await set(".review-section textarea", "Trải nghiệm kiểm thử tốt.");
+  await evaluate(
+    "document.querySelector('.review-section form').requestSubmit()",
+  );
+  await wait("document.querySelector('.review-section [role=status]')");
+  await go("/tours/ta-nang-phan-dung");
+  await wait("document.querySelector('.review-item')");
+  assert.ok(
+    (
+      await evaluate("document.querySelector('.review-item').textContent")
+    ).includes("Trải nghiệm kiểm thử tốt."),
+  );
+  results.push("Completed booking review appears on public tour");
+  await evaluate("localStorage.setItem('role','ROLE_ADMIN')");
+  await go("/admin/tours/ta-nang-phan-dung");
+  await click(".tour-settings .payment-actions button:first-child");
+  await wait("document.querySelector('.tour-settings form')");
+  await set(".tour-settings input", "Tên tour đã cập nhật");
+  await evaluate(
+    "document.querySelector('.tour-settings form').requestSubmit()",
+  );
+  await wait(
+    "document.querySelector('h1')?.textContent === 'Tên tour đã cập nhật'",
+  );
+  results.push("Admin updates tour through protected API");
+  await click(".tour-settings .payment-actions button:last-child");
+  await wait("document.querySelector('dialog[open]')");
+  await evaluate(
+    "document.querySelector('dialog .payment-actions .btn:not(.btn-outline)').click()",
+  );
+  await wait(
+    "document.querySelector('.tour-settings')?.textContent.includes('đã ngừng mở bán')",
+  );
+  await go("/admin/tours/ta-nang-phan-dung");
+  await wait(
+    "document.querySelector('.tour-settings')?.textContent.includes('đã ngừng mở bán')",
+  );
+  results.push("Inactive tour remains accessible in admin detail");
+  await evaluate(
+    "document.querySelectorAll('.segmented-tabs button')[1].click()",
+  );
+  await evaluate(
+    "[...document.querySelectorAll('.admin-item-list button')].find(b=>b.textContent.includes('Sửa lịch')).click()",
+  );
+  await wait("document.querySelector('dialog [name=status]')");
+  await set("dialog [name=status]", "CLOSED");
+  await evaluate("document.querySelector('dialog form').requestSubmit()");
+  await wait(
+    "!document.querySelector('dialog[open]') && document.querySelector('.admin-item-list')?.textContent.includes('Đã đóng')",
+  );
+  results.push("Admin closes departure through protected API");
+  bookings[0].status = "CONFIRMED";
+  await go("/admin/bookings/1");
+  await evaluate(
+    "[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Xác nhận đã hoàn thành')).click()",
+  );
+  await wait("document.querySelector('.status-completed')");
+  results.push("Admin confirms completed trip");
+  await evaluate("localStorage.setItem('role','ROLE_USER')");
+  await go("/profile");
+  await set("input[autocomplete=current-password]", "old-test-password");
+  await evaluate(
+    "document.querySelectorAll('input[autocomplete=new-password]').forEach(e=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'new-test-password');e.dispatchEvent(new Event('input',{bubbles:true}));})",
+  );
+  await evaluate("document.querySelectorAll('form')[1].requestSubmit()");
+  await wait("location.pathname === '/login'");
+  assert.equal(await evaluate("localStorage.getItem('token')"), null);
+  results.push("Password change clears local session and redirects to login");
+  await evaluate(
+    "localStorage.setItem('token','ui-test-token');localStorage.setItem('role','ROLE_USER');localStorage.setItem('username','traveler@example.test')",
+  );
+  bookings[0].status = "PENDING";
+  bookings[0].departureDate = future;
+  paymentHistory = [];
+  participation = {
+    ...participation,
+    status: "INCOMPLETE",
+    editable: true,
+    numberOfPax: 1,
+  };
+  await go("/my-bookings/1");
+  await wait("document.querySelector('.health-person input')");
+  assert.equal(
+    await evaluate("document.querySelector('.payment-summary .btn').disabled"),
+    true,
+  );
+  await set(".health-person input", "Synthetic traveller");
+  await set(".health-person select", "PRIVATE");
+  await set(".health-person .form-row input", "Synthetic contact");
+  await set(".health-person input[type=tel]", "0900000000");
+  await click(".health-person input[type=checkbox]");
+  await evaluate(
+    "document.querySelector('.health-panel form').requestSubmit()",
+  );
+  await wait(
+    "document.querySelector('.health-panel [role=status]')?.textContent.includes('Chờ người')",
+  );
+  await viewport(390, 844);
+  await check("Participation mobile");
+  await shot("participation-mobile");
+  results.push(
+    "Unreviewed declaration blocks checkout UI and submits private participant data",
+  );
+  await evaluate("localStorage.setItem('role','ROLE_ADMIN')");
+  await go("/admin/bookings/1");
+  await wait("document.querySelector('.health-panel .payment-actions button')");
+  await click(".health-panel .payment-actions button");
+  await set("dialog textarea","Private coordination confirmed");
+  await click("dialog .btn");
+  await wait(
+    "document.querySelector('.health-panel [role=status]')?.textContent.includes('Đã hoàn tất')",
+  );
+  await evaluate("localStorage.setItem('role','ROLE_USER')");
+  await go("/my-bookings/1");
+  assert.equal(
+    await evaluate("document.querySelector('.payment-summary .btn').disabled"),
+    false,
+  );
+  results.push("Admin participation review unlocks payment after confirmation");
+  await wait("document.querySelector('.health-panel').textContent.includes('Private coordination confirmed')");
+  results.push("Owner sees the private review note after admin confirmation");
+  tours[0].adventureProfile = {
+    distanceKm: 12,
+    maxAltitudeM: 260,
+    totalAscentM: 180,
+    activeHoursPerDay: 6,
+    medicalAccessHours: 2.5,
+    medicalAccessNotes: "Synthetic estimate, not operational",
+    sourceNote: "UI fixture only",
+    verifiedOn: "2026-01-01",
+    customersPerGuide: 4,
+  };
+  await go("/tours/ta-nang-phan-dung");
+  await wait("document.querySelector('.adventure-summary svg')");
+  await viewport(320, 844);
+  await check("Tour Summary 320px");
+  await evaluate(
+    "document.querySelector('.adventure-summary').scrollIntoView({block:'start'})",
+  );
+  await shot("tour-summary-mobile");
+  await viewport(1440);
+  await check("Tour Summary desktop");
+  await evaluate("window.scrollTo(0, 700)");
+  await pause(150);
+  assert.equal(await evaluate("Math.round(document.querySelector('.site-header').getBoundingClientRect().top)"), 0);
+  assert.equal(await evaluate("parseFloat(getComputedStyle(document.querySelector('.booking-summary')).top) > document.querySelector('.site-header').getBoundingClientRect().height"), true);
+  results.push("Sticky header reserves space above the tour booking summary");
+  await evaluate(
+    "document.querySelector('.adventure-summary').scrollIntoView({block:'start'})",
+  );
+  await shot("tour-summary-desktop");
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify(

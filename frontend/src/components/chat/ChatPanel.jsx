@@ -24,6 +24,7 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
   }
   return (
     <div className={'chat-panel' + (compact ? ' compact' : '')}>
+      <button className="btn btn-small btn-outline" disabled={loading} onClick={() => window.dispatchEvent(new Event('chat:reset'))}>Cuộc trò chuyện mới</button>
       <div
         className="chat-messages"
         ref={list}
@@ -86,7 +87,7 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
       {!compact && (
         <p className="chat-disclaimer">
           Thông tin từ AI có thể chưa chính xác. Hãy xác nhận lịch khởi hành và yêu cầu an toàn
-          trước khi đặt tour.
+          trước khi đặt tour. Không nhập bệnh sử hoặc thông tin liên hệ riêng tư vào chat.
         </p>
       )}
     </div>

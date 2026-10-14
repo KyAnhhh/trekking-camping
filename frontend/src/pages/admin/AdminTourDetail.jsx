@@ -9,6 +9,8 @@ import TourTimeline from "../../components/tour/TourTimeline";
 import TourImageManager from "../../components/tour/TourImageManager";
 import GuideAssignment from "../../components/tour/GuideAssignment";
 import GuideTeam from "../../components/tour/GuideTeam";
+import TourSettings from "../../components/tour/TourSettings";
+import ScheduleEditor from "../../components/tour/ScheduleEditor";
 import {
   dateLabel,
   duration,
@@ -29,28 +31,13 @@ export default function AdminTourDetail() {
   const { slug } = useParams();
   const [tab, setTab] = useState("itineraries");
   const [assigning, setAssigning] = useState(null);
+  const [editingSchedule, setEditingSchedule] = useState(null);
   const [forms, setForms] = useState(initial);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [success, setSuccess] = useState("");
   const loader = useCallback(async () => {
-    const tour = (await tourApi.getTourBySlug(slug)).data.data;
-    const results = await Promise.allSettled([
-      tourApi.getItineraries(tour.id),
-      tourApi.getSchedules(tour.id),
-      tourApi.getGears(tour.id),
-    ]);
-    return {
-      tour,
-      ...Object.fromEntries(
-        ["itineraries", "schedules", "gears"].map((key, index) => [
-          key,
-          results[index].status === "fulfilled"
-            ? results[index].value.data.data
-            : null,
-        ]),
-      ),
-    };
+    return (await tourApi.adminDetail(slug)).data.data;
   }, [slug]);
   const { data, loading, error: loadError, reload } = useResource(loader);
   function update(event) {
@@ -128,10 +115,25 @@ export default function AdminTourDetail() {
             người
           </p>
         </div>
-        <Link className="btn btn-outline" to={"/tours/" + slug}>
-          Xem trên website <ArrowUpRight size={17} />
-        </Link>
+        {tour.isActive && (
+          <Link className="btn btn-outline" to={"/tours/" + slug}>
+            Xem trên website <ArrowUpRight size={17} />
+          </Link>
+        )}
       </header>
+      <TourSettings
+        key={tour.updatedAt || tour.id}
+        tour={tour}
+        onSaved={reload}
+      />
+      {editingSchedule && (
+        <ScheduleEditor
+          tourId={tour.id}
+          schedule={editingSchedule}
+          onSaved={reload}
+          onClose={() => setEditingSchedule(null)}
+        />
+      )}
       <div className="segmented-tabs" aria-label="Nhóm thông tin tour">
         {tabs.map(([key, label]) => (
           <button
@@ -183,6 +185,16 @@ export default function AdminTourDetail() {
                       members={item.guides}
                       legacyName={item.guideName}
                     />
+                    {item.departureDate > todayInVietnam() &&
+                      item.status !== "CANCELLED" && (
+                        <button
+                          className="btn btn-small btn-outline"
+                          disabled={busy}
+                          onClick={() => setEditingSchedule(item)}
+                        >
+                          Sửa lịch
+                        </button>
+                      )}
                     {item.departureDate > todayInVietnam() &&
                       item.status !== "CANCELLED" && (
                         <button

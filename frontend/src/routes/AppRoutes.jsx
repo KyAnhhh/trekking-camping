@@ -5,10 +5,16 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import ClientLayout from "../layouts/ClientLayout";
 import Home from "../pages/client/Home";
 const Login = lazy(() => import("../pages/auth/Login"));
+const Profile = lazy(() => import("../pages/client/Profile"));
+const Planner = lazy(() => import("../pages/client/Planner"));
 const Register = lazy(() => import("../pages/auth/Register"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
 const ChatPage = lazy(() => import("../pages/client/ChatPage"));
+const Handbook = lazy(() => import("../pages/client/Handbook"));
+const About = lazy(() => import("../pages/client/About"));
+const Destinations = lazy(() => import("../pages/client/Destinations"));
+const Contact = lazy(() => import("../pages/client/Contact"));
 const TourList = lazy(() => import("../pages/client/TourList"));
 const TourDetail = lazy(() => import("../pages/client/TourDetail"));
 const Booking = lazy(() => import("../pages/client/Booking"));
@@ -46,10 +52,30 @@ export default function AppRoutes() {
         <Route element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="planner"
+            element={
+              <ProtectedRoute>
+                <Planner />
+              </ProtectedRoute>
+            }
+          />
           <Route path="register" element={<Register />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="chat" element={<ChatPage />} />
+          <Route path="handbook" element={<Handbook />} />
+          <Route path="about" element={<About />} />
+          <Route path="destinations" element={<Destinations />} />
+          <Route path="contact" element={<Contact />} />
           <Route path="tours" element={<TourList />} />
           <Route path="tours/:slug" element={<TourDetail />} />
           <Route path="guides/:id" element={<GuideProfile />} />

@@ -1,30 +1,46 @@
-import { useCallback, useContext, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, CalendarDays, ShieldCheck } from 'lucide-react';
-import { AuthContext } from '../../context/AuthContext';
-import { tourApi } from '../../api/tourService';
-import { bookingService } from '../../api/bookingService';
-import useResource from '../../hooks/useResource';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
-import EmptyState from '../../components/common/EmptyState';
-import { dateLabel, duration, errorMessage, isBookable, money } from '../../utils/tour';
+import { useCallback, useContext, useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CalendarDays,
+  ShieldCheck,
+} from "lucide-react";
+import { AuthContext } from "../../context/AuthContext";
+import { tourApi } from "../../api/tourService";
+import { bookingService } from "../../api/bookingService";
+import useResource from "../../hooks/useResource";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import EmptyState from "../../components/common/EmptyState";
+import {
+  dateLabel,
+  duration,
+  errorMessage,
+  isBookable,
+  money,
+} from "../../utils/tour";
 export default function Booking() {
   const { slug } = useParams();
   const [params] = useSearchParams();
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState("");
   const [form, setForm] = useState({
-    contactName: user?.fullName || '',
-    contactEmail: user?.email || '',
-    contactPhone: user?.phone || '',
-    scheduleId: params.get('schedule') || '',
+    contactName: user?.fullName || "",
+    contactEmail: user?.email || "",
+    contactPhone: user?.phone || "",
+    scheduleId: params.get("schedule") || "",
     numberOfPax: 1,
-    specialRequirements: '',
-    medicalConditions: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
+    specialRequirements: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
   });
   const loader = useCallback(async () => {
     const tour = (await tourApi.getTourBySlug(slug)).data.data;
@@ -32,24 +48,32 @@ export default function Booking() {
     return { tour, schedules };
   }, [slug]);
   const { data, loading, error: loadError, reload } = useResource(loader);
-  const update = (e) => setForm((current) => ({ ...current, [e.target.name]: e.target.value }));
+  const update = (e) =>
+    setForm((current) => ({ ...current, [e.target.name]: e.target.value }));
   const openSchedules = (data?.schedules || []).filter(isBookable);
-  const selected = openSchedules.find((schedule) => schedule.id === Number(form.scheduleId));
+  const selected = openSchedules.find(
+    (schedule) => schedule.id === Number(form.scheduleId),
+  );
   const submit = async (event) => {
     event.preventDefault();
     if (busy) return;
     const pax = Number(form.numberOfPax);
-    if (!selected || !Number.isInteger(pax) || pax < 1 || pax > selected.availableSlots) {
-      setError('Chọn lịch khởi hành và số người phù hợp với số chỗ còn lại.');
+    if (
+      !selected ||
+      !Number.isInteger(pax) ||
+      pax < 1 ||
+      pax > selected.availableSlots
+    ) {
+      setError("Chọn lịch khởi hành và số người phù hợp với số chỗ còn lại.");
       return;
     }
     setBusy(true);
-    setError('');
+    setError("");
     try {
       const payload = Object.fromEntries(
         Object.entries(form).map(([key, value]) => [
           key,
-          typeof value === 'string' ? value.trim() : value,
+          typeof value === "string" ? value.trim() : value,
         ]),
       );
       const response = await bookingService.createBooking({
@@ -57,7 +81,7 @@ export default function Booking() {
         scheduleId: selected.id,
         numberOfPax: pax,
       });
-      navigate('/my-bookings/' + response.data.data.id, {
+      navigate("/my-bookings/" + response.data.data.id, {
         replace: true,
         state: { bookingCode: response.data.data.bookingCode },
       });
@@ -83,7 +107,7 @@ export default function Booking() {
   const { tour } = data;
   return (
     <div className="container page-space">
-      <Link className="back-link" to={'/tours/' + slug}>
+      <Link className="back-link" to={"/tours/" + slug}>
         <ArrowLeft size={16} />
         Quay lại chi tiết tour
       </Link>
@@ -104,7 +128,9 @@ export default function Booking() {
               <span className="step-number">1</span> Lịch khởi hành
             </legend>
             {!openSchedules.length && (
-              <div className="notice">Chưa có lịch khởi hành còn chỗ cho tour này.</div>
+              <div className="notice">
+                Chưa có lịch khởi hành còn chỗ cho tour này.
+              </div>
             )}
             <div className="form-grid">
               <label className="field">
@@ -113,12 +139,19 @@ export default function Booking() {
                   required
                   name="scheduleId"
                   value={form.scheduleId}
-                  onChange={(e) => setForm({ ...form, scheduleId: e.target.value, numberOfPax: 1 })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      scheduleId: e.target.value,
+                      numberOfPax: 1,
+                    })
+                  }
                 >
                   <option value="">Chọn lịch khởi hành</option>
                   {openSchedules.map((schedule) => (
                     <option key={schedule.id} value={schedule.id}>
-                      {dateLabel(schedule.departureDate)} · Còn {schedule.availableSlots} chỗ
+                      {dateLabel(schedule.departureDate)} · Còn{" "}
+                      {schedule.availableSlots} chỗ
                     </option>
                   ))}
                 </select>
@@ -183,16 +216,11 @@ export default function Booking() {
               <span className="step-number">3</span> Chuẩn bị cùng bạn
             </legend>
             <div className="form-grid">
-              <label className="field span-2">
-                Lưu ý sức khỏe <span className="optional">Không bắt buộc</span>
-                <textarea
-                  name="medicalConditions"
-                  rows="2"
-                  value={form.medicalConditions}
-                  onChange={update}
-                  placeholder="Những thông tin sức khỏe bạn muốn đơn vị tổ chức lưu ý"
-                />
-              </label>
+              <p className="notice span-2">
+                Sau khi tạo đơn, khai báo riêng tư cho từng người và chờ người
+                phụ trách xem xét trước thanh toán. Không nhập bệnh sử vào yêu
+                cầu chung bên dưới.
+              </p>
               <label className="field">
                 Người liên hệ khẩn cấp
                 <input
@@ -223,11 +251,16 @@ export default function Booking() {
             </div>
           </fieldset>
           <p className="small muted">
-            <ShieldCheck size={16} /> Đơn đặt tour sẽ ở trạng thái chờ xác nhận. Chưa có thanh toán
+            <ShieldCheck size={16} /> Chỗ được giữ tối đa 48 giờ và không quá
+            ngày khởi hành trong khi hoàn tất khai báo/xem xét. Chưa thanh toán
             tại bước này.
           </p>
-          <button className="btn full-width" disabled={busy || !selected} type="submit">
-            {busy ? 'Đang gửi yêu cầu...' : 'Xác nhận đặt tour'}
+          <button
+            className="btn full-width"
+            disabled={busy || !selected}
+            type="submit"
+          >
+            {busy ? "Đang gửi yêu cầu..." : "Xác nhận đặt tour"}
             <ArrowRight size={18} />
           </button>
         </form>
@@ -253,9 +286,17 @@ export default function Booking() {
               <strong>{dateLabel(selected.departureDate)}</strong>
             </div>
           )}
+          {selected?.pickupAt && (
+            <p className="small">
+              Đón {selected.pickupAt.replace("T", " ")} (giờ Việt Nam) ·{" "}
+              {selected.pickupPoint}
+            </p>
+          )}
           <div className="summary-total">
             <span>Tổng dự kiến</span>
-            <strong>{money((tour.pricePerPax || 0) * Number(form.numberOfPax || 0))}</strong>
+            <strong>
+              {money((tour.pricePerPax || 0) * Number(form.numberOfPax || 0))}
+            </strong>
           </div>
           <p className="small muted">
             <Check size={15} /> Giá và chỗ trống được xác nhận khi gửi đơn.

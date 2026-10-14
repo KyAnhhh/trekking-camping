@@ -1,0 +1,84 @@
+.adventure-summary {
+  padding: 32px 0;
+  margin: 24px 0;
+  border-block: 1px solid var(--line);
+}
+.adventure-summary-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+}
+.adventure-summary svg {
+  width: 100%;
+  max-height: 360px;
+}
+.summary-facts {
+  margin: 0;
+}
+.summary-facts > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 1.5fr);
+  gap: 12px;
+  padding: 10px 0;
+}
+.summary-facts dt,
+.summary-metrics dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.summary-facts dd {
+  margin: 0;
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px;
+  padding: 24px 0;
+  border-block: 1px solid var(--line);
+}
+.summary-metrics dd {
+  margin: 8px 0 0;
+  color: var(--forest);
+  font-weight: 700;
+}
+.summary-incomplete,
+.summary-requirements {
+  padding: 24px;
+  background: var(--mist);
+  border-radius: var(--radius);
+}
+.summary-requirements {
+  margin-top: 24px;
+}
+.adventure-summary details {
+  font-size: 13px;
+  color: var(--muted);
+}
+.adventure-summary summary {
+  cursor: pointer;
+}
+.adventure-editor {
+  width: 100%;
+}
+.health-panel {
+  margin-block: 24px;
+}
+.health-person {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+@media (max-width: 700px) {
+  .adventure-summary-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

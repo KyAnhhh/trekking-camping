@@ -2,6 +2,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Compass } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ChatBookingCard from './ChatBookingCard';
+import './chat-booking.css';
 function ChatLink({ href = '', children }) {
   if (href.startsWith('/') && !href.startsWith('//')) return <Link to={href}>{children}</Link>;
   return (
@@ -26,6 +28,12 @@ export default function ChatMessage({ message }) {
             {message.text}
           </ReactMarkdown>
         )}
+        {message.notices?.map((notice, i) => <p className="notice" key={i}>{notice}</p>)}
+        {!!message.sources?.length && <details><summary>Nguồn đã truy xuất</summary>
+          <ul>{message.sources.map((s) => <li key={s.id}>[{s.id}] {s.label} · {s.updatedAt}</li>)}</ul>
+        </details>}
+        {message.tours?.map((tour) => <ChatBookingCard key={tour.scheduleId} tour={tour}
+          suggestedPeople={message.proposal?.scheduleId === tour.scheduleId ? message.proposal.people : 1} />)}
       </div>
     </div>
   );

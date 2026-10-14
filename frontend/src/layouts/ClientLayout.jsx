@@ -9,7 +9,7 @@ export default function ClientLayout() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [pathname]);
   return (
-    <>
+    <div className="client-site">
       <a className="skip-link" href="#main-content">
         Đến nội dung chính
       </a>
@@ -19,6 +19,6 @@ export default function ClientLayout() {
       </main>
       <Footer />
       {pathname !== '/chat' && <ChatWidget />}
-    </>
+    </div>
   );
 }

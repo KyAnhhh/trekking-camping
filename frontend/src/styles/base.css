@@ -528,19 +528,6 @@ p {
 .danger-text {
   color: var(--danger);
 }
-.site-header {
-  background: #fff;
-  border-bottom: 1px solid #edf0e9;
-  position: relative;
-  z-index: 30;
-}
-.nav-shell {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 91px;
-  gap: 25px;
-}
 .brand {
   display: inline-flex;
   align-items: center;
@@ -568,47 +555,6 @@ p {
   letter-spacing: 0.18em;
   font-weight: 500;
   margin-top: 5px;
-}
-.main-nav {
-  display: flex;
-  align-items: center;
-  gap: 26px;
-}
-.main-nav > a {
-  position: relative;
-  padding-block: 12px;
-  font-size: 0.76rem;
-  white-space: nowrap;
-  color: var(--muted);
-}
-.main-nav > a.active {
-  color: var(--forest);
-  font-weight: 600;
-}
-.main-nav > a.active::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 3px;
-  width: 18px;
-  height: 2px;
-  background: var(--forest);
-}
-.nav-account {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-left: 16px;
-}
-.user-label {
-  font-size: 0.75rem;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mobile-toggle {
-  display: none;
 }
 .hero {
   position: relative;

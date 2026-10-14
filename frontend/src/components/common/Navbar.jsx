@@ -1,7 +1,9 @@
-import { useContext, useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
-import { Mountain, Menu, X, ArrowUpRight, LogOut } from "lucide-react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Mountain, Menu, X, UserRound, ChevronDown } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
+import AccountMenu from "./AccountMenu";
+import HeaderNavigation from "./HeaderNavigation";
 
 export function Brand({ admin = false }) {
   return (
@@ -22,78 +24,118 @@ export function Brand({ admin = false }) {
 }
 export default function Navbar() {
   const { user, logout, loggingOut, logoutError } = useContext(AuthContext);
-  const [open, setOpen] = useState(false);
-  const { pathname } = useLocation();
-  useEffect(() => setOpen(false), [pathname]);
+  const [open, setOpen] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
+  const marker = useRef(null);
+  const header = useRef(null);
+  const accountTrigger = useRef(null);
+  const navigationTrigger = useRef(null);
+  const loginLink = useRef(null);
+  const location = useLocation();
+  const identity = user ? `${user.username || user.email}:${user.role}` : null;
+  useEffect(() => setOpen(null), [location.key, identity]);
   useEffect(() => {
-    const close = (event) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
+    if (!('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    observer.observe(marker.current);
+    return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const trigger = open === "account" ? accountTrigger : navigationTrigger;
+    const panel = header.current?.querySelector(
+      open === "account" ? "#account-navigation" : "#main-navigation",
+    );
+    panel?.querySelector("a, button")?.focus();
+    const onKey = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(null);
+      trigger.current?.focus();
+    };
+    const onOutside = (event) => {
+      if (!header.current?.contains(event.target)) setOpen(null);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onOutside);
+    document.addEventListener("focusin", onOutside);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onOutside);
+      document.removeEventListener("focusin", onOutside);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1200px)");
+    const close = () => setOpen(null);
+    media.addEventListener("change", close);
+    return () => media.removeEventListener("change", close);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !window.matchMedia("(max-width: 1200px)").matches) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+
+  const close = () => setOpen(null);
+  const toggle = (name) => setOpen((current) => current === name ? null : name);
+  const handleLogout = async () => {
+    await logout();
+    // On failure the account remains present and the error stays in the dropdown.
+    requestAnimationFrame(() => loginLink.current?.focus());
+  };
   return (
-    <header className="site-header">
-      <div className="container nav-shell">
-        <Brand />
-        <button
-          className="icon-btn mobile-toggle"
-          aria-label={open ? "Đóng menu" : "Mở menu"}
-          aria-controls="main-navigation"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <X /> : <Menu />}
-        </button>
-        <nav
-          id="main-navigation"
-          className={"main-nav" + (open ? " is-open" : "")}
-          aria-label="Điều hướng chính"
-        >
-          <NavLink to="/" end>
-            Trang chủ
-          </NavLink>
-          <NavLink to="/tours">Khám phá tour</NavLink>
-          <NavLink to="/chat">Trợ lý hành trình</NavLink>
-          {user && <NavLink to="/my-bookings">Chuyến đi của tôi</NavLink>}
-          <div className="nav-account">
+    <>
+      <span ref={marker} className="header-scroll-marker" aria-hidden="true" />
+      {open && <div className="header-backdrop" aria-hidden="true" onClick={close} />}
+      <header className={`site-header${open ? " has-open-menu" : ""}${scrolled ? " is-scrolled" : ""}`} ref={header}>
+        <div className="container header-shell">
+          <div onClick={close}><Brand /></div>
+          <HeaderNavigation open={open === "navigation"} onNavigate={close} />
+          <div className="header-actions">
             {user ? (
-              <>
-                {["ROLE_ADMIN", "ADMIN"].includes(user.role) && (
-                  <Link className="btn btn-small btn-outline" to="/admin">
-                    Quản trị <ArrowUpRight size={15} />
-                  </Link>
-                )}
-                <span
-                  className="user-label"
-                  title={user.fullName || user.email}
-                >
-                  {user.fullName || user.email}
-                </span>
+              <div className="header-account">
                 <button
-                  className="btn btn-small btn-outline"
-                  onClick={logout}
-                  disabled={loggingOut}
-                  aria-label="Đăng xuất"
-                  title="Đăng xuất"
+                  ref={accountTrigger}
+                  type="button"
+                  className="header-account-trigger"
+                  aria-label={open === "account" ? "Đóng menu tài khoản" : "Mở menu tài khoản"}
+                  aria-controls="account-navigation"
+                  aria-expanded={open === "account"}
+                  onClick={() => toggle("account")}
+                  onKeyDown={(event) => {
+                    if (event.key === "ArrowDown") {
+                      event.preventDefault();
+                      setOpen("account");
+                    }
+                  }}
                 >
-                  <LogOut size={18} />{" "}
-                  {loggingOut ? "Đang thoát..." : "Đăng xuất"}
+                  <UserRound size={21} aria-hidden="true" />
+                  <ChevronDown size={14} aria-hidden="true" />
                 </button>
-                {logoutError && (
-                  <span role="alert" className="small danger-text">
-                    {logoutError}
-                  </span>
-                )}
-              </>
+                {open === "account" && <AccountMenu user={user} onNavigate={close}
+                  onLogout={handleLogout} loggingOut={loggingOut} logoutError={logoutError} />}
+              </div>
             ) : (
-              <Link className="btn btn-small" to="/login">
-                Đăng nhập <ArrowUpRight size={16} />
+              <Link ref={loginLink} className="header-login" to="/login" onClick={close}
+                state={location.pathname === "/login" ? location.state : { from: location.pathname + location.search }}
+                aria-label="Đăng nhập">
+                <UserRound size={21} aria-hidden="true" /><span>Đăng nhập</span>
               </Link>
             )}
+            <button ref={navigationTrigger} type="button" className="header-menu-trigger"
+              aria-label={open === "navigation" ? "Đóng menu" : "Mở menu"}
+              aria-controls="main-navigation" aria-expanded={open === "navigation"}
+              onClick={() => toggle("navigation")}>
+              {open === "navigation" ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            </button>
           </div>
-        </nav>
-      </div>
-    </header>
+        </div>
+      </header>
+    </>
   );
 }

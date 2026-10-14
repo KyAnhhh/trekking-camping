@@ -21,10 +21,18 @@ export default function Footer() {
             </Link>
             <Link to="/tours?difficulty=1">Dành cho người mới</Link>
             <Link to="/tours?duration=short">Chuyến đi ngắn ngày</Link>
+            <Link to="/destinations">Các điểm đến</Link>
           </div>
           <div>
-            <h3>Đồng hành cùng bạn</h3>
+            <h3>Chuẩn bị hành trình</h3>
             <Link to="/chat">Hỏi trợ lý hành trình</Link>
+            <Link to="/planner">Lập lịch trình</Link>
+            <Link to="/handbook">Cẩm nang trekking</Link>
+          </div>
+          <div>
+            <h3>Thông tin & hỗ trợ</h3>
+            <Link to="/about">Về chúng tôi</Link>
+            <Link to="/contact">Liên hệ</Link>
             <Link to="/my-bookings">Theo dõi đặt tour</Link>
             <Link to="/register">Tạo tài khoản</Link>
           </div>

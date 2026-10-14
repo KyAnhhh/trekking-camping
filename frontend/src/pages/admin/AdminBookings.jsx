@@ -6,6 +6,7 @@ import EmptyState from "../../components/common/EmptyState";
 import { money, dateLabel } from "../../utils/tour";
 const loadBookings = async () => (await bookingService.getAll()).data.data;
 const statuses = {
+  COMPLETED: "Đã hoàn thành",
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
   CANCELLED: "Đã hủy",

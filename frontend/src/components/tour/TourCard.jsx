@@ -1,23 +1,26 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { ArrowUpRight, Clock3, MapPin, Mountain } from 'lucide-react';
 import { duration, formatDifficulty, money, tourImage, landscape } from '../../utils/tour';
 export default function TourCard({ tour }) {
+  const [failedImage, setFailedImage] = useState(null);
+  const source = tourImage(tour);
+  const fallback = !tour.bannerUrl || failedImage === source;
   return (
     <article className="tour-card">
       <Link className="tour-image" to={'/tours/' + tour.slug} tabIndex={-1} aria-hidden="true">
         <img
           loading="lazy"
-          src={tourImage(tour)}
+          src={fallback ? landscape : source}
           alt=""
-          onError={(e) => {
-            if (e.currentTarget.src !== landscape) e.currentTarget.src = landscape;
-          }}
+          decoding="async"
+          onError={() => { if (!fallback) setFailedImage(source); }}
         />
         <span className="image-badge">
           <Mountain size={13} />
           {formatDifficulty(tour.difficultyLevel)}
         </span>
-        {!tour.bannerUrl && <span className="image-credit">Ảnh minh họa</span>}
+        {fallback && <span className="image-credit">Ảnh minh họa</span>}
       </Link>
       <div className="tour-card-body">
         <p className="eyebrow">

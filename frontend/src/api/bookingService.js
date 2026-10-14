@@ -1,6 +1,7 @@
 import axiosClient from "./axiosClient";
 
 export const bookingService = {
+  complete: (id) => axiosClient.post(`/api/admin/bookings/${id}/complete`),
   createBooking: (bookingData) =>
     axiosClient.post("/api/bookings", bookingData),
   getMyBookings: () => axiosClient.get("/api/bookings/my-bookings"),

@@ -31,6 +31,21 @@ export default function TourImportPanel({ onImported }) {
           description: "Mô tả chi tiết",
           requiredGear: "Giày trekking",
           safetyTips: "Đi cùng hướng dẫn viên",
+          adventureProfile: {
+            distanceKm: null,
+            maxAltitudeM: null,
+            totalAscentM: null,
+            activeHoursPerDay: null,
+            medicalAccessHours: null,
+            medicalAccessNotes: null,
+            recommendedMonths: null,
+            pickupNotes: null,
+            assemblyPoint: null,
+            customersPerGuide: null,
+            participationRequirements: null,
+            sourceNote: null,
+            verifiedOn: null,
+          },
         },
         itineraries: [
           {
@@ -50,6 +65,8 @@ export default function TourImportPanel({ onImported }) {
             returnDate: date.toISOString().slice(0, 10),
             availableSlots: 12,
             guideAssignments: [],
+            pickupAt: null,
+            pickupPoint: null,
           },
         ],
         gears: [{ gearName: "Lều", isProvided: true, rentalPrice: 0 }],
@@ -97,6 +114,9 @@ export default function TourImportPanel({ onImported }) {
           title: e.tour.title,
           slug: e.tour.slug,
           schedules: e.schedules?.length || 0,
+          summaryFields: Object.values(e.tour.adventureProfile || {}).filter(
+            (v) => v != null && v !== "",
+          ).length,
         })),
       );
       setFile(selected);
@@ -182,6 +202,7 @@ export default function TourImportPanel({ onImported }) {
                 {preview.map((tour, index) => (
                   <li key={index}>
                     {tour.title} · {tour.slug} · {tour.schedules} lịch khởi hành
+                    {` · ${tour.summaryFields} thông số tổng quan`}
                   </li>
                 ))}
               </ul>

@@ -19,6 +19,8 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import EmptyState from "../../components/common/EmptyState";
 import TourTimeline from "../../components/tour/TourTimeline";
 import GuideTeam from "../../components/tour/GuideTeam";
+import TourReviews from "../../components/tour/TourReviews";
+import TourSummary from "../../components/tour/TourSummary";
 import {
   dateLabel,
   duration,
@@ -121,6 +123,7 @@ export default function TourDetail() {
           ))}
         </div>
       )}
+      <TourSummary tour={tour} />
       <div className="detail-layout">
         <div className="detail-sections">
           {partialError && (
@@ -213,6 +216,12 @@ export default function TourDetail() {
                         {dateLabel(schedule.returnDate)}
                       </strong>
                       <small>Còn {schedule.availableSlots} chỗ</small>
+                      {schedule.pickupAt && (
+                        <small>
+                          Đón {schedule.pickupAt.replace("T", " ")} (giờ Việt
+                          Nam) · {schedule.pickupPoint}
+                        </small>
+                      )}
                       <GuideTeam
                         members={schedule.guides}
                         legacyName={schedule.guideName}
@@ -276,6 +285,7 @@ export default function TourDetail() {
           </p>
         </aside>
       </div>
+      <TourReviews tourId={tour.id} />
     </div>
   );
 }

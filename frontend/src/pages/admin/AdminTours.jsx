@@ -6,13 +6,16 @@ import useResource from "../../hooks/useResource";
 import EmptyState from "../../components/common/EmptyState";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import TourImportPanel from "../../components/tour/TourImportPanel";
+import AdventureFields, {
+  adventurePayload,
+} from "../../components/tour/AdventureFields";
 import {
   duration,
   money,
   formatDifficulty,
   errorMessage,
 } from "../../utils/tour";
-const loadTours = async () => (await tourApi.getAllTours()).data.data;
+const loadTours = async () => (await tourApi.adminList()).data.data;
 const slugify = (text) =>
   text
     .normalize("NFD")
@@ -23,6 +26,7 @@ const slugify = (text) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 export default function AdminTours() {
+  const [adventure, setAdventure] = useState({});
   const { data: tours, loading, error, reload } = useResource(loadTours);
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -68,6 +72,7 @@ export default function AdminTours() {
       ].forEach((key) => {
         payload[key] = Number(payload[key]);
       });
+      payload.adventureProfile = adventurePayload(adventure);
       const response = await tourApi.createTour(payload);
       navigate("/admin/tours/" + (response.data.data?.slug || payload.slug));
     } catch (err) {
@@ -230,6 +235,7 @@ export default function AdminTours() {
                   />
                 </label>
               ))}
+              <AdventureFields value={adventure} onChange={setAdventure} />
             </fieldset>
             <button className="btn" disabled={busy}>
               {busy ? "Đang tạo tour..." : "Tạo tour & bổ sung lịch trình"}
@@ -288,6 +294,13 @@ export default function AdminTours() {
                   <tr key={tour.id}>
                     <td>
                       <strong>{tour.title}</strong>
+                      <span className="small muted">
+                        {" "}
+                        ·{" "}
+                        {tour.isActive === false
+                          ? "Ngừng mở bán"
+                          : "Đang mở bán"}
+                      </span>
                       <small>{tour.location}</small>
                     </td>
                     <td>{duration(tour)}</td>

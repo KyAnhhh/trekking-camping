@@ -14,6 +14,8 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import EmptyState from "../../components/common/EmptyState";
 import Modal from "../../components/common/Modal";
 import BookingGuideTeam from "../../components/tour/BookingGuideTeam";
+import BookingReview from "../../components/tour/BookingReview";
+import ParticipationPanel from "../../components/tour/ParticipationPanel";
 import {
   money,
   dateLabel,
@@ -22,6 +24,7 @@ import {
 } from "../../utils/tour";
 
 const statuses = {
+  COMPLETED: "Đã hoàn thành",
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
   CANCELLED: "Đã hủy",
@@ -119,6 +122,12 @@ export default function BookingDetail({ admin = false }) {
               {statuses[data.booking.status] || data.booking.status}
             </span>
           </header>
+          <ParticipationPanel
+            bookingId={id}
+            admin={admin}
+            bookingStatus={data.booking.status}
+            onSaved={reload}
+          />
           <div className="booking-layout">
             <section className="panel booking-form">
               <h2>Thông tin chuyến đi</h2>
@@ -215,12 +224,23 @@ export default function BookingDetail({ admin = false }) {
                     </p>
                     <button
                       className="btn btn-full"
-                      disabled={busy}
+                      disabled={
+                        busy ||
+                        (!!data.participationStatus &&
+                          data.participationStatus !== "READY")
+                      }
                       onClick={pay}
                     >
                       <CreditCard size={18} />{" "}
                       {busy ? "Đang xử lý..." : "Thanh toán VNPAY Sandbox"}
                     </button>
+                    {data.participationStatus &&
+                      data.participationStatus !== "READY" && (
+                        <p className="notice">
+                          Hoàn tất khai báo và chờ người phụ trách xem xét trước
+                          khi thanh toán.
+                        </p>
+                      )}
                   </>
                 )}
               {data.booking.status === "CONFIRMED" && (
@@ -237,6 +257,17 @@ export default function BookingDetail({ admin = false }) {
                   Xác nhận đơn
                 </button>
               )}
+              {admin &&
+                data.booking.status === "CONFIRMED" &&
+                data.booking.returnDate < todayInVietnam() && (
+                  <button
+                    className="btn btn-full"
+                    disabled={busy}
+                    onClick={() => action(() => bookingService.complete(id))}
+                  >
+                    Xác nhận đã hoàn thành chuyến đi
+                  </button>
+                )}
               {data.canCancel && (
                 <button
                   className="btn btn-outline btn-full"
@@ -254,6 +285,7 @@ export default function BookingDetail({ admin = false }) {
               )}
             </aside>
           </div>
+          {!admin && <BookingReview bookingId={id} />}
         </>
       )}
       {cancelOpen && (

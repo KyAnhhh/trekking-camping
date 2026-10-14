@@ -44,6 +44,16 @@ export const AuthProvider = ({ children }) => {
     window.dispatchEvent(new Event("auth:changed"));
   };
 
+  const updateProfile = (profile) =>
+    setUser((current) => (current ? { ...current, ...profile } : current));
+  const clearSession = () => {
+    ["token", "role", "username"].forEach((key) =>
+      localStorage.removeItem(key),
+    );
+    setUser(null);
+    window.dispatchEvent(new Event("auth:changed"));
+  };
+
   const logout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -69,7 +79,16 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, loading, loggingOut, logoutError }}
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        loggingOut,
+        logoutError,
+        updateProfile,
+        clearSession,
+      }}
     >
       {!loading && children}
     </AuthContext.Provider>

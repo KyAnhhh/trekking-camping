@@ -15,6 +15,10 @@ const bundle = await build({
       export { chatService } from './src/api/chatService.js';
       export { guideService } from './src/api/guideService.js';
       export { adminService } from './src/api/adminService.js';
+      export { accountService } from './src/api/accountService.js';
+      export { plannerService } from './src/api/plannerService.js';
+      export { reviewService } from './src/api/reviewService.js';
+      export { participationService } from './src/api/participationService.js';
       export { formatDifficulty } from './src/utils/tour.js';
     `,
     resolveDir: fileURLToPath(new URL("../", import.meta.url)),
@@ -76,16 +80,76 @@ test("chat carries the server session across turns", async () => {
   await api.chatService.sendMessage(
     "Còn tour nào phù hợp?",
     "session-from-server",
+    "session-secret",
   );
   assert.equal(request.url, "/api/chat");
   assert.deepEqual(JSON.parse(request.data), {
     message: "Còn tour nào phù hợp?",
     sessionId: "session-from-server",
+    sessionToken: "session-secret",
   });
+});
+test("chat sessions and explicit draft confirmation use dedicated endpoints", async () => {
+  await api.chatService.createSession();
+  assert.equal(request.url, "/api/chat/sessions");
+  await api.chatService.history({ sessionId: "session", sessionToken: "secret" });
+  assert.equal(request.url, "/api/chat/history");
+  assert.equal(JSON.parse(request.data).sessionToken, "secret");
+  await api.chatService.prepareBooking({ requestId: "stable-request", scheduleId: 5, people: 2 });
+  assert.equal(request.url, "/api/chat/booking-drafts");
+  assert.deepEqual(JSON.parse(request.data), { requestId: "stable-request", scheduleId: 5, people: 2 });
+  await api.chatService.confirmBooking("stable-request", { confirmed: true, contactName: "Test" });
+  assert.equal(request.url, "/api/chat/booking-drafts/stable-request/confirm");
+  assert.equal(JSON.parse(request.data).confirmed, true);
+});
+test("private participation uses owner paths and explicit admin review revision", async () => {
+  await api.participationService.get(4);
+  assert.equal(request.url, "/api/bookings/4/participation");
+  await api.participationService.submit(4, { revision: 2, people: [] });
+  assert.equal(request.method, "put");
+  assert.equal(JSON.parse(request.data).revision, 2);
+  await api.participationService.review(4, { revision: 3, decision: "READY" });
+  assert.equal(request.url, "/api/admin/bookings/4/participation/review");
+  await api.participationService.remove(4);
+  assert.equal(request.method, "delete");
+});
+
+test("account, planner, reviews and tour management preserve ownership-oriented API paths", async () => {
+  await api.accountService.me();
+  assert.equal(request.url, "/api/account");
+  await api.accountService.update({ fullName: "Traveler", phone: "" });
+  assert.equal(request.method, "put");
+  await api.accountService.changePassword({
+    currentPassword: "old",
+    newPassword: "new",
+  });
+  assert.equal(request.url, "/api/account/password");
+  await api.plannerService.generate({ destination: "Da Lat", days: 2 });
+  assert.equal(request.url, "/api/plans");
+  assert.equal(request.timeout, 110000);
+  await api.plannerService.get(7);
+  assert.equal(request.url, "/api/plans/7");
+  await api.plannerService.remove(7);
+  assert.equal(request.method, "delete");
+  await api.reviewService.list(3, 2);
+  assert.equal(request.url, "/api/tours/3/reviews");
+  assert.equal(request.params.page, 2);
+  await api.reviewService.create(7, { rating: 5, comment: "Good" });
+  assert.equal(request.url, "/api/bookings/7/review");
+  await api.bookingService.complete(7);
+  assert.equal(request.url, "/api/admin/bookings/7/complete");
+  await api.tourApi.adminList();
+  assert.equal(request.url, "/api/admin/tours");
+  await api.tourApi.setActive(3, false);
+  assert.deepEqual(JSON.parse(request.data), { active: false });
+  await api.tourApi.updateSchedule(3, 9, { status: "CLOSED" });
+  assert.equal(request.url, "/api/admin/tours/3/schedules/9");
 });
 
 test("guide assignment uses codes and roles; image upload stays multipart", async () => {
-  await api.guideService.importGuides(new Blob(["[]"], { type: "application/json" }));
+  await api.guideService.importGuides(
+    new Blob(["[]"], { type: "application/json" }),
+  );
   assert.equal(request.url, "/api/admin/guides/import");
   assert.equal(request.method, "post");
   assert.ok(request.data instanceof FormData);

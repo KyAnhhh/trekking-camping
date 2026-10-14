@@ -1,0 +1,9 @@
+.chat-tour-card { margin-block: 1rem; padding: 1rem; border: 1px solid #cbdad2; border-radius: 12px; background: #f8fbf9; color: #173a2d; overflow-wrap: anywhere; }
+.chat-tour-card p { margin-block: .6rem; font-size: .875rem; }
+.chat-tour-card input:not([type=checkbox]) { width: 100%; min-width: 0; box-sizing: border-box; }
+.chat-tour-card fieldset { border: 0; padding: 0; min-width: 0; }
+.chat-tour-card .btn { margin-top: .5rem; white-space: normal; }
+.chat-booking-actions { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; }
+.chat-booking-actions label { max-width: 100px; }
+.chat-tour-card .check-field { display: flex; align-items: start; gap: .5rem; margin-block: .75rem; }
+.chat-tour-card .check-field input { flex: none; margin-top: .3rem; }

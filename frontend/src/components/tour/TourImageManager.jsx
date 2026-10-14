@@ -8,7 +8,7 @@ import Modal from "../common/Modal";
 
 export default function TourImageManager({ tourId, onChanged }) {
   const loader = useCallback(
-    async () => (await tourApi.getImages(tourId)).data.data,
+    async () => (await tourApi.adminImages(tourId)).data.data,
     [tourId],
   );
   const {

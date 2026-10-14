@@ -7,6 +7,7 @@ import TourCard from '../../components/tour/TourCard';
 import TourFilter from '../../components/tour/TourFilter';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Reveal from '../../components/common/Reveal';
 const loadTours = async () => (await tourApi.getAllTours()).data.data;
 export default function TourList() {
   const { data, loading, error, reload } = useResource(loadTours);
@@ -80,6 +81,10 @@ export default function TourList() {
           )}
         </>
       )}
+      <Reveal className="destination-guidance">
+        <div><p className="eyebrow">CHỌN TOUR CÓ CHUẨN BỊ</p><h2>Đọc kỹ trước khi chọn ngày.</h2></div>
+        <div><p>So sánh thời gian vận động, quãng đường và yêu cầu tham gia trong tổng quan từng tour. Giá trong danh sách là thông tin tham khảo của tour; lịch và chi phí hiện tại được kiểm tra khi đặt.</p><div className="content-links"><Link className="text-link" to="/handbook">Cẩm nang trekking <ArrowUpRight size={16} /></Link><Link className="text-link" to="/destinations">Khám phá theo điểm đến <ArrowUpRight size={16} /></Link></div></div>
+      </Reveal>
     </div>
   );
 }

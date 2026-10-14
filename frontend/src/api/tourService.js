@@ -1,6 +1,15 @@
 import axiosClient from "./axiosClient";
 
 export const tourApi = {
+  adminList: () => axiosClient.get("/api/admin/tours"),
+  adminDetail: (slug) =>
+    axiosClient.get(`/api/admin/tours/${encodeURIComponent(slug)}`),
+  update: (id, data) => axiosClient.put(`/api/admin/tours/${id}`, data),
+  setActive: (id, active) =>
+    axiosClient.put(`/api/admin/tours/${id}/active`, { active }),
+  updateSchedule: (tourId, id, data) =>
+    axiosClient.put(`/api/admin/tours/${tourId}/schedules/${id}`, data),
+  adminImages: (id) => axiosClient.get(`/api/admin/tours/${id}/images`),
   importTours: (file) => {
     const data = new FormData();
     data.append("file", file);
