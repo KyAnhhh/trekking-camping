@@ -1,95 +1,25 @@
-import { Link } from 'react-router-dom';
-import { Mountain, BookOpen, ArrowUpRight, Users, Plus } from 'lucide-react';
-import { tourApi } from '../../api/tourService';
-import { adminService } from '../../api/adminService';
+﻿import { Link } from 'react-router-dom';
+import { operationsService } from '../../api/operationsService';
 import useResource from '../../hooks/useResource';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-const loadOverview = async () => {
-  const results = await Promise.allSettled([
-    tourApi.getAllTours(),
-    adminService.getUsers(),
-    adminService.getFiles(),
-  ]);
-  return results.map((result) => (result.status === 'fulfilled' ? result.value.data.data : null));
-};
+import EmptyState from '../../components/common/EmptyState';
+import DashboardCharts from '../../components/admin/DashboardCharts';
+const load = async () => (await operationsService.overview()).data.data;
 export default function Dashboard() {
-  const { data, loading, reload } = useResource(loadOverview);
-  return (
-    <>
-      <header className="admin-page-heading">
-        <div>
-          <p className="eyebrow">TREK & CAMP / QUẢN TRỊ</p>
-          <h1>Một ngày mới, những hành trình mới.</h1>
-          <p className="muted">Chuẩn bị nội dung và thông tin để khách sẵn sàng lên đường.</p>
-        </div>
-        <Link className="btn" to="/admin/tours?create=1">
-          <Plus size={18} />
-          Tạo tour
-        </Link>
-      </header>
-      {loading ? (
-        <LoadingSpinner />
-      ) : (
-        <div className="stats-grid">
-          {[
-            { label: 'Tour đang hiển thị', icon: Mountain, to: '/admin/tours' },
-            { label: 'Tài khoản người dùng', icon: Users, to: '/admin/users' },
-            { label: 'Tài liệu tri thức', icon: BookOpen, to: '/admin/knowledge' },
-          ].map(({ label, icon: Icon, to }, index) => (
-            <Link key={to} to={to} className="stat-card">
-              <Icon size={23} />
-              <strong>{data?.[index]?.length ?? '—'}</strong>
-              <span>
-                {label}
-                <ArrowUpRight size={18} />
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
-      {data?.some((item) => item === null) && (
-        <div role="alert" className="notice notice-error">
-          Một số dữ liệu chưa tải được.{' '}
-          <button className="text-btn" onClick={reload}>
-            Thử lại
-          </button>
-        </div>
-      )}
+  const { data, loading, error, reload } = useResource(load);
+  return <>
+    <header className="admin-page-heading"><div><p className="eyebrow">ĐIỀU HÀNH CHUYẾN ĐI</p><h1>Tổng quan nghiệp vụ.</h1><p className="muted">Ưu tiên các đơn và giao dịch cần xử lý.</p></div><button className="btn btn-outline" onClick={reload} disabled={loading}>Tải lại</button></header>
+    {loading ? <LoadingSpinner /> : error ? <EmptyState error title="Chưa tải được tổng quan" description={error} onRetry={reload} /> : data && <>
+      <div className="stats-grid">{[
+        ['Booking chờ duyệt tham gia', data.awaitingReview, '/admin/bookings?queue=REVIEW_REQUIRED'],
+        ['Giao dịch chưa có kết quả cuối', data.pendingPayments, '/admin/payments?status=PENDING'],
+        ['Giao dịch cần xử lý hoàn tiền', data.refundRequired, '/admin/payments?status=REFUND_REQUIRED'],
+      ].map(([label, count, to]) => <Link className="stat-card" to={to} key={to}><strong>{count}</strong><span>{label} →</span></Link>)}</div>
+      <DashboardCharts data={data} />
       <div className="admin-two-col">
-        <section className="panel">
-          <p className="eyebrow">CHUẨN BỊ MỘT CHUYẾN ĐI</p>
-          <h2>Từ thông tin đến lịch khởi hành</h2>
-          <ol className="task-list">
-            <li>
-              <strong>Tạo thông tin tour</strong>
-              <p>Tên, địa điểm, thời lượng, độ khó và giá mỗi người.</p>
-            </li>
-            <li>
-              <strong>Bổ sung lịch trình & trang bị</strong>
-              <p>Giúp khách hiểu từng ngày và những gì cần mang theo.</p>
-            </li>
-            <li>
-              <strong>Mở lịch khởi hành</strong>
-              <p>Chọn ngày, số chỗ và thông tin hướng dẫn viên.</p>
-            </li>
-          </ol>
-          <Link className="text-link" to="/admin/tours">
-            Quản lý tour <ArrowUpRight size={17} />
-          </Link>
-        </section>
-        <section className="panel green-panel">
-          <BookOpen size={30} strokeWidth={1.4} />
-          <h2>
-            Tri thức tốt.
-            <br />
-            Tư vấn rõ ràng.
-          </h2>
-          <p>Cập nhật tài liệu để trợ lý có thêm thông tin về các chuyến đi và cách chuẩn bị.</p>
-          <Link className="btn btn-lime" to="/admin/knowledge">
-            Mở kho tri thức <ArrowUpRight size={17} />
-          </Link>
-        </section>
+        <section className="panel"><h2>Đánh giá của khách</h2><p>{data.visibleReviews} đang hiển thị · {data.hiddenReviews} đã ẩn</p><Link className="text-link" to="/admin/reviews">Quản lý đánh giá →</Link></section>
+        <section className="panel green-panel"><h2>Tri thức theo tour hiện tại</h2><p>Sau khi sửa tour, lịch trình hoặc trang bị, đồng bộ lại kho tri thức. Chatbot sẽ bỏ qua bản tour có nội dung đã cũ.</p><Link className="btn btn-lime" to="/admin/knowledge">Mở kho tri thức →</Link></section>
       </div>
-    </>
-  );
+    </>}
+  </>;
 }

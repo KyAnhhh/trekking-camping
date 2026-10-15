@@ -3,6 +3,8 @@
   background: #f5f7f2;
 }
 .admin-sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
   position: fixed;
   inset: 0 auto 0 0;
   width: 252px;

@@ -27,6 +27,7 @@ const chatRows = [];
 let chatConfirmAttempts = 0;
 let failLogout = false;
 let reviewsFail = false, emptyTours = false;
+let operationApproved = true, reconcileFailure = false;
 const send = (method, params = {}) =>
   new Promise((resolve, reject) => {
     const callId = ++id;
@@ -285,6 +286,15 @@ function api(request) {
   if (path === "/api/admin/bookings/1/complete") {
     bookings[0].status = "COMPLETED";
     return { data: bookingDetail(bookings[0]) };
+  }
+  if (path === '/api/admin/operations/overview') return { data: { bookings: { PENDING: 1 }, awaitingReview: 1, pendingPayments: 1, refundRequired: 1, successfulAmount: 1200000, refundRequiredAmount: 500000, visibleReviews: 1, hiddenReviews: 0 } };
+  if (path === '/api/admin/operations/bookings') return { data: { items: bookings.map(b => ({ id: b.id, code: b.bookingCode, tour: b.tourTitle, status: b.status, contactName: 'Khách thử', departureDate: b.departureDate, people: b.numberOfPax, amount: b.totalAmount, participationStatus: 'REVIEW_REQUIRED' })), page: 0, totalPages: 1, totalElements: bookings.length } };
+  if (path === '/api/admin/operations/payments') return { data: { items: [{ id: 10, bookingId: 1, bookingCode: 'TEST-001', orderId: 'VN20261015090000abcdefghijklmnopabcdefghijklmnop', method: 'VNPAY_SANDBOX', status: 'PENDING', amount: 1200000, checkoutExpired: true, canReconcile: true }], page: 0, totalPages: 1, totalElements: 1 } };
+  if (path === '/api/admin/operations/payments/10/reconcile') return reconcileFailure ? { status: 503, message: 'Cổng thử nghiệm tạm gián đoạn' } : { data: { id: 10, bookingId: 1, status: 'PENDING' } };
+  if (path === '/api/admin/operations/reviews') return { data: { items: [{ id: 10, bookingId: 1, tour: tours[0].title, author: 'Khách kiểm thử', rating: 2, comment: 'Phản hồi cần kiểm tra', approved: operationApproved }], page: 0, totalPages: 1, totalElements: 1 } };
+  if (path === '/api/admin/operations/reviews/10/visibility') {
+    if (payload.expectedApproved !== operationApproved) return { status: 409, message: 'Đánh giá đã thay đổi' };
+    operationApproved = payload.approved; return { data: { approved: operationApproved } };
   }
   if (path === "/api/admin/tours") return { data: tours };
   if (/^\/api\/admin\/tours\/\d+\/images$/.test(path)) return { data: photos };
@@ -942,11 +952,34 @@ try {
   await go("/admin");
   await check("Admin dashboard desktop");
   await shot("admin-desktop");
+  await go('/admin/payments');
+  assert.ok(!(writes.some(w => w.path.endsWith('/reconcile'))));
+  await click('.booking-card button');
+  await wait('document.querySelector("dialog[open]")');
+  reconcileFailure = true;
+  await click('dialog .btn');
+  await wait('document.querySelector("dialog [role=alert]")');
+  reconcileFailure = false;
+  await click('dialog .btn');
+  await wait('!document.querySelector("dialog") && document.querySelector("[role=status]")?.textContent.includes("chưa ghi nhận")');
+  assert.equal(writes.filter(w => w.path.endsWith('/reconcile')).length, 2);
+  await go('/admin/reviews');
+  await click('.booking-card button');
+  assert.equal(operationApproved, true);
+  await click('dialog .btn');
+  await wait('!document.querySelector("dialog") && document.querySelector(".booking-card button")?.textContent.includes("Hiển thị lại")');
+  assert.equal(operationApproved, false);
+  await click('.booking-card button');
+  await click('dialog .btn');
+  await wait('!document.querySelector("dialog") && document.querySelector(".booking-card button")?.textContent.includes("Ẩn đánh giá")');
+  results.push('Admin reconciliation is explicit, handles errors/pending, and review visibility changes require confirmation');
   for (const path of [
     "/admin/tours",
     "/admin/tours/ta-nang-phan-dung",
     "/admin/users",
     "/admin/bookings",
+    "/admin/payments",
+    "/admin/reviews",
     "/admin/bookings/1",
     "/admin/knowledge",
   ]) {
@@ -1149,6 +1182,8 @@ try {
     "/admin/tours/ta-nang-phan-dung",
     "/admin/users",
     "/admin/bookings",
+    "/admin/payments",
+    "/admin/reviews",
     "/admin/bookings/1",
     "/admin/knowledge",
   ]) {

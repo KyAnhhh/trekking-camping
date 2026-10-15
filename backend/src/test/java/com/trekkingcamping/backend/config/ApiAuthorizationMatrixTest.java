@@ -56,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Real controllers, security chain and JWT signatures; business services and DB are mocked. */
 @WebMvcTest(controllers = {AuthController.class, AccountRecoveryController.class,
+        com.trekkingcamping.backend.module.admin.controller.AdminOperationsController.class,
         com.trekkingcamping.backend.module.user.controller.AccountController.class,
         com.trekkingcamping.backend.module.planner.controller.PlannerController.class,
         com.trekkingcamping.backend.module.review.controller.ReviewController.class,
@@ -73,6 +74,7 @@ class ApiAuthorizationMatrixTest {
     @Autowired MockMvc mvc;
     @Autowired JwtTokenProvider tokens;
     @MockBean UserRepository users;
+    @MockBean com.trekkingcamping.backend.module.admin.service.AdminOperationsService operations;
     @MockBean UserService userService;
     @MockBean com.trekkingcamping.backend.module.user.service.AccountService accountService;
     @MockBean com.trekkingcamping.backend.module.planner.service.PlannerService plannerService;
@@ -106,6 +108,12 @@ class ApiAuthorizationMatrixTest {
 
     static Stream<Arguments> accessMatrix() {
         var endpoints = List.of(
+                new Endpoint("GET", "/api/admin/operations/overview", "ADMIN"),
+                new Endpoint("GET", "/api/admin/operations/bookings", "ADMIN"),
+                new Endpoint("GET", "/api/admin/operations/payments", "ADMIN"),
+                new Endpoint("POST", "/api/admin/operations/payments/1/reconcile", "ADMIN"),
+                new Endpoint("GET", "/api/admin/operations/reviews", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/operations/reviews/1/visibility", "ADMIN"),
                 new Endpoint("POST", "/api/chat/sessions", "PUBLIC"),
                 new Endpoint("POST", "/api/chat/history", "PUBLIC"),
                 new Endpoint("POST", "/api/chat/booking-drafts", "AUTHENTICATED"),

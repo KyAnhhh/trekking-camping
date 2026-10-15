@@ -12,7 +12,12 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BookingRepository extends JpaRepository<Booking, Long> {
+public interface BookingRepository extends JpaRepository<Booking, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Booking> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths={"schedule", "schedule.tour"})
+    org.springframework.data.domain.Page<Booking> findAll(org.springframework.data.jpa.domain.Specification<Booking> spec, org.springframework.data.domain.Pageable pageable);
+    @Query("select b.status, count(b) from Booking b group by b.status")
+    List<Object[]> statusCounts();
+    long countByStatusAndParticipationStatus(String status,String participationStatus);
     @Query("select distinct b.schedule.tour.id from Booking b where b.user.id = :userId and b.status = 'COMPLETED'")
     List<Long> completedTourIds(@Param("userId") Long userId);
     @Query("""

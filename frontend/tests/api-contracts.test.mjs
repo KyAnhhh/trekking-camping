@@ -19,6 +19,7 @@ const bundle = await build({
       export { plannerService } from './src/api/plannerService.js';
       export { reviewService } from './src/api/reviewService.js';
       export { participationService } from './src/api/participationService.js';
+      export { operationsService } from './src/api/operationsService.js';
       export { formatDifficulty } from './src/utils/tour.js';
     `,
     resolveDir: fileURLToPath(new URL("../", import.meta.url)),
@@ -53,6 +54,26 @@ beforeEach(() => {
       config,
     };
   };
+});
+
+test('admin operations use paged filters and explicit state-safe writes', async () => {
+  await api.operationsService.overview();
+  assert.equal(request.url, '/api/admin/operations/overview');
+  await api.operationsService.bookings('REVIEW_REQUIRED', 2);
+  assert.deepEqual(request.params, { queue: 'REVIEW_REQUIRED', page: 2 });
+  await api.operationsService.payments('PENDING', 0);
+  assert.equal(request.url, '/api/admin/operations/payments');
+  assert.deepEqual(request.params, { status: 'PENDING', page: 0 });
+  await api.operationsService.reconcile(42);
+  assert.equal(request.url, '/api/admin/operations/payments/42/reconcile');
+  assert.equal(request.method, 'post');
+  assert.equal(JSON.parse(request.data), null); // No client amount, provider or payment status is trusted.
+  await api.operationsService.reviews('HIDDEN', 1);
+  assert.deepEqual(request.params, { visibility: 'HIDDEN', page: 1 });
+  await api.operationsService.moderate(3, true, false);
+  assert.equal(request.url, '/api/admin/operations/reviews/3/visibility');
+  assert.equal(request.method, 'put');
+  assert.deepEqual(JSON.parse(request.data), { expectedApproved: true, approved: false });
 });
 
 test("auth and booking services use the server paths and preserve booking payload", async () => {

@@ -1,0 +1,88 @@
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 25px;
+  margin-bottom: 25px;
+}
+.dashboard-chart {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.dashboard-chart-heading .eyebrow { font-size: .57rem; margin: 0 0 9px; }
+.dashboard-chart-heading h2 { font-size: 1.2rem; margin: 0; letter-spacing: -.03em; }
+.dashboard-chart-period {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: .6rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.booking-chart-layout { display: flex; align-items: center; gap: 10px; flex: 1; }
+.booking-donut { position: relative; flex: 0 0 42%; min-width: 0; max-width: 240px; }
+.booking-donut svg { display: block; width: 100%; height: auto; }
+.booking-donut circle { transition: opacity .18s ease; }
+.booking-donut circle.is-muted { opacity: .2; }
+.booking-donut-center { position: absolute; inset: 24% 18%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 3px; }
+.booking-donut-center strong { font-family: 'Manrope', sans-serif; font-variant-numeric: tabular-nums; font-size: clamp(1.25rem, 2.4vw, 2.4rem); line-height: 1.1; overflow-wrap: anywhere; }
+.booking-donut-center span { color: var(--muted); font-size: .62rem; }
+.booking-donut-center small { color: var(--forest); font-size: .56rem; }
+.dashboard-chart-legend { list-style: none; padding: 0; margin: 0; flex: 1; min-width: 0; }
+.dashboard-chart-legend a {
+  display: grid;
+  grid-template-columns: 8px 1fr auto 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: .65rem;
+  border-radius: 4px;
+  transition: background .18s ease;
+}
+.dashboard-chart-legend li:last-child a { border-bottom-color: transparent; }
+.dashboard-chart-legend a:hover { background: var(--mist); }
+.dashboard-chart-legend strong { font-variant-numeric: tabular-nums; text-align: right; }
+.dashboard-chart-legend small { display: block; color: var(--muted); font-weight: 400; font-size: .6rem; }
+.chart-swatch { width: 8px; height: 8px; border-radius: 3px; }
+.dashboard-chart-note { padding-top: 20px; margin: auto 0 0; color: var(--muted); font-size: .68rem; line-height: 1.8; }
+.payment-chart-scale { display: flex; justify-content: space-between; gap: 12px; font-size: .62rem; color: var(--muted); font-variant-numeric: tabular-nums; margin: 4px 0 16px; }
+.payment-chart-bars { list-style: none; padding: 0; margin: 0; }
+.payment-chart-bars li + li { margin-top: 26px; }
+.payment-chart-bars a { display: block; border-radius: 5px; }
+.payment-chart-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 11px; font-size: .72rem; }
+.payment-chart-label span { display: flex; align-items: center; gap: 5px; }
+.payment-chart-label strong { font-family: 'Manrope', sans-serif; font-variant-numeric: tabular-nums; font-size: .95rem; overflow-wrap: anywhere; max-width: 100%; }
+.payment-chart-track { height: 25px; border-radius: 5px; overflow: hidden; background: repeating-linear-gradient(to right, transparent 0, transparent calc(25% - 1px), #dce4d7 calc(25% - 1px), #dce4d7 25%), #f3f6f0; }
+.payment-chart-fill { height: 100%; border-radius: 5px; transition: opacity .18s ease; }
+.payment-chart-bars a:hover .payment-chart-fill { opacity: .8; }
+.payment-chart-bars a:focus-visible, .dashboard-chart-legend a:focus-visible { outline: 2px solid var(--forest); outline-offset: 4px; }
+.dashboard-chart-empty { color: var(--muted); font-size: .72rem; margin: 20px 0 0; }
+@media (min-width: 801px) and (max-width: 1280px) {
+  .dashboard-charts { grid-template-columns: 1fr; }
+  .booking-chart-layout { gap: 28px; }
+}
+@media (max-width: 800px) {
+  .dashboard-charts { grid-template-columns: 1fr; gap: 18px; }
+  .booking-donut { flex-basis: 38%; }
+}
+@media (max-width: 480px) {
+  .dashboard-chart-heading { flex-wrap: wrap; margin-bottom: 15px; }
+  .booking-chart-layout { flex-direction: column; }
+  .booking-donut { width: 190px; flex-basis: auto; }
+  .booking-donut-center strong { font-size: 2rem; }
+  .dashboard-chart-legend { width: 100%; }
+  .dashboard-chart-legend a { font-size: .72rem; }
+  .dashboard-chart-legend small { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .booking-donut circle, .dashboard-chart-legend a, .payment-chart-fill { transition: none; }
+}

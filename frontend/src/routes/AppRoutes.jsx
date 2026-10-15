@@ -23,6 +23,8 @@ const BookingDetail = lazy(() => import("../pages/client/BookingDetail"));
 const MomoReturn = lazy(() => import("../pages/client/MomoReturn"));
 const VnpayReturn = lazy(() => import("../pages/client/VnpayReturn"));
 const AdminBookings = lazy(() => import("../pages/admin/AdminBookings"));
+const AdminPayments = lazy(() => import("../pages/admin/AdminPayments"));
+const AdminReviews = lazy(() => import("../pages/admin/AdminReviews"));
 const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
 const Dashboard = lazy(() => import("../pages/admin/Dashboard"));
 const AdminTours = lazy(() => import("../pages/admin/AdminTours"));
@@ -136,6 +138,8 @@ export default function AppRoutes() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="guides" element={<AdminGuides />} />
           <Route path="bookings" element={<AdminBookings />} />
+          <Route path="payments" element={<AdminPayments />} />
+          <Route path="reviews" element={<AdminReviews />} />
           <Route path="bookings/:id" element={<BookingDetail admin />} />
           <Route path="knowledge" element={<AdminKnowledge />} />
           <Route path="*" element={<NotFound />} />

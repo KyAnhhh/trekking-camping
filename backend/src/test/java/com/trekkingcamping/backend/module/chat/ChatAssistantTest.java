@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class ChatAssistantTest {
     ChatSessions sessions=mock(ChatSessions.class);ChatService model=mock(ChatService.class);VectorStore vector=mock(VectorStore.class);
     ChatCatalog catalog=mock(ChatCatalog.class);TourRepository tours=mock(TourRepository.class);
-    ChatAssistant assistant=new ChatAssistant(sessions,model,vector,catalog,tours,new ObjectMapper().findAndRegisterModules(),mock(com.trekkingcamping.backend.module.guide.service.GuideChatContext.class));
+    TourKnowledgeContent content=mock(TourKnowledgeContent.class);
+    ChatAssistant assistant=new ChatAssistant(sessions,model,vector,catalog,tours,new ObjectMapper().findAndRegisterModules(),mock(com.trekkingcamping.backend.module.guide.service.GuideChatContext.class),content);
     ChatRequestDto request=new ChatRequestDto();ChatSessions.Turn turn;
     ChatAssistantTest() {
         request.setSessionId("session");request.setSessionToken("secret");request.setMessage("Need a tour");
@@ -25,6 +26,52 @@ class ChatAssistantTest {
         when(sessions.begin(any(),any(),any())).thenReturn(turn);
     }
     @AfterEach void close() { assistant.close(); }
+    @Test void followupRetrievalUsesUserContextAndHistoryIsNotCurrentEvidence() {
+        var previous=new com.trekkingcamping.backend.module.chat.entity.ChatMessage();previous.setSender("USER");previous.setMessage("Tôi muốn đi Bidoup");
+        var bot=new com.trekkingcamping.backend.module.chat.entity.ChatMessage();bot.setSender("BOT");bot.setMessage("Nội dung cũ");
+        turn=new ChatSessions.Turn("session",1,turn.owner(),List.of(previous,bot));when(sessions.begin(any(),any(),any())).thenReturn(turn);
+        request.setMessage("tour đó cần mang gì?");
+        when(model.converse(any(),any(),anyList(),any())).thenAnswer(c->{
+            assertTrue(((String)c.getArgument(0)).contains("không chứng minh nội dung tour còn đúng"));
+            assertTrue(((String)c.getArgument(1)).contains("USER: Tôi muốn đi Bidoup"));return "Chưa có thông tin trang bị";
+        });
+        assistant.chat(request,"owner");
+        verify(vector).similaritySearch(argThat((org.springframework.ai.vectorstore.SearchRequest q)->q.getQuery().contains("Bidoup")));
+    }
+    @Test void staleTourIsExcludedEvenWhenValidTextSourcesExist() {
+        var t=new com.trekkingcamping.backend.module.tour.entity.Tour();t.setId(1L);t.setIsActive(true);
+        when(tours.findById(1L)).thenReturn(Optional.of(t));
+        when(content.snapshot(t)).thenReturn(new TourKnowledgeContent.Snapshot("current","new"));
+        when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenReturn(List.of(
+            new Document("Old itinerary",Map.of("category","TOUR_INFO","tour_id",1,"content_version",TourKnowledgeContent.VERSION,"content_fingerprint","old")),
+            new Document("Equipment advice",Map.of("source_file","guide.txt"))));
+        when(model.converse(any(),any(),anyList(),any())).thenAnswer(c->{
+            String prompt=c.getArgument(1);assertFalse(prompt.contains("Old itinerary"));assertTrue(prompt.contains("Equipment advice"));return "Advice [S1]";
+        });
+        var answer=assistant.chat(request,"owner");assertEquals(1,answer.sources().size());assertTrue(answer.notices().stream().anyMatch(n->n.contains("tour cũ")));
+    }
+    @Test void matchingFingerprintAcceptedButLegacyAndInactiveToursExcluded() {
+        var t=new com.trekkingcamping.backend.module.tour.entity.Tour();t.setId(1L);t.setIsActive(true);
+        when(tours.findById(1L)).thenReturn(Optional.of(t));when(content.snapshot(t)).thenReturn(new TourKnowledgeContent.Snapshot("current","hash"));
+        when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenReturn(List.of(
+            new Document("valid",Map.of("category","TOUR_INFO","tour_id",1,"content_version",TourKnowledgeContent.VERSION,"content_fingerprint","hash")),
+            new Document("legacy",Map.of("category","TOUR_INFO","tour_id",1,"tour_updated_at","old")),
+            new Document("deleted",Map.of("category","TOUR_INFO","tour_id",2))));
+        when(model.converse(any(),any(),anyList(),any())).thenReturn("Answer [S1]");
+        assertEquals(1,assistant.chat(request,"owner").sources().size());verify(content,times(1)).snapshot(t);
+        t.setIsActive(false);when(model.converse(any(),any(),anyList(),any())).thenReturn("Chưa có nguồn hiện tại");
+        assertTrue(assistant.chat(request,"owner").sources().isEmpty());
+    }
+    @Test void invalidSearchCannotReuseEarlierOptionsOrProposal() {
+        when(catalog.search(any(),eq(12L))).thenReturn(List.of(option()));
+        when(model.converse(any(),any(),anyList(),any())).thenAnswer(c->{
+            BiFunction<String,Map<String,Object>,Object> tool=c.getArgument(3);
+            tool.apply("search_tours",Map.of("people",2));tool.apply("propose_booking",Map.of("scheduleId",2,"people",2));
+            tool.apply("search_tours",Map.of("people",-1));
+            assertTrue(((Map<?,?>)tool.apply("propose_booking",Map.of("scheduleId",2,"people",2))).containsKey("error"));return "Hỏi lại số người";
+        });
+        var answer=assistant.chat(request,"owner");assertTrue(answer.tours().isEmpty());assertNull(answer.proposal());
+    }
     ChatCatalog.Option option() { return new ChatCatalog.Option(1L,2L,"Real tour","/tours/real",LocalDate.now().plusDays(4),LocalDate.now().plusDays(5),BigDecimal.TEN,3,1,false,null); }
     @Test void retrievalFailureIsVisibleAndDoesNotPreventAnswerOrInventSources() {
         when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenThrow(new IllegalStateException());

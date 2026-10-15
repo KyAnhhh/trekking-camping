@@ -6,7 +6,7 @@ Triển khai ngày 11/10/2026, tái sử dụng PgVector, embedding cục bộ, 
 
 1. Sao lưu DB và xem `docs/sql/chat-assistant.sql`. Hai bảng mới `chat_sessions` và `chat_booking_drafts` dùng DB hiện có để bảo vệ phiên và chống tạo trùng qua nhiều request/instance. Script chưa chạy. Nếu hệ thống đang dùng `ddl-auto: update`, Hibernate có thể tự tạo bảng khi khởi động; kiểm tra schema trước khi áp dụng SQL. `CREATE TABLE IF NOT EXISTS` không bổ sung constraint còn thiếu vào bảng đã có.
 2. Khởi động lại backend/frontend. Không cần biến môi trường mới; giữ cấu hình Gemini và các biến thanh toán/khai báo hiện có. Model phải hỗ trợ function calling trên GenerateContent. Chưa kiểm tra model/quota/credentials thực tế; kiểm thử mock không xác nhận chúng hoạt động.
-3. Admin đồng bộ tour vào kho tri thức một lần nữa. Document tour được chia đoạn và thêm phiên bản `tour_updated_at`; tài liệu tour cũ không có phiên bản khớp sẽ không được dùng trong luồng chat mới. TXT cũ vẫn dùng được nhưng hiện cảnh báo chưa có ngày nạp.
+3. Admin đồng bộ tour vào kho tri thức một lần nữa. Từ bản nâng cấp 15/10/2026, document tour có `content_version` và `content_fingerprint` SHA-256 của nội dung tour, thông số hành trình, lịch trình và trang bị. Không còn chỉ dựa vào `tour.updatedAt`: sửa bảng con cũng làm bản nạp cũ mất hiệu lực. Bản tour thiếu metadata mới, đã ẩn/xóa hoặc không xác minh được sẽ bị bỏ qua và có notice, kể cả khi vẫn tìm thấy TXT. Giá/chỗ/lịch mở bán lấy từ DB hiện tại. TXT nhập tay không có liên kết tour tự động nên vẫn cần kiểm tra nội dung thủ công; ngày nạp không chứng minh tính cập nhật.
 4. Tạo cuộc trò chuyện mới. Phiên cũ chỉ có sessionId không còn được endpoint chat mới chấp nhận. Không tự nhận quyền sở hữu lịch sử cũ.
 
 ## Luồng thực hiện
