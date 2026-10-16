@@ -12,7 +12,7 @@ import static org.mockito.Mockito.*;
 
 class GuideImportTest {
     GuideRepository repository = mock(GuideRepository.class);
-    GuideService guides = new GuideService(repository, null, null, null, null, null);
+    GuideService guides = new GuideService(repository, null, null, null, null, null, org.mockito.Mockito.mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class));
     GuideImportService importer = new GuideImportService(new ObjectMapper(), repository, guides);
     String valid = "{\"code\":\"HDV_01\",\"fullName\":\"Guide Test\",\"experienceSince\":2020,\"active\":true}";
     MockMultipartFile file(String text) { return new MockMultipartFile("file", "guides.json", "application/json", text.getBytes(StandardCharsets.UTF_8)); }

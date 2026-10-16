@@ -83,13 +83,13 @@ public class UserService {
 
     public List<UserResponseDto> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(this::mapToDto)
+                .map(UserService::mapToDto)
                 .toList();
     }
 
-    private UserResponseDto mapToDto(User user) {
+    static UserResponseDto mapToDto(User user) {
         String roleName = user.getRole() != null ? user.getRole().getName() : "ROLE_USER";
-        return new UserResponseDto(
+        UserResponseDto response = new UserResponseDto(
                 user.getId(),
                 user.getEmail(),
                 user.getEmail(),
@@ -98,5 +98,8 @@ public class UserService {
                 roleName,
                 user.getCreatedAt()
         );
+        response.setActive(Boolean.TRUE.equals(user.getIsActive()));
+        response.setUpdatedAt(user.getUpdatedAt());
+        return response;
     }
 }

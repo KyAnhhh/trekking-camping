@@ -56,6 +56,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Real controllers, security chain and JWT signatures; business services and DB are mocked. */
 @WebMvcTest(controllers = {AuthController.class, AccountRecoveryController.class,
+        com.trekkingcamping.backend.module.notification.controller.NotificationController.class,
+        com.trekkingcamping.backend.module.guide.controller.GuideWorkspaceController.class,
+        com.trekkingcamping.backend.module.guide.controller.GuideInvitationController.class,
+        com.trekkingcamping.backend.module.booking.controller.PassengerController.class,
         com.trekkingcamping.backend.module.admin.controller.AdminOperationsController.class,
         com.trekkingcamping.backend.module.user.controller.AccountController.class,
         com.trekkingcamping.backend.module.planner.controller.PlannerController.class,
@@ -74,6 +78,11 @@ class ApiAuthorizationMatrixTest {
     @Autowired MockMvc mvc;
     @Autowired JwtTokenProvider tokens;
     @MockBean UserRepository users;
+    @MockBean com.trekkingcamping.backend.module.user.service.AdminUserService adminUsers;
+    @MockBean com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
+    @MockBean com.trekkingcamping.backend.module.guide.service.GuideWorkspaceService workspace;
+    @MockBean com.trekkingcamping.backend.module.guide.service.GuideInvitationService invitations;
+    @MockBean com.trekkingcamping.backend.module.booking.service.PassengerService passengers;
     @MockBean com.trekkingcamping.backend.module.admin.service.AdminOperationsService operations;
     @MockBean UserService userService;
     @MockBean com.trekkingcamping.backend.module.user.service.AccountService accountService;
@@ -108,6 +117,29 @@ class ApiAuthorizationMatrixTest {
 
     static Stream<Arguments> accessMatrix() {
         var endpoints = List.of(
+                new Endpoint("GET", "/api/admin/guides/1/invitation", "ADMIN"),
+                new Endpoint("POST", "/api/admin/guides/1/invitation", "ADMIN"),
+                new Endpoint("DELETE", "/api/admin/guides/1/invitation", "ADMIN"),
+                new Endpoint("POST", "/api/guide-invitations/preview", "PUBLIC"),
+                new Endpoint("POST", "/api/guide-invitations/accept", "PUBLIC"),
+                new Endpoint("GET", "/api/bookings/1/passengers", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/bookings/1/passengers", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/bookings/1/passengers/history", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/admin/bookings/1/passengers", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/bookings/1/passengers", "ADMIN"),
+                new Endpoint("GET", "/api/admin/bookings/1/passengers/history", "ADMIN"),
+                new Endpoint("GET", "/api/guide-workspace/trips/1/bookings/1/passengers", "GUIDE"),
+                new Endpoint("GET", "/api/guide-workspace/trips/1/bookings/1/passengers/history", "GUIDE"),
+                new Endpoint("PUT", "/api/guide-workspace/trips/1/bookings/1/passengers/1/attendance", "GUIDE"),
+                new Endpoint("GET", "/api/notifications", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/notifications/unread-count", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/notifications/1/read", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/notifications/read-all", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/guide-workspace/trips", "GUIDE"),
+                new Endpoint("GET", "/api/guide-workspace/trips/1", "GUIDE"),
+                new Endpoint("PUT", "/api/guide-workspace/trips/1/bookings/1/attendance", "GUIDE"),
+                new Endpoint("GET", "/api/admin/guides/1/account", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/guides/1/account", "ADMIN"),
                 new Endpoint("GET", "/api/admin/operations/overview", "ADMIN"),
                 new Endpoint("GET", "/api/admin/operations/bookings", "ADMIN"),
                 new Endpoint("GET", "/api/admin/operations/payments", "ADMIN"),
@@ -179,6 +211,9 @@ class ApiAuthorizationMatrixTest {
                 new Endpoint("POST", "/api/admin/bookings/1/cancel", "ADMIN"),
                 new Endpoint("POST", "/api/admin/bookings/1/confirm", "ADMIN"),
                 new Endpoint("GET", "/api/users", "ADMIN"),
+                new Endpoint("PUT", "/api/users/1", "ADMIN"),
+                new Endpoint("PUT", "/api/users/1/active", "ADMIN"),
+                new Endpoint("DELETE", "/api/users/1?updatedAt=2026-10-15T10:00:00", "ADMIN"),
                 new Endpoint("POST", "/api/tours", "ADMIN"),
                 new Endpoint("POST", "/api/tours/1/itineraries", "ADMIN"),
                 new Endpoint("POST", "/api/tours/1/schedules", "ADMIN"),
@@ -189,7 +224,7 @@ class ApiAuthorizationMatrixTest {
                 new Endpoint("GET", "/api/admin/knowledge/files", "ADMIN"),
                 new Endpoint("DELETE", "/api/admin/knowledge/delete?fileName=guide.txt", "ADMIN")
         );
-        return endpoints.stream().flatMap(endpoint -> Stream.of("ANONYMOUS", "USER", "ADMIN")
+        return endpoints.stream().flatMap(endpoint -> Stream.of("ANONYMOUS", "USER", "ADMIN", "GUIDE")
                 .map(actor -> Arguments.of(endpoint, actor)));
     }
 
@@ -216,13 +251,14 @@ class ApiAuthorizationMatrixTest {
 
         int expected = "PUBLIC".equals(endpoint.access()) ? 200
                 : "ANONYMOUS".equals(actor) ? 401
-                : "ADMIN".equals(endpoint.access()) && !"ADMIN".equals(actor) ? 403 : 200;
+                : "ADMIN".equals(endpoint.access()) && !"ADMIN".equals(actor) ? 403
+                : "GUIDE".equals(endpoint.access()) && !"GUIDE".equals(actor) ? 403 : 200;
         mvc.perform(request).andExpect(status().is(expected));
         if (expected != 200) {
             verifyNoInteractions(userService, tourService, bookingService, chatService,
                     tourIngestion, ingestionService, knowledgeService, bookingManagement, momoPayment,
                     recovery, tourImport, tourImages, imageStorage, guideService, guideImages, guideImport,
-                    accountService, plannerService, planStore, reviewService, tourManagement);
+                    accountService, plannerService, planStore, reviewService, tourManagement, notifications, workspace, adminUsers, invitations, passengers);
         }
         if (expected == 200 && endpoint.path().equals("/api/bookings")) {
             verify(bookingService).createBooking(eq("actor@example.test"), any());

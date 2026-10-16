@@ -54,4 +54,26 @@ public class PasswordResetMailer {
                 + "\n\nNếu bạn không yêu cầu, hãy bỏ qua email này.");
         sender.send(message);
     }
+
+    public void sendGuideInvitation(String email, String token, String guideName) {
+        requireConfigured();
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from); message.setTo(email);
+        message.setSubject("Trek & Camp - Lời mời hướng dẫn viên");
+        message.setText("Bạn được mời quản lý lịch dẫn đoàn cho hồ sơ " + guideName
+                + ". Đặt mật khẩu riêng tại liên kết dưới đây. Liên kết chỉ dùng một lần, có hiệu lực 24 giờ:\n\n"
+                + frontendUrl.replaceAll("/+$", "") + "/guide-invitation#token=" + token
+                + "\n\nNếu bạn không phải người được mời, hãy bỏ qua email này và không chia sẻ liên kết.");
+        sender.send(message);
+    }
+
+    public void sendNotification(String email,String title,String body,String path) {
+        requireConfigured();
+        if(path==null || !path.matches("/(my-bookings/[0-9]+|admin/bookings/[0-9]+|guide-workspace(/[0-9]+)?|notifications)"))
+            throw new IllegalArgumentException("Liên kết thông báo không hợp lệ.");
+        SimpleMailMessage message=new SimpleMailMessage();
+        message.setFrom(from);message.setTo(email);message.setSubject("Trek & Camp - "+title);
+        message.setText(body+"\n\nĐăng nhập để xem chi tiết:\n"+frontendUrl.replaceAll("/+$", "")+path);
+        sender.send(message);
+    }
 }

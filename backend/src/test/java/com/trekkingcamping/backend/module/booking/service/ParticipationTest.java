@@ -24,8 +24,8 @@ class ParticipationTest {
     final TourScheduleRepository schedules=mock(TourScheduleRepository.class);
     final ObjectMapper json=new ObjectMapper();
     final HealthCipher cipher=new HealthCipher(Base64.getEncoder().encodeToString(randomKey()));
-    final ParticipationService service=new ParticipationService(bookings,payments,declarations,audits,users,em,json,cipher);
-    final ParticipationMaintenance maintenance=new ParticipationMaintenance(bookings,payments,schedules,declarations,audits,em);
+    final ParticipationService service=new ParticipationService(bookings,payments,declarations,audits,users,em,json,cipher, org.mockito.Mockito.mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class));
+    final ParticipationMaintenance maintenance=new ParticipationMaintenance(bookings,payments,schedules,declarations,audits,em, org.mockito.Mockito.mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class));
     Booking b; User owner; ParticipationDeclaration stored;
     static byte[] randomKey(){byte[] key=new byte[32];new java.security.SecureRandom().nextBytes(key);return key;}
     @BeforeEach void setup() {

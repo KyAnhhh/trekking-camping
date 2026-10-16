@@ -10,6 +10,13 @@ public class UserResponseDto {
     private String phone;
     private String role;
     private LocalDateTime createdAt;
+    private Boolean active;
+    private LocalDateTime updatedAt;
+
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public UserResponseDto() {
     }

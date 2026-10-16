@@ -15,6 +15,7 @@ import java.util.*;
 
 @Service
 public class ParticipationService {
+    private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
     public record Person(String name,String support,String notes,String emergencyName,String emergencyPhone,Boolean acknowledged) {}
     public record Submission(Long revision,List<Person> people) {}
     public record Review(Long revision,String decision,String note) {
@@ -31,7 +32,8 @@ public class ParticipationService {
     private final ObjectMapper json;
     private final HealthCipher cipher;
     public ParticipationService(BookingRepository bookings,PaymentTransactionRepository payments,ParticipationRepository declarations,
-            ParticipationAuditRepository audits,UserRepository users,EntityManager em,ObjectMapper json,HealthCipher cipher) {
+            ParticipationAuditRepository audits,UserRepository users,EntityManager em,ObjectMapper json,HealthCipher cipher, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this.notifications=notifications;
         this.bookings=bookings; this.payments=payments; this.declarations=declarations; this.audits=audits;
         this.users=users; this.em=em; this.json=json; this.cipher=cipher;
     }
@@ -51,7 +53,9 @@ public class ParticipationService {
         declarations.save(row);
         b.setParticipationRevision(revisionOf(b)+1); b.setParticipationStatus("REVIEW_REQUIRED");
         if(b.getParticipationDeadline()==null) b.setParticipationDeadline(ParticipationGate.deadline(b.getSchedule().getDepartureDate(),48));
-        bookings.save(b); audit(b,user,"SUBMIT"); return view(b,packet);
+        bookings.save(b); audit(b,user,"SUBMIT");
+        notifications.administrators(b,"PARTICIPATION:"+b.getParticipationRevision(),"Có khai báo tham gia chờ duyệt");
+        return view(b,packet);
     }
     @Transactional public View review(String email,Long id,Review input) {
         User user=user(email,true); Booking b=locked(id); mutable(b);
@@ -68,6 +72,9 @@ public class ParticipationService {
         catch(com.fasterxml.jackson.core.JsonProcessingException e) { throw invalid(); }
         declarations.save(row);
         b.setParticipationStatus(input.decision()); b.setParticipationRevision(revisionOf(b)+1);
+        notifications.booking(b,"PARTICIPATION:"+b.getParticipationRevision(),
+            "READY".equals(input.decision())?"Khai báo tham gia đã được duyệt":"Cần xem lại thông tin tham gia",
+            "Vui lòng đăng nhập xem kết quả và hướng dẫn tiếp theo trong chi tiết đơn.");
         if("READY".equals(input.decision())) b.setParticipationDeadline(ParticipationGate.deadline(b.getSchedule().getDepartureDate(),24));
         bookings.save(b); audit(b,user,"REVIEW_"+input.decision()); return view(b,p);
     }

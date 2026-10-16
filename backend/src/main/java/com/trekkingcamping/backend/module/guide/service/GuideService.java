@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class GuideService {
+    private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
     private final GuideRepository guides;
     private final ScheduleGuideRepository assignments;
     private final TourScheduleRepository schedules;
@@ -25,7 +26,8 @@ public class GuideService {
     private final GuideImageStorage images;
     private final jakarta.persistence.EntityManager entityManager;
     public GuideService(GuideRepository guides, ScheduleGuideRepository assignments,
-                        TourScheduleRepository schedules, TourRepository tours, GuideImageStorage images, jakarta.persistence.EntityManager entityManager) {
+                        TourScheduleRepository schedules, TourRepository tours, GuideImageStorage images, jakarta.persistence.EntityManager entityManager, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this.notifications=notifications;
         this.guides = guides; this.assignments = assignments; this.schedules = schedules; this.tours = tours; this.images = images;
         this.entityManager = entityManager;
     }
@@ -84,6 +86,14 @@ public class GuideService {
             next.add(new ScheduleGuide(schedule, g, a.role()));
         }
         assignments.deleteAll(old); assignments.flush(); assignments.saveAll(next);
+        String change=UUID.randomUUID().toString();
+        for(Guide g:locked.values()) {
+            String before=old.stream().filter(a->a.getGuide().getId().equals(g.getId())).map(ScheduleGuide::getRole).findFirst().orElse(null);
+            String after=next.stream().filter(a->a.getGuide().getId().equals(g.getId())).map(ScheduleGuide::getRole).findFirst().orElse(null);
+            if(g.getUser()!=null && !Objects.equals(before,after))
+                notifications.emit(g.getUser(),"assignment:"+scheduleId+":"+change,"Cập nhật phân công hướng dẫn",
+                    after==null?"Bạn đã được gỡ khỏi lịch phân công. Xem lịch làm việc hiện tại.":"Bạn có phân công mới hoặc thay đổi vai trò. Đăng nhập để xem lịch làm việc.","/guide-workspace");
+        }
         // Explicit replacement removes legacy data; old rows are otherwise left untouched.
         schedule.setGuideName(null); schedule.setGuidePhone(null);
         return new Team(next.stream().map(this::member).toList(), null, null);

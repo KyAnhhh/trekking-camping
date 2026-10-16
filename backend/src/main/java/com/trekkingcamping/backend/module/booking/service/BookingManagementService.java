@@ -19,13 +19,15 @@ import java.util.Objects;
 
 @Service
 public class BookingManagementService {
+    private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
     private final BookingRepository bookings;
     private final PaymentTransactionRepository payments;
     private final TourScheduleRepository schedules;
     private final UserRepository users;
 
     public BookingManagementService(BookingRepository bookings, PaymentTransactionRepository payments,
-                                    TourScheduleRepository schedules, UserRepository users) {
+                                    TourScheduleRepository schedules, UserRepository users, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this.notifications=notifications;
         this.bookings = bookings;
         this.payments = payments;
         this.schedules = schedules;
@@ -72,6 +74,7 @@ public class BookingManagementService {
         if ("FULL".equals(schedule.getStatus())) schedule.setStatus("OPEN");
         schedules.save(schedule);
         booking.setStatus("CANCELLED");
+        notifications.booking(booking,"CANCELLED","Đơn đặt tour đã hủy","Xem chi tiết trạng thái đơn trong tài khoản.");
         booking.setUpdatedAt(LocalDateTime.now());
         bookings.save(booking);
         return detail(booking);
@@ -95,6 +98,7 @@ public class BookingManagementService {
             throw conflict("Lịch khởi hành không còn khả dụng.");
         }
         booking.setStatus("CONFIRMED");
+        notifications.booking(booking,"CONFIRMED","Đơn đặt tour đã xác nhận","Vui lòng kiểm tra lịch khởi hành và chuẩn bị trang bị.");
         booking.setUpdatedAt(LocalDateTime.now());
         bookings.save(booking);
         return detail(booking);
@@ -111,6 +115,7 @@ public class BookingManagementService {
             throw conflict("Chỉ hoàn thành đơn đã xác nhận, đủ tiền và đã qua ngày kết thúc tour.");
         }
         booking.setStatus("COMPLETED");
+        notifications.booking(booking,"COMPLETED","Chuyến đi đã hoàn thành","Cảm ơn bạn đã đồng hành. Bạn có thể gửi đánh giá trong chi tiết đơn.");
         booking.setUpdatedAt(LocalDateTime.now());
         bookings.save(booking);
         return detail(booking);

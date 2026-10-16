@@ -18,13 +18,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class BookingLifecycleTest {
+    com.trekkingcamping.backend.module.notification.service.NotificationService notifications = mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class);
     BookingRepository bookings = mock(BookingRepository.class);
     PaymentTransactionRepository payments = mock(PaymentTransactionRepository.class);
     UserRepository users = mock(UserRepository.class);
     TourScheduleRepository schedules = mock(TourScheduleRepository.class);
     jakarta.persistence.EntityManager entityManager = mock(jakarta.persistence.EntityManager.class);
-    MomoPaymentStore store = new MomoPaymentStore(bookings, payments, users, schedules, entityManager);
-    BookingManagementService management = new BookingManagementService(bookings, payments, schedules, users);
+    MomoPaymentStore store = new MomoPaymentStore(bookings, payments, users, schedules, entityManager, notifications);
+    BookingManagementService management = new BookingManagementService(bookings, payments, schedules, users, notifications);
     Booking booking;
     User user;
     TourSchedule schedule;
@@ -81,6 +82,7 @@ class BookingLifecycleTest {
         assertEquals("SUCCESS", history.getFirst().getStatus());
         assertEquals("CONFIRMED", booking.getStatus()); assertEquals(0, schedule.getAvailableSlots());
         verify(bookings, times(1)).save(booking);
+        verify(notifications, times(1)).booking(eq(booking), eq("CONFIRMED"), anyString(), anyString());
         assertStatus(409, () -> management.cancel(user.getEmail(), 1L, false));
     }
 
@@ -141,6 +143,7 @@ class BookingLifecycleTest {
         store.applyResult(second.orderId(), second.amount(), 0, null, null);
         assertEquals("REFUND_REQUIRED", store.applyResult(first.orderId(), first.amount(), 0, null, null).status());
         verify(bookings, times(1)).save(booking);
+        verify(notifications, times(1)).booking(eq(booking), eq("CONFIRMED"), anyString(), anyString());
     }
 
     @Test void reconciledExpiredVnpayCanRetryAndLateSuccessRequiresRefund() {
@@ -155,6 +158,7 @@ class BookingLifecycleTest {
         assertEquals("CONFIRMED", booking.getStatus());
         assertEquals(0, schedule.getAvailableSlots());
         verify(bookings, times(1)).save(booking);
+        verify(notifications, times(1)).booking(eq(booking), eq("CONFIRMED"), anyString(), anyString());
     }
 
     @Test void staleExpiryResultCannotOverwriteCapturedVnpayPayment() {

@@ -22,12 +22,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class BookingService {
+    private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
 
     private final BookingRepository bookingRepository;
     private final TourScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
 
-    public BookingService(BookingRepository bookingRepository, TourScheduleRepository scheduleRepository, UserRepository userRepository) {
+    public BookingService(BookingRepository bookingRepository, TourScheduleRepository scheduleRepository, UserRepository userRepository, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this.notifications=notifications;
         this.bookingRepository = bookingRepository;
         this.scheduleRepository = scheduleRepository;
         this.userRepository = userRepository;
@@ -97,7 +99,10 @@ public class BookingService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return BookingResponseDto.from(bookingRepository.save(booking));
+        booking=bookingRepository.save(booking);
+        notifications.booking(booking,"CREATED","Đã tiếp nhận đơn đặt tour","Vui lòng hoàn tất khai báo tham gia trong thời hạn của đơn. Đơn chưa được xác nhận thanh toán.");
+        notifications.administrators(booking,"CREATED","Có đơn đặt tour mới");
+        return BookingResponseDto.from(booking);
     }
 
     @Transactional(readOnly = true)

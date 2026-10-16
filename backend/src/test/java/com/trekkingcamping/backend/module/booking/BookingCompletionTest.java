@@ -16,7 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 class BookingCompletionTest {
     BookingRepository bookings=mock(BookingRepository.class);PaymentTransactionRepository payments=mock(PaymentTransactionRepository.class);
     TourScheduleRepository schedules=mock(TourScheduleRepository.class);UserRepository users=mock(UserRepository.class);
-    BookingManagementService service=new BookingManagementService(bookings,payments,schedules,users);
+    BookingManagementService service=new BookingManagementService(bookings,payments,schedules,users, org.mockito.Mockito.mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class));
     Booking setup() {
         var u=new User();u.setId(1L);u.setRole(new Role(1,"ROLE_ADMIN"));
         when(users.findByEmail("admin")).thenReturn(Optional.of(u));

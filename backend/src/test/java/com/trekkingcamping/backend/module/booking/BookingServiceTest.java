@@ -24,7 +24,7 @@ class BookingServiceTest {
     private final BookingRepository bookings = mock(BookingRepository.class);
     private final TourScheduleRepository schedules = mock(TourScheduleRepository.class);
     private final UserRepository users = mock(UserRepository.class);
-    private final BookingService service = new BookingService(bookings, schedules, users);
+    private final BookingService service = new BookingService(bookings, schedules, users, org.mockito.Mockito.mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class));
     private BookingRequestDto request;
     private TourSchedule schedule;
     private User user;

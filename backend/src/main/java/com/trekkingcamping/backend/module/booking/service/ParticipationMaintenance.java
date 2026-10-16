@@ -10,10 +10,12 @@ import java.util.Set;
 
 @Service
 public class ParticipationMaintenance {
+    private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
     private final BookingRepository bookings; private final PaymentTransactionRepository payments;
     private final TourScheduleRepository schedules; private final ParticipationRepository declarations;
     private final ParticipationAuditRepository audits; private final EntityManager em;
-    public ParticipationMaintenance(BookingRepository b,PaymentTransactionRepository p,TourScheduleRepository s,ParticipationRepository d,ParticipationAuditRepository a,EntityManager em) {
+    public ParticipationMaintenance(BookingRepository b,PaymentTransactionRepository p,TourScheduleRepository s,ParticipationRepository d,ParticipationAuditRepository a,EntityManager em, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this.notifications=notifications;
         bookings=b; payments=p; schedules=s; declarations=d; audits=a; this.em=em;
     }
     @Transactional public void expire(Long id) {
@@ -24,6 +26,7 @@ public class ParticipationMaintenance {
         s.setAvailableSlots(Math.addExact(s.getAvailableSlots(),b.getNumberOfPax()));
         if("FULL".equals(s.getStatus()))s.setStatus("OPEN"); schedules.save(s);
         b.setStatus("CANCELLED"); b.setUpdatedAt(LocalDateTime.now()); bookings.save(b); audit(id,"HOLD_EXPIRED");
+        notifications.booking(b,"CANCELLED","Đơn đặt tour hết thời hạn giữ chỗ","Đơn đã hủy do quá hạn hoàn tất bước tham gia/thanh toán. Xem chi tiết trong tài khoản.");
     }
     @Transactional public void purge(Long id) {
         var b=bookings.findByIdForUpdate(id).orElse(null); if(b==null)return;

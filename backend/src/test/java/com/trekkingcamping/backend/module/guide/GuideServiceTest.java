@@ -22,7 +22,7 @@ class GuideServiceTest {
     TourRepository tours = mock(TourRepository.class);
     GuideImageStorage images = mock(GuideImageStorage.class);
     EntityManager em = mock(EntityManager.class);
-    GuideService service = new GuideService(guides, assignments, schedules, tours, images, em);
+    GuideService service = new GuideService(guides, assignments, schedules, tours, images, em, org.mockito.Mockito.mock(com.trekkingcamping.backend.module.notification.service.NotificationService.class));
     Guide guide; TourSchedule schedule;
     @BeforeEach void setup() {
         guide = new Guide(); guide.setId(1L); guide.setCode("HDV_01"); guide.setFullName("Hướng dẫn viên thử nghiệm");

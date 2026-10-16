@@ -33,4 +33,13 @@ class PasswordResetMailerTest {
             assertThrows(ResponseStatusException.class, mailer::requireConfigured);
         }
     }
+    @Test void invitationLinkKeepsCredentialInFragmentAndDoesNotContainPassword() {
+        var mailer = new PasswordResetMailer("smtp.example.test",587,"sender@example.test","synthetic-only","sender@example.test","http://localhost:5173");
+        var sender=spy((JavaMailSenderImpl)ReflectionTestUtils.getField(mailer,"sender"));
+        doNothing().when(sender).send(any(SimpleMailMessage.class));ReflectionTestUtils.setField(mailer,"sender",sender);
+        mailer.sendGuideInvitation("guide@example.test","synthetic-invitation-token","Guide test");
+        var message=ArgumentCaptor.forClass(SimpleMailMessage.class);verify(sender).send(message.capture());
+        assertTrue(message.getValue().getText().contains("/guide-invitation#token=synthetic-invitation-token"));
+        assertFalse(message.getValue().getText().contains("?token="));assertFalse(message.getValue().getText().contains("synthetic-only"));
+    }
 }

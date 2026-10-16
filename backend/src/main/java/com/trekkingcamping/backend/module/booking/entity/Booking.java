@@ -22,6 +22,8 @@ import lombok.Setter;
 @Entity
 @Table(name = "bookings", indexes=@Index(name="idx_booking_participation_deadline",columnList="status,participation_deadline"))
 public class Booking {
+    @Column(name="passenger_revision", nullable=false, columnDefinition="bigint default 0")
+    @Builder.Default private Long passengerRevision = 0L;
     // Null denotes a legacy booking created before the participation workflow.
     @Column(name="participation_status") private String participationStatus;
     @Column(name="participation_revision") private Long participationRevision;

@@ -5,6 +5,8 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import java.util.*;
 public interface GuideRepository extends JpaRepository<Guide, Long> {
+    Optional<Guide> findByUserId(Long userId);
+    boolean existsByUserId(Long userId);
     List<Guide> findAllByOrderByFullNameAsc();
     Optional<Guide> findByCode(String code);
     boolean existsByCode(String code);

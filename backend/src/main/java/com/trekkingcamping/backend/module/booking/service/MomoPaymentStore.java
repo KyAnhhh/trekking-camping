@@ -16,6 +16,7 @@ import java.util.*;
 /** Shared payment persistence; legacy class name retained for existing MoMo integration. */
 @Service
 public class MomoPaymentStore {
+    private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
     private static final Set<Integer> FINAL_FAILURES = Set.of(98, 99, 1001, 1002, 1003, 1004,
             1005, 1006, 1007, 1017, 1026, 2019, 4001, 4002, 4100);
     private final BookingRepository bookings;
@@ -27,7 +28,8 @@ public class MomoPaymentStore {
     public record Attempt(Long bookingId, String orderId, long amount, String orderInfo, String status) {}
 
     public MomoPaymentStore(BookingRepository bookings, PaymentTransactionRepository payments,
-                            UserRepository users, TourScheduleRepository schedules, jakarta.persistence.EntityManager entityManager) {
+                            UserRepository users, TourScheduleRepository schedules, jakarta.persistence.EntityManager entityManager, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this.notifications=notifications;
         this.bookings = bookings; this.payments = payments; this.users = users; this.schedules = schedules;
         this.entityManager = entityManager;
     }
@@ -139,6 +141,7 @@ public class MomoPaymentStore {
             payment.setPaidAt(LocalDateTime.now());
             if (fulfill) {
                 booking.setStatus("CONFIRMED");
+                notifications.booking(booking,"CONFIRMED","Thanh toán thành công, đơn đã xác nhận","Cổng thanh toán đã được đối soát. Kiểm tra lịch và chuẩn bị cho chuyến đi.");
                 booking.setUpdatedAt(LocalDateTime.now());
                 bookings.save(booking);
             }
@@ -149,6 +152,12 @@ public class MomoPaymentStore {
         }
         // Unknown/transient codes never release a possibly live payment for a second charge.
         payments.save(payment);
+        if("REFUND_REQUIRED".equals(payment.getStatus())) {
+            notifications.booking(booking,"PAYMENT:"+orderId+":REFUND_REQUIRED","Giao dịch cần xử lý hoàn tiền","Đã ghi nhận tiền nhưng chưa thể xác nhận đơn. Vui lòng liên hệ nhà tổ chức; đây chưa phải xác nhận đã hoàn tiền.");
+            notifications.administrators(booking,"PAYMENT:"+orderId+":REFUND_REQUIRED","Giao dịch cần xử lý hoàn tiền");
+        }
+        if(Set.of("FAILED","EXPIRED").contains(payment.getStatus()))
+            notifications.booking(booking,"PAYMENT:"+orderId+":"+payment.getStatus(),"Giao dịch chưa thanh toán thành công","Giao dịch đã được xác minh thất bại hoặc hết hạn. Mở chi tiết đơn để kiểm tra bước tiếp theo; chưa có xác nhận thanh toán thành công.");
         return snapshot(payment);
     }
 

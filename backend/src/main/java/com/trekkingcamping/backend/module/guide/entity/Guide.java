@@ -5,6 +5,10 @@ import jakarta.persistence.*;
 public class Guide {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @OneToOne(fetch=FetchType.LAZY) @JoinColumn(name="user_id",unique=true)
+    private com.trekkingcamping.backend.module.user.entity.User user;
+    public com.trekkingcamping.backend.module.user.entity.User getUser() {return user;}
+    public void setUser(com.trekkingcamping.backend.module.user.entity.User value) {user=value;}
     @Column(nullable = false, unique = true, length = 40)
     private String code;
     @Column(nullable = false, length = 150)

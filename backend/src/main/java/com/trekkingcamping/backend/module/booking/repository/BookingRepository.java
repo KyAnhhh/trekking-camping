@@ -13,6 +13,9 @@ import java.util.Optional;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Booking> {
+    org.springframework.data.domain.Page<Booking> findByScheduleIdAndStatusInOrderByIdAsc(Long scheduleId,java.util.Collection<String> statuses,org.springframework.data.domain.Pageable page);
+    @Query("select b.id from Booking b where b.id > :after and b.status='CONFIRMED' and b.schedule.departureDate=:day order by b.id")
+    List<Long> reminderCandidates(@Param("after") Long after,@Param("day") java.time.LocalDate day,org.springframework.data.domain.Pageable page);
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths={"schedule", "schedule.tour"})
     org.springframework.data.domain.Page<Booking> findAll(org.springframework.data.jpa.domain.Specification<Booking> spec, org.springframework.data.domain.Pageable pageable);
     @Query("select b.status, count(b) from Booking b group by b.status")
