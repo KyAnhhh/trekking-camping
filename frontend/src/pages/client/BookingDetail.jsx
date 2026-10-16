@@ -16,6 +16,7 @@ import Modal from "../../components/common/Modal";
 import BookingGuideTeam from "../../components/tour/BookingGuideTeam";
 import BookingReview from "../../components/tour/BookingReview";
 import ParticipationPanel from "../../components/tour/ParticipationPanel";
+import PassengerPanel from "../../components/tour/PassengerPanel";
 import {
   money,
   dateLabel,
@@ -128,6 +129,7 @@ export default function BookingDetail({ admin = false }) {
             bookingStatus={data.booking.status}
             onSaved={reload}
           />
+          <PassengerPanel bookingId={id} admin={admin} />
           <div className="booking-layout">
             <section className="panel booking-form">
               <h2>Thông tin chuyến đi</h2>

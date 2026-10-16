@@ -1,0 +1,40 @@
+.workspace-page { padding-block: 48px 72px; min-height: 65vh; }
+.workspace-list { display: grid; gap: 16px; margin-block: 24px; }
+.workspace-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; margin-block: 24px; }
+.notification-item, .attendance-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.notification-item h2, .attendance-row h2, .guide-trip h2 { font-size: 1.15rem; margin-block: 12px; overflow-wrap: anywhere; }
+.notification-item p, .attendance-row p { font-size: .8rem; margin-block: 8px; }
+.notification-item.is-unread { border-left: 4px solid var(--sage); background: var(--mist); }
+.notification-item .btn, .attendance-row .btn { flex-shrink: 0; }
+.notification-bell { position: relative; flex-shrink: 0; }
+.notification-badge { position: absolute; top: -3px; right: -5px; padding: 2px 4px; min-width: 17px; border-radius: 10px; background: var(--forest); color: #fff; font-size: .55rem; text-align: center; border: 2px solid #fff; }
+.guide-trip > p { display: flex; align-items: baseline; gap: 8px; font-size: .8rem; }
+.guide-trip > p svg { flex-shrink: 0; }
+.guide-trip > .btn { margin-top: 15px; }
+.guide-account-form label { display: grid; gap: 8px; margin-block: 16px; }
+.guide-account-form .modal-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+@media(max-width: 650px) {
+  .workspace-grid { grid-template-columns: 1fr; }
+  .workspace-page { padding-block: 30px 50px; }
+  .notification-item, .attendance-row { align-items: flex-start; flex-direction: column; gap: 12px; }
+}
+.guide-invitation-panel { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 20px; }
+.guide-invitation-panel .form-stack { margin-block: 18px; }
+.passenger-panel { margin-block: 24px; min-width: 0; }
+.passenger-heading, .passenger-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.passenger-heading h2 { margin: 0 0 12px; }
+.passenger-actions { justify-content: flex-start; }
+.passenger-list { list-style: none; padding: 0; margin: 18px 0; }
+.passenger-list li { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.passenger-list li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.passenger-list p { margin: 5px 0 0; }
+.passenger-position { font-variant-numeric: tabular-nums; color: var(--muted); }
+.passenger-status-present { color: var(--forest); }
+.passenger-status-absent { color: var(--danger); }
+.passenger-status-not_checked { color: var(--muted); }
+.passenger-history-toggle { display: block; margin-top: 18px; }
+.passenger-history ol { border-left: 2px solid var(--line); list-style: none; padding-left: 18px; }
+.passenger-history li { margin-bottom: 20px; overflow-wrap: anywhere; }
+.passenger-history p { margin: 5px 0; }
+.passenger-names-form { max-width: 640px; }
+@media (max-width: 480px) { .passenger-list li { flex-wrap: wrap; } .passenger-list li .btn { margin-left: auto; } }

@@ -4,6 +4,7 @@ import { Mountain, Menu, X, UserRound, ChevronDown } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import AccountMenu from "./AccountMenu";
 import HeaderNavigation from "./HeaderNavigation";
+import NotificationBell from "./NotificationBell";
 
 export function Brand({ admin = false }) {
   return (
@@ -97,6 +98,7 @@ export default function Navbar() {
           <div onClick={close}><Brand /></div>
           <HeaderNavigation open={open === "navigation"} onNavigate={close} />
           <div className="header-actions">
+            <NotificationBell />
             {user ? (
               <div className="header-account">
                 <button

@@ -34,7 +34,7 @@ export default function Login() {
         phone: user.phone,
       });
       navigate(
-        location.state?.from || (role === "ROLE_ADMIN" ? "/admin" : "/"),
+        location.state?.from || (role === "ROLE_ADMIN" ? "/admin" : role === "ROLE_GUIDE" ? "/guide-workspace" : "/"),
         { replace: true },
       );
     } catch (err) {

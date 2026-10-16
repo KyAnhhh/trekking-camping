@@ -10,6 +10,7 @@ const Planner = lazy(() => import("../pages/client/Planner"));
 const Register = lazy(() => import("../pages/auth/Register"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
+const GuideInvitation = lazy(() => import("../pages/auth/GuideInvitation"));
 const ChatPage = lazy(() => import("../pages/client/ChatPage"));
 const Handbook = lazy(() => import("../pages/client/Handbook"));
 const About = lazy(() => import("../pages/client/About"));
@@ -23,6 +24,10 @@ const BookingDetail = lazy(() => import("../pages/client/BookingDetail"));
 const MomoReturn = lazy(() => import("../pages/client/MomoReturn"));
 const VnpayReturn = lazy(() => import("../pages/client/VnpayReturn"));
 const AdminBookings = lazy(() => import("../pages/admin/AdminBookings"));
+const Notifications = lazy(() => import("../pages/client/Notifications"));
+const AdminNotifications = lazy(() => import("../pages/admin/AdminNotifications"));
+const GuideWorkspace = lazy(() => import("../pages/guide/GuideWorkspace"));
+const GuideTrip = lazy(() => import("../pages/guide/GuideTrip"));
 const AdminPayments = lazy(() => import("../pages/admin/AdminPayments"));
 const AdminReviews = lazy(() => import("../pages/admin/AdminReviews"));
 const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
@@ -53,7 +58,11 @@ export default function AppRoutes() {
       <Routes>
         <Route element={<ClientLayout />}>
           <Route index element={<Home />} />
+          <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="guide-workspace" element={<ProtectedRoute allowedRoles={["ROLE_GUIDE", "GUIDE"]}><GuideWorkspace /></ProtectedRoute>} />
+          <Route path="guide-workspace/:id" element={<ProtectedRoute allowedRoles={["ROLE_GUIDE", "GUIDE"]}><GuideTrip /></ProtectedRoute>} />
           <Route path="login" element={<Login />} />
+          <Route path="guide-invitation" element={<GuideInvitation />} />
           <Route
             path="profile"
             element={
@@ -142,6 +151,7 @@ export default function AppRoutes() {
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="bookings/:id" element={<BookingDetail admin />} />
           <Route path="knowledge" element={<AdminKnowledge />} />
+          <Route path="notifications" element={<AdminNotifications />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

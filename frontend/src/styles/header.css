@@ -133,6 +133,11 @@ html {
   line-height: 1.6;
 }
 .header-backdrop { display: none; }
+@media (max-width: 380px) {
+  .header-actions { gap: 4px; }
+  .header-account-trigger > svg:last-child { display: none; }
+  .header-shell { gap: 8px; }
+}
 @media (max-width: 1200px) {
   html { --site-header-height: 64px; }
   .header-shell { gap: 12px; justify-content: space-between; }

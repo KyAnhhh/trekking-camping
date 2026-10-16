@@ -12,9 +12,11 @@ import {
   LogOut,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
 import { Brand } from "../components/common/Navbar";
+import NotificationBell from "../components/common/NotificationBell";
 const links = [
   { to: "/admin", label: "Tổng quan", icon: LayoutDashboard, end: true },
   { to: "/admin/tours", label: "Tour & lịch khởi hành", icon: Mountain },
@@ -24,6 +26,7 @@ const links = [
   { to: "/admin/users", label: "Người dùng", icon: Users },
   { to: "/admin/guides", label: "Hướng dẫn viên", icon: Users },
   { to: "/admin/knowledge", label: "Kho tri thức", icon: BookOpen },
+  { to: "/admin/notifications", label: "Thông báo", icon: Bell },
 ];
 export default function AdminLayout() {
   const { user, logout, loggingOut, logoutError } = useContext(AuthContext);
@@ -88,13 +91,16 @@ export default function AdminLayout() {
       </aside>
       <div className="admin-workspace">
         <header className="admin-topbar">
-          <span>
+          <span className="admin-breadcrumb">
             Quản trị /{" "}
             {links.find(
               (item) => item.to !== "/admin" && pathname.startsWith(item.to),
             )?.label || "Tổng quan"}
           </span>
-          <span className="status-badge">Quyền quản trị</span>
+          <div className="admin-topbar-actions">
+            <NotificationBell />
+            <span className="status-badge">Quyền quản trị</span>
+          </div>
         </header>
         <main id="admin-content" className="admin-content">
           <Outlet />

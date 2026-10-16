@@ -5,6 +5,7 @@ import useResource from "../../hooks/useResource";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import EmptyState from "../../components/common/EmptyState";
 import GuideImportPanel from "../../components/tour/GuideImportPanel";
+import GuideAccountLink from "../../components/tour/GuideAccountLink";
 import { errorMessage, mediaUrl } from "../../utils/tour";
 const empty = {
   code: "",
@@ -18,6 +19,7 @@ const empty = {
   active: true,
 };
 export default function AdminGuides() {
+  const [accountGuide, setAccountGuide] = useState(null);
   const loader = useCallback(
     async () => (await guideService.list()).data.data,
     [],
@@ -116,6 +118,7 @@ export default function AdminGuides() {
         </p>
       )}
       <GuideImportPanel onImported={reload} disabled={busy} onBusyChange={setBusy} />
+      {accountGuide && <GuideAccountLink guide={accountGuide} onClose={() => setAccountGuide(null)} />}
       <div className="admin-detail-grid">
         <section className="panel">
           <h2>Danh sách đội ngũ</h2>
@@ -164,6 +167,7 @@ export default function AdminGuides() {
                         >
                           Sửa hồ sơ
                         </button>
+                        <button className="text-btn" onClick={() => setAccountGuide(row.profile)} disabled={busy}>Tài khoản đăng nhập</button>
                         <Link
                           className="text-link"
                           to={`/guides/${row.profile.id}`}

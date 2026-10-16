@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { UserRound, CalendarDays, ShieldCheck, LogOut } from "lucide-react";
+import { UserRound, CalendarDays, ShieldCheck, LogOut, Bell, Compass } from "lucide-react";
 
 export default function AccountMenu({ user, onNavigate, onLogout, loggingOut, logoutError }) {
   const name = user.fullName || user.username || user.email || "Tài khoản của tôi";
@@ -14,6 +14,8 @@ export default function AccountMenu({ user, onNavigate, onLogout, loggingOut, lo
       }}>
         <Link to="/profile"><UserRound size={18} aria-hidden="true" />Hồ sơ cá nhân</Link>
         <Link to="/my-bookings"><CalendarDays size={18} aria-hidden="true" />Chuyến đi của tôi</Link>
+        <Link to={["ROLE_ADMIN", "ADMIN"].includes(user.role) ? "/admin/notifications" : "/notifications"}><Bell size={18} aria-hidden="true" />Thông báo</Link>
+        {["ROLE_GUIDE", "GUIDE"].includes(user.role) && <Link to="/guide-workspace"><Compass size={18} aria-hidden="true" />Lịch dẫn đoàn</Link>}
         {["ROLE_ADMIN", "ADMIN"].includes(user.role) && (
           <Link to="/admin"><ShieldCheck size={18} aria-hidden="true" />Quản trị</Link>
         )}

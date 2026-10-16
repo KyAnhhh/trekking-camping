@@ -1,3 +1,19 @@
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 160px;
+}
+.admin-user-form p {
+  overflow-wrap: anywhere;
+}
+.admin-user-form .modal-actions {
+  flex-wrap: wrap;
+}
+body:has(.admin-shell) {
+  min-width: 0;
+}
 .admin-shell {
   min-height: 100vh;
   background: #f5f7f2;
@@ -103,6 +119,30 @@
 }
 .admin-mobile-bar {
   display: none;
+}
+.admin-breadcrumb {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.admin-topbar-actions .status-badge {
+  white-space: nowrap;
+}
+.admin-notifications .notification-item > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-notifications .list-toolbar {
+  flex-wrap: wrap;
+}
+@media (max-width: 480px) {
+  .admin-topbar-actions { gap: 10px; }
 }
 .admin-content {
   max-width: 1440px;

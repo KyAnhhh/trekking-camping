@@ -20,6 +20,10 @@ const bundle = await build({
       export { reviewService } from './src/api/reviewService.js';
       export { participationService } from './src/api/participationService.js';
       export { operationsService } from './src/api/operationsService.js';
+      export { notificationService } from './src/api/notificationService.js';
+      export { guideWorkspaceService } from './src/api/guideWorkspaceService.js';
+      export { guideInvitationService } from './src/api/guideInvitationService.js';
+      export { passengerService } from './src/api/passengerService.js';
       export { formatDifficulty } from './src/utils/tour.js';
     `,
     resolveDir: fileURLToPath(new URL("../", import.meta.url)),
@@ -56,6 +60,42 @@ beforeEach(() => {
   };
 });
 
+test('guide invitation credentials stay in POST bodies and passenger paths preserve scope and revision', async () => {
+  await api.guideInvitationService.send(2, 'guide@example.test');
+  assert.equal(request.url, '/api/admin/guides/2/invitation'); assert.equal(request.method, 'post');
+  assert.deepEqual(JSON.parse(request.data), { email: 'guide@example.test' });
+  await api.guideInvitationService.revoke(2); assert.equal(request.method, 'delete');
+  await api.guideInvitationService.preview('synthetic-token');
+  assert.equal(request.url, '/api/guide-invitations/preview'); assert.deepEqual(JSON.parse(request.data), { token: 'synthetic-token' });
+  await api.guideInvitationService.accept('synthetic-token', 'synthetic-password');
+  assert.equal(request.url, '/api/guide-invitations/accept');
+  assert.deepEqual(JSON.parse(request.data), { token: 'synthetic-token', password: 'synthetic-password' });
+  await api.passengerService.save(7, ['One', 'Two'], 3, false);
+  assert.equal(request.url, '/api/bookings/7/passengers'); assert.equal(request.method, 'put');
+  assert.deepEqual(JSON.parse(request.data), { fullNames: ['One', 'Two'], revision: 3 });
+  await api.passengerService.list(7, true); assert.equal(request.url, '/api/admin/bookings/7/passengers');
+  await api.passengerService.mark(9, 7, 4, 'PRESENT', 2);
+  assert.equal(request.url, '/api/guide-workspace/trips/9/bookings/7/passengers/4/attendance');
+  assert.deepEqual(JSON.parse(request.data), { status: 'PRESENT', revision: 2 });
+  await api.passengerService.history(7, 1, false, 9);
+  assert.equal(request.url, '/api/guide-workspace/trips/9/bookings/7/passengers/history'); assert.deepEqual(request.params, { page: 1 });
+});
+
+test('admin user edits, activation and deletion preserve the version and bearer token', async () => {
+  storage.set('token', 'test-only-token');
+  const updatedAt = '2026-10-15T10:00:00.123456';
+  await api.adminService.updateUser(7, { fullName: 'Name', phone: '', updatedAt });
+  assert.equal(request.url, '/api/users/7'); assert.equal(request.method, 'put');
+  assert.equal(request.headers.Authorization, 'Bearer test-only-token');
+  assert.deepEqual(JSON.parse(request.data), { fullName: 'Name', phone: '', updatedAt });
+  await api.adminService.setUserActive(7, { active: false, updatedAt });
+  assert.equal(request.url, '/api/users/7/active'); assert.equal(request.method, 'put');
+  assert.deepEqual(JSON.parse(request.data), { active: false, updatedAt });
+  await api.adminService.deleteUser(7, updatedAt);
+  assert.equal(request.url, '/api/users/7'); assert.equal(request.method, 'delete');
+  assert.deepEqual(request.params, { updatedAt });
+});
+
 test('admin operations use paged filters and explicit state-safe writes', async () => {
   await api.operationsService.overview();
   assert.equal(request.url, '/api/admin/operations/overview');
@@ -74,6 +114,20 @@ test('admin operations use paged filters and explicit state-safe writes', async 
   assert.equal(request.url, '/api/admin/operations/reviews/3/visibility');
   assert.equal(request.method, 'put');
   assert.deepEqual(JSON.parse(request.data), { expectedApproved: true, approved: false });
+});
+
+test('notifications never accept owner IDs and guide attendance sends the current revision', async () => {
+  await api.notificationService.list(2);
+  assert.equal(request.url, '/api/notifications'); assert.deepEqual(request.params, { page: 2 });
+  await api.notificationService.read(9); assert.equal(request.url, '/api/notifications/9/read'); assert.equal(request.method, 'put');
+  await api.notificationService.readAll(); assert.equal(request.url, '/api/notifications/read-all');
+  await api.guideWorkspaceService.trips(0); assert.equal(request.url, '/api/guide-workspace/trips');
+  await api.guideWorkspaceService.roster(4, 1); assert.equal(request.url, '/api/guide-workspace/trips/4');
+  await api.guideWorkspaceService.checkIn(4, 8, 2, 3);
+  assert.equal(request.url, '/api/guide-workspace/trips/4/bookings/8/attendance');
+  assert.deepEqual(JSON.parse(request.data), { presentCount: 2, revision: 3 });
+  await api.guideWorkspaceService.link(4, 'guide@example.test');
+  assert.equal(request.url, '/api/admin/guides/4/account'); assert.deepEqual(JSON.parse(request.data), { email: 'guide@example.test' });
 });
 
 test("auth and booking services use the server paths and preserve booking payload", async () => {

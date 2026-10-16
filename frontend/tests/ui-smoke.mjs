@@ -26,8 +26,21 @@ const errors = [],
 const chatRows = [];
 let chatConfirmAttempts = 0;
 let failLogout = false;
+let invitationState = { status: 'NONE', email: null }, invitationMailFailure = false, invitationConsumed = false;
+let passengerRevision = 0;
+let passengerRows = [
+  { id: 1, position: 1, fullName: 'Hành khách Một', status: 'NOT_CHECKED', revision: 0, markedAt: null },
+  { id: 2, position: 2, fullName: 'Hành khách Hai', status: 'NOT_CHECKED', revision: 0, markedAt: null },
+];
+let passengerAudit = [];
+let managedUsers = [
+  { id: 1, fullName: 'Người dùng thử nghiệm', email: 'traveler@example.test', phone: '0900000000', role: 'ROLE_USER', active: true, updatedAt: '2026-10-15T10:00:00' },
+  { id: 2, fullName: 'Quản trị thử nghiệm', email: 'admin@example.test', role: 'ROLE_ADMIN', active: true, updatedAt: '2026-10-15T10:00:00' },
+  { id: 3, fullName: 'Tài khoản trống', email: 'unused@example.test', role: 'ROLE_USER', active: true, updatedAt: '2026-10-15T10:00:00' },
+];
 let reviewsFail = false, emptyTours = false;
 let operationApproved = true, reconcileFailure = false;
+let unreadNotifications = 1, presentCount = null, attendanceRevision = 0, linkedGuideAccount = null;
 const send = (method, params = {}) =>
   new Promise((resolve, reject) => {
     const callId = ++id;
@@ -176,6 +189,47 @@ function api(request) {
   if (method !== "GET" && method !== "OPTIONS")
     writes.push({ path, method, payload });
   if (method === "OPTIONS") return { status: 204 };
+  if (/^\/api\/admin\/guides\/\d+\/invitation$/.test(path)) {
+    if (method === 'POST') {
+      if (invitationMailFailure) return { status: 503, message: 'Chưa gửi được email lời mời.' };
+      invitationConsumed = false; invitationState = { status: 'PENDING', email: payload.email, expiresAt: new Date(Date.now()+86400000).toISOString() };
+    }
+    if (method === 'DELETE') invitationState.status = 'REVOKED';
+    return { data: invitationState };
+  }
+  if (path === '/api/guide-invitations/preview' || path === '/api/guide-invitations/accept') {
+    if (invitationConsumed || payload.token !== 'a'.repeat(43) || invitationState.status !== 'PENDING') return { status: 400, message: 'Lời mời không hợp lệ hoặc đã hết hạn.' };
+    if (path.endsWith('/accept')) { invitationConsumed = true; return { data: null }; }
+    return { data: { guideName: 'Hướng dẫn viên thử nghiệm', email: invitationState.email, expiresAt: invitationState.expiresAt } };
+  }
+  if (/\/passengers\/history$/.test(path)) return { data: { items: passengerAudit, page: 0, totalPages: 1, totalElements: passengerAudit.length } };
+  if (/\/passengers\/\d+\/attendance$/.test(path)) {
+    const person = passengerRows.find(p => p.id === Number(path.split('/').at(-2)));
+    if (!person || person.revision !== payload.revision) return { status: 409, message: 'Điểm danh đã thay đổi. Tải lại danh sách.' };
+    passengerAudit.unshift({ id: passengerAudit.length+1, passengerName: person.fullName, guideName: 'Guide fixture', previousStatus: person.status, status: payload.status, createdAt: new Date().toISOString() });
+    person.status=payload.status; person.revision++; person.markedAt=new Date().toISOString();
+    return { data: person };
+  }
+  if (/\/passengers$/.test(path)) {
+    if (method === 'PUT') {
+      if (payload.revision !== passengerRevision) return { status: 409, message: 'Danh sách đã thay đổi. Tải lại trước khi lưu.' };
+      passengerRows=payload.fullNames.map((fullName,i)=>({ id:i+1,position:i+1,fullName,status:'NOT_CHECKED',revision:0,markedAt:null }));passengerRevision++;
+    }
+    return { data: { expectedCount:2,revision:passengerRevision,passengers:passengerRows,editable:!path.includes('guide-workspace')&&!passengerRows.some(p=>p.markedAt),canCheckIn:path.includes('guide-workspace')&&passengerRows.length===2 } };
+  }
+  if (path === '/api/notifications/unread-count') return { data: unreadNotifications };
+  if (path === '/api/notifications') return { data: { items: [{id:1,title:'Chuyến đi khởi hành ngày mai',body:'Kiểm tra giờ đón và trang bị.',link:'/my-bookings/1',createdAt:new Date().toISOString(),readAt:unreadNotifications?null:new Date().toISOString()}], unread:unreadNotifications,page:0,totalPages:1,totalElements:1 } };
+  if (/^\/api\/notifications\/(1\/read|read-all)$/.test(path)) { unreadNotifications=0;return {data:null}; }
+  if (/^\/api\/admin\/guides\/\d+\/account$/.test(path)) {
+    if(method==='PUT')linkedGuideAccount=payload.email?{userId:7,email:payload.email}:null;
+    return {data:linkedGuideAccount || {userId:null,email:null}};
+  }
+  if(path==='/api/guide-workspace/trips')return {data:{items:[{id:1,title:tours[0].title,departureDate:future,returnDate:later,role:'LEAD',status:'OPEN',pickupPoint:'Điểm đón thử nghiệm'}],page:0,totalPages:1,totalElements:1}};
+  if(path==='/api/guide-workspace/trips/1')return {data:{trip:{id:1,title:tours[0].title,departureDate:future,returnDate:later},guests:{items:[{bookingId:1,code:'TEST-001',contactName:'Khách thử nghiệm',contactPhone:'0900000000',people:2,status:'CONFIRMED',namedPassengers:passengerRows.length,presentCount:passengerRows.filter(p=>p.status==='PRESENT').length,revision:attendanceRevision}],page:0,totalPages:1,totalElements:1},canCheckIn:true}};
+  if(path==='/api/guide-workspace/trips/1/bookings/1/attendance') {
+    if(payload.revision!==attendanceRevision)return {status:409,message:'Điểm danh đã thay đổi. Tải lại danh sách.'};
+    presentCount=payload.presentCount;attendanceRevision++;return {data:null};
+  }
   if (/^\/api\/(admin\/)?bookings\/1\/participation(?:\/review)?$/.test(path)) {
     if (method === "PUT") {
       participation = {
@@ -455,24 +509,22 @@ function api(request) {
   }
   if (path.startsWith("/api/tours/"))
     return { data: tours.find((t) => t.slug === path.split("/").at(-1)) };
-  if (path === "/api/users")
-    return {
-      data: [
-        {
-          id: 1,
-          fullName: "Người dùng thử nghiệm",
-          email: "traveler@example.test",
-          role: "ROLE_USER",
-          phone: "0900000000",
-        },
-        {
-          id: 2,
-          fullName: "Quản trị thử nghiệm",
-          email: "admin@example.test",
-          role: "ROLE_ADMIN",
-        },
-      ],
-    };
+  if (path === '/api/users') return { data: managedUsers };
+  if (/^\/api\/users\/\d+(\/active)?$/.test(path)) {
+    const target = managedUsers.find(u => u.id === Number(path.split('/')[3]));
+    if (!target) return { status: 404, message: 'Không tìm thấy tài khoản.' };
+    const version = method === 'DELETE' ? url.searchParams.get('updatedAt') : payload.updatedAt;
+    if (version !== target.updatedAt) return { status: 409, message: 'Tài khoản đã thay đổi. Hãy tải lại danh sách.' };
+    if (method === 'DELETE') {
+      if (target.id === 1) return { status: 409, message: 'Tài khoản có dữ liệu liên quan. Hãy khóa tài khoản để giữ lịch sử thay vì xóa.' };
+      managedUsers = managedUsers.filter(u => u.id !== target.id);
+      return { data: null };
+    }
+    if (path.endsWith('/active')) target.active = payload.active;
+    else { target.fullName = payload.fullName; target.phone = payload.phone; }
+    target.updatedAt = new Date(Date.parse(target.updatedAt + 'Z') + 1000).toISOString().replace('Z', '');
+    return { data: target };
+  }
   if (path === "/api/admin/knowledge/files") return { data: files };
   if (path === "/api/admin/knowledge/upload") {
     files.push("ui-knowledge.txt");
@@ -1451,6 +1503,135 @@ try {
     "document.querySelector('.adventure-summary').scrollIntoView({block:'start'})",
   );
   await shot("tour-summary-desktop");
+  await evaluate("localStorage.setItem('token','fixture-only');localStorage.setItem('role','ROLE_ADMIN')");
+  await go('/admin/guides');
+  await evaluate("[...document.querySelectorAll('.guide-actions button')].find(b=>b.textContent==='Tài khoản đăng nhập').click()");
+  await wait('document.querySelector("dialog input[type=email]")');
+  await set('dialog input[type=email]', 'guide@example.test');
+  assert.equal(await evaluate('document.querySelector("dialog .btn").disabled'), true);
+  await click('dialog input[type=checkbox]');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('document.querySelector("dialog strong")?.textContent.includes("guide@example.test")');
+  assert.equal(linkedGuideAccount.email, 'guide@example.test');
+  await click('dialog .icon-btn');
+  results.push('Admin guide account link requires explicit acknowledgement');
+  await go('/notifications');
+  await check('Notifications desktop');
+  await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Đánh dấu tất cả')).click()");
+  await wait('document.querySelector(".list-toolbar")?.textContent.includes("0 thông báo chưa đọc")');
+  assert.equal(unreadNotifications, 0);
+  await viewport(320, 844);await check('Notifications mobile');
+  await evaluate("localStorage.setItem('role','ROLE_GUIDE')");
+  await go('/guide-workspace');await check('Guide workspace mobile');
+  await go('/guide-workspace/1');await check('Guide roster mobile');
+  await click('.attendance-row button');
+  await wait('document.querySelector(".passenger-list button")');
+  await click('.passenger-list button');await wait('document.querySelector("dialog select")');
+  await set('dialog select','PRESENT');
+  assert.equal(passengerRows[0].status,'NOT_CHECKED');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('!document.querySelector("dialog") && document.querySelector(".attendance-row")?.textContent.includes("1/2")');
+  assert.equal(passengerRows[0].status,'PRESENT');assert.equal(passengerAudit.length,1);
+  await wait('document.querySelector(".passenger-list button")');await click('.passenger-list button');
+  passengerRows[0].revision++;
+  await set('dialog select','ABSENT');await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('document.querySelector("dialog [role=alert]")?.textContent.includes("thay đổi")');
+  assert.equal(passengerRows[0].status,'PRESENT');
+  await click('dialog button[type=button].btn');await wait('!document.querySelector("dialog") && document.querySelector(".passenger-list")');
+  await click('.passenger-history-toggle');await wait('document.querySelector(".passenger-history")?.textContent.includes("Guide fixture")');
+  await check('Named passengers and attendance history mobile');
+  await viewport(1440);await check('Guide roster desktop');await shot('guide-workspace-desktop');
+  results.push('Guide checks in named passengers with history and rejects stale updates');
+  await evaluate("localStorage.setItem('role','ROLE_ADMIN')");
+  await viewport(1440); await go('/admin/users');
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify('button[aria-label="Khóa admin@example.test"]')}).disabled`), true);
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify('button[aria-label="Xóa admin@example.test"]')}).disabled`), true);
+  await click('button[aria-label="Sửa traveler@example.test"]');
+  await set('dialog input:not([type=tel])', 'Tên đã chỉnh sửa');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('!document.querySelector("dialog") && document.querySelector("tbody")?.textContent.includes("Tên đã chỉnh sửa")');
+  assert.equal(managedUsers[0].fullName, 'Tên đã chỉnh sửa');
+  await click('button[aria-label="Khóa traveler@example.test"]');
+  assert.equal(managedUsers[0].active, true);
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait(`!document.querySelector('dialog') && document.querySelector(${JSON.stringify('button[aria-label="Mở khóa traveler@example.test"]')})`);
+  assert.equal(managedUsers[0].active, false);
+  await click('button[aria-label="Mở khóa traveler@example.test"]');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait(`!document.querySelector('dialog') && document.querySelector(${JSON.stringify('button[aria-label="Khóa traveler@example.test"]')})`);
+  assert.equal(managedUsers[0].active, true);
+  results.push('Admin edits contacts and confirms lock/unlock; admin accounts remain protected');
+  await click('button[aria-label="Xóa traveler@example.test"]');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('document.querySelector("dialog [role=alert]")?.textContent.includes("dữ liệu liên quan")');
+  assert.equal(managedUsers.length, 3);
+  await click('dialog button[type=button].btn');
+  await wait('!document.querySelector("dialog") && document.querySelector("tbody")');
+  await click('button[aria-label="Xóa unused@example.test"]');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('!document.querySelector("dialog") && document.querySelector("tbody") && !document.querySelector("tbody").textContent.includes("unused@example.test")');
+  assert.equal(managedUsers.length, 2);
+  results.push('Admin sees linked-data rejection and can delete an unused account');
+  await click('button[aria-label="Sửa traveler@example.test"]');
+  managedUsers[0].updatedAt = '2026-10-15T11:00:00';
+  await set('dialog input:not([type=tel])', 'Không được ghi đè');
+  await evaluate('document.querySelector("dialog form").requestSubmit()');
+  await wait('document.querySelector("dialog [role=alert]")?.textContent.includes("thay đổi")');
+  assert.equal(managedUsers[0].fullName, 'Tên đã chỉnh sửa');
+  assert.equal(await evaluate('document.querySelector("dialog button[type=submit]").disabled'), true);
+  await viewport(320, 844); await check('Admin user conflict dialog 320px');
+  await click('dialog button[type=button].btn');
+  await wait('!document.querySelector("dialog") && document.querySelector("tbody")');
+  await check('Admin user actions mobile');
+  await viewport(1440); await check('Admin user actions desktop'); await shot('admin-users-desktop');
+  results.push('Admin stale contact edit cannot overwrite another update');
+  passengerRows=[];passengerAudit=[];passengerRevision=0;
+  await evaluate("localStorage.setItem('role','ROLE_USER')");
+  await go('/my-bookings/1');
+  await wait('document.querySelector(".passenger-panel")?.textContent.includes("Chưa có danh sách")');
+  await evaluate("[...document.querySelectorAll('.passenger-panel button')].find(b=>b.textContent.includes('Nhập / sửa')).click()");
+  await set('.passenger-names-form label:nth-of-type(1) input','Khách thật trong fixture Một');
+  await set('.passenger-names-form label:nth-of-type(2) input','Khách thật trong fixture Hai');
+  await evaluate('document.querySelector(".passenger-names-form").requestSubmit()');
+  await wait('document.querySelector(".passenger-list")?.textContent.includes("fixture Một")');
+  assert.equal(passengerRows.length,2);assert.equal(passengerRows[0].status,'NOT_CHECKED');
+  await evaluate("[...document.querySelectorAll('.passenger-panel button')].find(b=>b.textContent.includes('Nhập / sửa')).click()");
+  passengerRevision++;
+  await set('.passenger-names-form input','Không ghi đè');await evaluate('document.querySelector(".passenger-names-form").requestSubmit()');
+  await wait('document.querySelector(".passenger-names-form [role=alert]")?.textContent.includes("thay đổi")');
+  assert.equal(passengerRows[0].fullName,'Khách thật trong fixture Một');
+  await viewport(320,844);await check('Passenger names editor mobile');
+  results.push('Booking owner supplies exact passenger names and stale list edits are rejected');
+  linkedGuideAccount=null;invitationState={status:'NONE',email:null};
+  await evaluate("localStorage.setItem('role','ROLE_ADMIN')");await go('/admin/guides');
+  await evaluate("[...document.querySelectorAll('.guide-actions button')].find(b=>b.textContent==='Tài khoản đăng nhập').click()");
+  await wait('document.querySelector(".guide-invitation-panel input[type=email]")');
+  await set('.guide-invitation-panel input[type=email]','new-guide@example.test');
+  await click('.guide-invitation-panel input[type=checkbox]');
+  invitationMailFailure=true;
+  await evaluate('document.querySelector(".guide-invitation-panel form").requestSubmit()');
+  await wait('document.querySelector(".guide-invitation-panel [role=alert]")?.textContent.includes("Chưa gửi")');
+  assert.equal(invitationState.status,'NONE');invitationMailFailure=false;
+  await evaluate('document.querySelector(".guide-invitation-panel form").requestSubmit()');
+  await wait('document.querySelector(".guide-invitation-panel [role=status]")?.textContent.includes("Đã gửi")');
+  assert.equal(invitationState.email,'new-guide@example.test');await check('Guide invitation admin dialog mobile');
+  await evaluate("[...document.querySelectorAll('.guide-invitation-panel button')].find(b=>b.textContent.includes('Thu hồi')).click()");
+  await wait('document.querySelector(".guide-invitation-panel [role=status]")?.textContent.includes("thu hồi")');
+  assert.equal(invitationState.status,'REVOKED');
+  results.push('Admin invitation reports SMTP failure, sends explicitly and supports revocation');
+  invitationState={status:'PENDING',email:'new-guide@example.test',expiresAt:new Date(Date.now()+86400000).toISOString()};
+  await evaluate('localStorage.clear()');await go('/guide-invitation#token='+'a'.repeat(43));
+  await wait('document.querySelector("input[name=password]")');
+  assert.equal(await evaluate('location.hash'),'');
+  await check('Guide invitation acceptance mobile');
+  await set('input[name=password]','synthetic-new-password');await set('input[name=confirm]','synthetic-new-password');
+  await evaluate('document.querySelector("form").requestSubmit()');
+  await wait('document.querySelector("[role=status]")?.textContent.includes("Đã tạo tài khoản")');
+  assert.equal(invitationConsumed,true);assert.equal(await evaluate("localStorage.getItem('token')"),null);
+  await go('/guide-invitation#token='+'a'.repeat(43));
+  await wait('document.body.textContent.includes("không hợp lệ hoặc đã hết hạn")');
+  assert.equal(await evaluate('Boolean(document.querySelector("input[name=password]"))'),false);
+  results.push('Guide invitation clears URL token, accepts once and rejects reused link');
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify(
