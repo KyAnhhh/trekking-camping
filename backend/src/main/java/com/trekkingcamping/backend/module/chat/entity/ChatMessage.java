@@ -7,6 +7,12 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "chat_messages")
 public class ChatMessage {
+    @Column(columnDefinition="TEXT") private String sourceMetadata;
+    public String getSourceMetadata(){return sourceMetadata;}
+    public void setSourceMetadata(String value){sourceMetadata=value;}
+    @Column(length=100) private String modelId;
+    public String getModelId(){return modelId;}
+    public void setModelId(String value){modelId=value;}
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

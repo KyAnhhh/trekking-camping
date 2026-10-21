@@ -54,7 +54,7 @@ public class PlannerService {
                     NHU CẦU: %s
                     TỐI ĐA 10 LỊCH TOUR PHÙ HỢP TỪ DATABASE: %s
                     """.formatted(encode(request), encode(options));
-            Generated generated = parse(ai.generateStructured(prompt), request.days(), options);
+            Generated generated = parse(ai.generateStructured(prompt,request.modelId()), request.days(), options);
             var recommended = options.stream().filter(o -> generated.recommendedTourIds().contains(o.tourId())).toList();
             return store.save(email, user.getAuthVersion(), new Content(request, generated, recommended, Instant.now()));
         } finally { running.remove(user.getId()); }

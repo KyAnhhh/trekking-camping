@@ -2,8 +2,6 @@ package com.trekkingcamping.backend.module.chat.controller;
 
 import com.trekkingcamping.backend.common.dto.ApiResponse;
 import com.trekkingcamping.backend.module.chat.dto.ChatRequestDto;
-import com.trekkingcamping.backend.module.chat.dto.ChatResponseDto;
-import com.trekkingcamping.backend.module.chat.service.ChatService;
 import com.trekkingcamping.backend.module.chat.service.DataIngestionService;
 import org.springframework.web.bind.annotation.*;
 import com.trekkingcamping.backend.module.chat.service.ChatAssistant;
@@ -54,12 +52,25 @@ public class ChatController {
         var r=new ApiResponse<ChatSessions.Credentials>();r.setData(sessions.create(email));return r;
     }
     public record HistoryRequest(String sessionId,String sessionToken) {}
-    public record Message(String sender,String message) {}
+    public record Message(String sender,String message,String modelId,java.util.List<ChatAssistant.Source> sources) {}
+    public record SettingsRequest(String sessionToken,String modelId,long revision) {}
+    @PostMapping("/sessions/{id}/state")
+    public ApiResponse<ChatSessions.Selection> state(@PathVariable String id,@RequestBody SettingsRequest input,@AuthenticationPrincipal String email) {
+        ApiResponse<ChatSessions.Selection> response = new ApiResponse<>();
+        response.setData(sessions.selection(id,input.sessionToken(),email));
+        return response;
+    }
+    @PatchMapping("/sessions/{id}/settings")
+    public ApiResponse<ChatSessions.Selection> settings(@PathVariable String id,@RequestBody SettingsRequest input,@AuthenticationPrincipal String email) {
+        ApiResponse<ChatSessions.Selection> response = new ApiResponse<>();
+        response.setData(sessions.select(id,input.sessionToken(),email,input.modelId(),input.revision()));
+        return response;
+    }
     @PostMapping("/history")
     public ApiResponse<java.util.List<Message>> history(@RequestBody HistoryRequest input,@AuthenticationPrincipal String email,HttpServletRequest http) {
         limits.check(http.getRemoteAddr(),"history",60);
         var r=new ApiResponse<java.util.List<Message>>();r.setData(sessions.history(input.sessionId(),input.sessionToken(),email).stream()
-                .map(m -> new Message(m.getSender(),m.getMessage())).toList());return r;
+                .map(m -> new Message(m.getSender(),m.getMessage(),m.getModelId(),ChatSessions.sources(m))).toList());return r;
     }
     @PostMapping("/booking-drafts")
     public ApiResponse<ChatBookingService.Quote> draft(@RequestBody ChatBookingService.Prepare input,@AuthenticationPrincipal String email,HttpServletRequest http) {

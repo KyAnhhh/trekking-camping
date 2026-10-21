@@ -20,8 +20,9 @@ public class KnowledgeController {
     }
 
     @PostMapping("/upload")
-    public ApiResponse<Map<String, Object>> uploadDocument(@RequestParam("file") MultipartFile file) throws IOException {
-        int chunks = knowledgeService.uploadKnowledgeBase(file);
+    public ApiResponse<Map<String, Object>> uploadDocument(@RequestParam("file") MultipartFile file,
+            @RequestParam(value="publicExcerpt",defaultValue="false") boolean publicExcerpt) throws IOException {
+        int chunks = publicExcerpt?knowledgeService.uploadKnowledgeBase(file,true):knowledgeService.uploadKnowledgeBase(file);
         ApiResponse<Map<String, Object>> response = new ApiResponse<>();
         response.setData(Map.of(
                 "fileName", file.getOriginalFilename(),

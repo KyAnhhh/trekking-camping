@@ -56,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Real controllers, security chain and JWT signatures; business services and DB are mocked. */
 @WebMvcTest(controllers = {AuthController.class, AccountRecoveryController.class,
+        com.trekkingcamping.backend.module.chat.controller.AiModelsController.class,
         com.trekkingcamping.backend.module.notification.controller.NotificationController.class,
         com.trekkingcamping.backend.module.guide.controller.GuideWorkspaceController.class,
         com.trekkingcamping.backend.module.guide.controller.GuideInvitationController.class,
@@ -75,6 +76,30 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         properties = {"jwt.secret=", "logging.level.root=ERROR", "debug=false"})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class ApiAuthorizationMatrixTest {
+    @MockBean com.trekkingcamping.backend.module.chat.service.AiModels aiModels;
+    @Test void modelManagementIsAdminOnlyWhileCatalogIsPublic() throws Exception {
+        mvc.perform(get("/api/chat/models")).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/ai-models")).andExpect(status().isUnauthorized());
+        account("user@test", "ROLE_USER", true);
+        var userToken=tokens.generateToken("user@test","ROLE_USER");
+        mvc.perform(get("/api/admin/ai-models").header("Authorization","Bearer "+userToken)).andExpect(status().isForbidden());
+        mvc.perform(put("/api/admin/ai-models").header("Authorization","Bearer "+userToken).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/ai-models/history/0/restore").header("Authorization","Bearer "+userToken).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        account("admin@test", "ROLE_ADMIN", true);
+        mvc.perform(get("/api/admin/ai-models").header("Authorization","Bearer "+tokens.generateToken("admin@test","ROLE_ADMIN")))
+            .andExpect(status().isOk());
+    }
+    @Test void modelSettingsCorsAllowsOnlyExpectedOriginAndPath() throws Exception {
+        mvc.perform(options("/api/chat/sessions/test/settings").header("Origin","http://localhost:5173")
+            .header("Access-Control-Request-Method","PATCH").header("Access-Control-Request-Headers","authorization,content-type"))
+            .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Credentials","true"));
+        mvc.perform(options("/api/chat/sessions/test/settings").header("Origin","https://untrusted.test")
+            .header("Access-Control-Request-Method","PATCH")).andExpect(status().isForbidden());
+        mvc.perform(options("/api/admin/users/1").header("Origin","http://localhost:5173")
+            .header("Access-Control-Request-Method","PATCH")).andExpect(status().isForbidden());
+    }
     @Autowired MockMvc mvc;
     @Autowired JwtTokenProvider tokens;
     @MockBean UserRepository users;

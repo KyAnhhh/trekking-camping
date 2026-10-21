@@ -11,6 +11,25 @@ import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 class ChatSessionsTest {
+    @Test void guestSelectionPersistsAndRejectsStaleBusyAndWrongSecret() {
+        var registry=mock(com.trekkingcamping.backend.module.chat.service.AiModels.class);
+        when(registry.resolve(anyString(),eq(false))).thenAnswer(i->i.getArgument(0));service.setModels(registry);
+        var c=service.create(null);
+        assertEquals(0,service.selection(c.sessionId(),c.sessionToken(),null).revision());
+        var result=service.select(c.sessionId(),c.sessionToken(),null,"gemma-4-31b-it",0);
+        assertEquals(1,result.revision());assertEquals("gemma-4-31b-it",service.selection(c.sessionId(),c.sessionToken(),null).modelId());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->service.select(c.sessionId(),c.sessionToken(),null,null,0)).getStatusCode().value());
+        assertEquals(404,assertThrows(ResponseStatusException.class,()->service.select(c.sessionId(),"wrong",null,null,1)).getStatusCode().value());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->service.begin(c.sessionId(),c.sessionToken(),null,0L)).getStatusCode().value());
+        var turn=service.begin(c.sessionId(),c.sessionToken(),null,1L);assertEquals("gemma-4-31b-it",turn.modelId());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->service.select(c.sessionId(),c.sessionToken(),null,null,1)).getStatusCode().value());
+        service.release(turn);assertEquals(2,service.select(c.sessionId(),c.sessionToken(),null,null,1).revision());
+    }
+    @Test void selectionStillRequiresMatchingAccount() {
+        user("a@test",1);user("b@test",2);var c=service.create("a@test");
+        assertEquals(404,assertThrows(ResponseStatusException.class,()->service.selection(c.sessionId(),c.sessionToken(),"b@test")).getStatusCode().value());
+        assertEquals(404,assertThrows(ResponseStatusException.class,()->service.select(c.sessionId(),c.sessionToken(),null,null,0)).getStatusCode().value());
+    }
     final ChatSessionRepository sessions=mock(ChatSessionRepository.class);
     final ChatMessageRepository messages=mock(ChatMessageRepository.class);
     final UserRepository users=mock(UserRepository.class);
@@ -21,6 +40,15 @@ class ChatSessionsTest {
         when(sessions.locked(anyString())).thenAnswer(i -> saved!=null && saved.getId().equals(i.getArgument(0))?Optional.of(saved):Optional.empty());
     }
     void user(String email,long id) { var u=new User();u.setId(id);u.setEmail(email);u.setIsActive(true);when(users.findByEmail(email)).thenReturn(Optional.of(u)); }
+    @Test void sourceMetadataRoundTripsAndLegacyHistoryHasNoSources() throws Exception {
+        var message=new com.trekkingcamping.backend.module.chat.entity.ChatMessage();
+        assertTrue(ChatSessions.sources(message).isEmpty());
+        var source=new com.trekkingcamping.backend.module.chat.service.ChatAssistant.Source("S1","guide.txt","2026-10-22","Public excerpt","DOCUMENT",true);
+        message.setSourceMetadata(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(List.of(source)));
+        assertEquals(List.of(source),ChatSessions.sources(message));
+        message.setSourceMetadata("null");assertTrue(ChatSessions.sources(message).isEmpty());
+        message.setSourceMetadata("broken");assertTrue(ChatSessions.sources(message).isEmpty());
+    }
     @Test void anonymousSpringPrincipalCreatesGuestSession() {
         service.create("anonymousUser");assertNull(saved.getUserId());verifyNoInteractions(users);
     }

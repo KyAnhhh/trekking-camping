@@ -22,6 +22,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class ChatService {
+    private AiModels modelRegistry;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setModelRegistry(AiModels value) { modelRegistry=value; }
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChatService.class);
     private final GeminiProperties gemini;
     private final TourChatContext tourContext;
@@ -29,9 +32,7 @@ public class ChatService {
 
     private final VectorStore vectorStore;
     private final ChatMessageRepository chatMessageRepository;
-    private final RestTemplate restTemplate = new org.springframework.boot.web.client.RestTemplateBuilder()
-            .setConnectTimeout(java.time.Duration.ofSeconds(5))
-            .setReadTimeout(java.time.Duration.ofSeconds(25)).build();
+    private final RestTemplate restTemplate = new RestTemplate(new ChatCallBudget.RequestFactory());
 
     public ChatService(VectorStore vectorStore, ChatMessageRepository chatMessageRepository,
                        GeminiProperties gemini, com.trekkingcamping.backend.module.guide.service.GuideChatContext guideContext, TourChatContext tourContext) {
@@ -148,7 +149,17 @@ public class ChatService {
         return new ChatResponseDto(sessionId, botReply);
     }
 
-    public String generateStructured(String prompt) { return generateReply(prompt, true); }
+    public String generateStructured(String prompt) {
+        return generateStructured(prompt,null);
+    }
+    public String generateStructured(String prompt,String selectedModel) {
+        if(modelRegistry==null) return generateReply(prompt,true);
+        String model=modelRegistry.resolve(selectedModel,true);
+        long start=System.nanoTime();String failure=null;
+        try { return generateReply(prompt,true,Map.of(),ChatService::extractReply,model); }
+        catch(RuntimeException e) { failure=e instanceof ResponseStatusException r?String.valueOf(r.getStatusCode().value()):"INTERNAL";throw e; }
+        finally { modelRegistry.measured(model,(System.nanoTime()-start)/1_000_000,failure); }
+    }
 
     private String generateReply(String fullPrompt, boolean structured) {
         return generateReply(fullPrompt,structured,Map.of(),ChatService::extractReply);
@@ -157,10 +168,21 @@ public class ChatService {
     /** Read-only tool loop. The caller supplies an allowlisted dispatcher; no write tool is exposed. */
     public String converse(String system,String prompt,List<Map<String,Object>> declarations,
             java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher) {
+        return converse(system,prompt,declarations,dispatcher,null);
+    }
+    public String converse(String system,String prompt,List<Map<String,Object>> declarations,
+            java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher,String model) {
+        ChatCallBudget.CURRENT.set(new ChatCallBudget(model!=null && model.startsWith("gemma-")));
+        try { return converseWithinBudget(system,prompt,declarations,dispatcher,model); }
+        finally { ChatCallBudget.CURRENT.remove(); }
+    }
+    private String converseWithinBudget(String system,String prompt,List<Map<String,Object>> declarations,
+            java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher,String model) {
         var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         List<Object> contents=new ArrayList<>();
         contents.add(Map.of("role","user","parts",List.of(Map.of("text",prompt))));
         for(int round=0;round<3;round++) {
+            ChatCallBudget.CURRENT.get().remaining();
             if(Thread.currentThread().isInterrupted())throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,"Lượt chat đã hết thời gian chờ.");
             try {
                 if(json.writeValueAsString(contents).length()>60000)
@@ -173,7 +195,7 @@ public class ChatService {
             if(round==2)extra.put("toolConfig",Map.of("functionCallingConfig",Map.of("mode","NONE")));
             String body=generateReply(prompt,false,extra,response -> {
                 try { return json.writeValueAsString(response); } catch(Exception e) { return null; }
-            });
+            },model);
             try {
                 var root=json.readTree(body);var candidate=root.path("candidates").path(0);var content=candidate.path("content");
                 List<Object> results=new ArrayList<>();
@@ -206,6 +228,10 @@ public class ChatService {
 
     private String generateReply(String fullPrompt, boolean structured,Map<String,Object> extra,
             java.util.function.Function<Map<?,?>,String> extract) {
+        return generateReply(fullPrompt,structured,extra,extract,null);
+    }
+    private String generateReply(String fullPrompt, boolean structured,Map<String,Object> extra,
+            java.util.function.Function<Map<?,?>,String> extract,String selectedModel) {
         if (gemini.configurationIssue() != null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         String botReply = null;
         ResponseStatusException failure = new ResponseStatusException(HttpStatus.BAD_GATEWAY,
@@ -221,10 +247,17 @@ public class ChatService {
         ));
         if (structured) requestBody.put("generationConfig", Map.of("responseMimeType", "application/json"));
         else requestBody.put("generationConfig",Map.of("maxOutputTokens",4096));
+        if(selectedModel!=null && selectedModel.startsWith("gemma-4-")) {
+            var generation=new HashMap<String,Object>();
+            generation.put("maxOutputTokens",4096);
+            generation.put("thinkingConfig",Map.of("thinkingLevel","minimal"));
+            if(structured)generation.put("responseMimeType","application/json");
+            requestBody.put("generationConfig",generation);
+        }
         requestBody.putAll(extra);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        List<String> candidates = new ArrayList<>(gemini.getModels());
+        List<String> candidates = new ArrayList<>(selectedModel==null?gemini.getModels():List.of(selectedModel));
         for (int attempt = 0; attempt < gemini.getMaxAttempts() && !candidates.isEmpty(); attempt++) {
             if(Thread.currentThread().isInterrupted())throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,"Lượt chat đã hết thời gian chờ.");
             String modelName = candidates.remove(0);
@@ -239,7 +272,10 @@ public class ChatService {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName.trim() + ":generateContent";
             
             try {
+                var budget=ChatCallBudget.CURRENT.get();
+                if(budget!=null)budget.claim();
                 ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                if(budget!=null)budget.remaining();
                 if (isBlocked(response.getBody())) {
                     log.warn("Gemini model {} blocked the response", modelName);
                     throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -266,6 +302,8 @@ public class ChatService {
                 failure = new ResponseStatusException(timeout ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.SERVICE_UNAVAILABLE,
                         timeout ? "Gemini phản hồi quá thời gian chờ. Vui lòng thử lại."
                                 : "Backend không kết nối được đến Gemini. Vui lòng kiểm tra kết nối mạng.");
+                // A read timeout has already spent the useful waiting window. Do not start it again.
+                if(timeout && ChatCallBudget.CURRENT.get()!=null) break;
                 candidates.add(modelName);
             } catch (RestClientException e) {
                 log.warn("Gemini request failed: {}", e.getClass().getSimpleName());

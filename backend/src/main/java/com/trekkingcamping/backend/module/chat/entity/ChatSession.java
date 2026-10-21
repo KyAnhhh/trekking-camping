@@ -14,4 +14,6 @@ public class ChatSession {
     private Instant busyUntil;
     private Instant nextTurnAt;
     private long turn;
+    @Column(length=100) private String selectedModelId;
+    @Column(nullable=false,columnDefinition="bigint default 0") private long settingsRevision;
 }

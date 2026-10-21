@@ -30,6 +30,10 @@ public class KnowledgeService {
 
     @Transactional(rollbackFor = Exception.class)
     public int uploadKnowledgeBase(MultipartFile file) throws IOException {
+        return uploadKnowledgeBase(file,false);
+    }
+    @Transactional(rollbackFor = Exception.class)
+    public int uploadKnowledgeBase(MultipartFile file,boolean publicExcerpt) throws IOException {
         String filename = file.getOriginalFilename();
         if (filename == null || filename.isBlank() || !filename.toLowerCase(Locale.ROOT).endsWith(".txt")) {
             throw new IllegalArgumentException("Chỉ hỗ trợ tài liệu .txt mã hóa UTF-8.");
@@ -45,7 +49,8 @@ public class KnowledgeService {
         }
         if (content.isBlank()) throw new IllegalArgumentException("Tài liệu không có nội dung.");
         var document = new Document(content, Map.of("filename", filename, "source_file", filename,
-                "ingested_at",java.time.Instant.now().toString(),"source_type","ADMIN_UPLOAD"));
+                "ingested_at",java.time.Instant.now().toString(),"source_type","ADMIN_UPLOAD",
+                "visibility",publicExcerpt?"PUBLIC":"CONTEXT_ONLY"));
         var chunks = new TokenTextSplitter().apply(List.of(document));
         if (chunks.isEmpty()) throw new IllegalArgumentException("Không tìm thấy nội dung để nạp.");
         lockFile(filename);

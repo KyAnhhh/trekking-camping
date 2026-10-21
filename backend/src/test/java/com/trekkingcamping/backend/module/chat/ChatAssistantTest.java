@@ -77,14 +77,18 @@ class ChatAssistantTest {
         when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenThrow(new IllegalStateException());
         when(model.converse(any(),any(),anyList(),any())).thenReturn("General information only");
         var answer=assistant.chat(request,"owner");assertTrue(answer.sources().isEmpty());assertFalse(answer.notices().isEmpty());
-        verify(sessions).finish(turn,request.getMessage(),answer.reply());verify(sessions).release(turn);
+        verify(sessions).finish(turn,request.getMessage(),answer.reply(),answer.sources());verify(sessions).release(turn);
     }
-    @Test void unknownCitationIsRejectedWithoutSaving() {
+    @Test void unknownCitationIsReplacedByExplicitNoticeNotUnsupportedAdvice() {
         when(model.converse(any(),any(),anyList(),any())).thenReturn("Made up [S99]");
-        assertThrows(ResponseStatusException.class,()->assistant.chat(request,"owner"));verify(sessions,never()).finish(any(),any(),any());verify(sessions).release(turn);
+        var answer=assistant.chat(request,"owner");
+        assertFalse(answer.reply().contains("Made up"));assertFalse(answer.reply().contains("[S99]"));
+        assertTrue(answer.reply().contains("chưa có câu trả lời"));assertFalse(answer.notices().isEmpty());assertNull(answer.proposal());
+        verify(sessions).finish(turn,request.getMessage(),answer.reply(),answer.sources());verify(sessions).release(turn);
+        verify(model).converse(any(),contains("MÃ NGUỒN RAG ĐƯỢC PHÉP TRONG LƯỢT NÀY: []"),anyList(),any());
     }
     @Test void sourcesKeepMetadataAndUnfilteredInitialOptionsAreNotPresentedAsRecommendations() {
-        when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenReturn(List.of(new Document("Relevant",Map.of("source_file","guide.txt","ingested_at","2026-10-11"))));
+        when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenReturn(List.of(new Document("Relevant",Map.of("source_file","guide.txt","visibility","PUBLIC","ingested_at","2026-10-11"))));
         when(catalog.search(isNull(),eq(12L))).thenReturn(List.of(option()));
         when(model.converse(any(),any(),anyList(),any())).thenReturn("Answer [S1]");
         var answer=assistant.chat(request,"owner");assertEquals("guide.txt",answer.sources().getFirst().label());assertTrue(answer.tours().isEmpty());
@@ -100,5 +104,21 @@ class ChatAssistantTest {
         });
         var result=assistant.chat(request,"owner");assertEquals(2L,result.proposal().scheduleId());assertEquals(1,result.tours().size());
         verify(catalog).search(argThat(f -> f!=null && f.people()==2),eq(12L));
+    }
+    @Test void publicExcerptsDistinguishCitationsFromRetrievalAndHidePrivateDocuments() {
+        when(vector.similaritySearch(any(org.springframework.ai.vectorstore.SearchRequest.class))).thenReturn(List.of(
+            new Document("Private content",Map.of("visibility","PRIVATE")),
+            new Document("Public excerpt",Map.of("visibility","PUBLIC","source_file","C:/internal/guide.txt")),
+            new Document("Legacy knowledge",Map.of("source_file","internal.txt"))));
+        when(model.converse(any(),any(),anyList(),any())).thenAnswer(c->{
+            assertFalse(((String)c.getArgument(1)).contains("Private content"));return "Advice [S1]";
+        });
+        var answer=assistant.chat(request,"owner");
+        assertEquals(2,answer.sources().size());
+        assertEquals("guide.txt",answer.sources().getFirst().label());
+        assertEquals("Public excerpt",answer.sources().getFirst().excerpt());
+        assertTrue(answer.sources().getFirst().cited());
+        assertFalse(answer.sources().get(1).cited());assertNull(answer.sources().get(1).excerpt());
+        assertFalse(answer.sources().get(1).label().contains("internal.txt"));
     }
 }

@@ -6,7 +6,10 @@ public final class PlanDtos {
     private PlanDtos() {}
     public record Request(String destination, LocalDate startDate, Integer days, Integer people,
                           BigDecimal budgetPerPerson, Integer fitness, String preferences,
-                          BigDecimal maxDistanceKm, BigDecimal maxActiveHoursPerDay, BigDecimal maxMedicalAccessHours) {
+                          BigDecimal maxDistanceKm, BigDecimal maxActiveHoursPerDay, BigDecimal maxMedicalAccessHours,String modelId) {
+        public Request(String destination,LocalDate startDate,Integer days,Integer people,BigDecimal budget,Integer fitness,String preferences,BigDecimal distance,BigDecimal hours,BigDecimal medical) {
+            this(destination,startDate,days,people,budget,fitness,preferences,distance,hours,medical,null);
+        }
         public Request(String destination,LocalDate startDate,Integer days,Integer people,BigDecimal budget,Integer fitness,String preferences) {
             this(destination,startDate,days,people,budget,fitness,preferences,null,null,null);
         }

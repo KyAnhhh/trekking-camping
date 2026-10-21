@@ -14,6 +14,23 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 class ChatToolsTest {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"gemma-4-31b-it","gemma-4-26b-a4b-it"})
+    void selectedGemmaRemainsPinnedAcrossToolsAndTransientRetry(String model) {
+        config.setMaxAttempts(2);
+        String url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent";
+        server.expect(requestTo(url)).andExpect(jsonPath("$.systemInstruction.parts[0].text").value("rules"))
+            .andExpect(jsonPath("$.generationConfig.thinkingConfig.thinkingLevel").value("minimal"))
+            .andRespond(withStatus(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(requestTo(url)).andRespond(withSuccess("""
+            {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"search_tours","args":{}}}]}}]}
+            """,MediaType.APPLICATION_JSON));
+        server.expect(requestTo(url)).andExpect(jsonPath("$.contents[2].parts[0].functionResponse.name").value("search_tours"))
+            .andRespond(withSuccess("""
+            {"candidates":[{"content":{"parts":[{"text":"Không có tour phù hợp."}]},"finishReason":"STOP"}]}
+            """,MediaType.APPLICATION_JSON));
+        assertEquals("Không có tour phù hợp.",service.converse("rules","question",List.of(),(n,a)->Map.of("tours",List.of()),model));server.verify();
+    }
     GeminiProperties config=new GeminiProperties();ChatService service;MockRestServiceServer server;
     ChatToolsTest() {
         config.setApiKey("unit-test-only");config.setModels(List.of("test-model"));config.setMaxAttempts(1);
@@ -41,5 +58,12 @@ class ChatToolsTest {
                 {"candidates":[{"content":{"parts":[{"text":"partial"}]},"finishReason":"MAX_TOKENS"}]}
                 """,MediaType.APPLICATION_JSON));
         assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.converse("rules","question",List.of(),(n,a)->Map.of()));
+    }
+    @Test void socketTimeoutIsNotRepeatedWithinChatTurn() {
+        config.setMaxAttempts(3);
+        server.expect(anything()).andRespond(withException(new java.net.SocketTimeoutException("synthetic")));
+        var error=assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            ()->service.converse("rules","question",List.of(),(n,a)->Map.of(),"gemma-4-31b-it"));
+        assertEquals(504,error.getStatusCode().value());server.verify();
     }
 }

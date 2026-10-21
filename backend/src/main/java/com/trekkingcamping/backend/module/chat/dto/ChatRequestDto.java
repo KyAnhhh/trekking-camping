@@ -1,6 +1,9 @@
 package com.trekkingcamping.backend.module.chat.dto;
 
 public class ChatRequestDto {
+    private Long settingsRevision;
+    public Long getSettingsRevision(){return settingsRevision;}
+    public void setSettingsRevision(Long value){settingsRevision=value;}
     private String sessionToken;
     public String getSessionToken() { return sessionToken; }
     public void setSessionToken(String token) { sessionToken=token; }

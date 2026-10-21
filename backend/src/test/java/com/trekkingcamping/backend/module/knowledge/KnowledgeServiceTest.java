@@ -32,4 +32,12 @@ class KnowledgeServiceTest {
         verify(jdbc).update(query, "guide.txt");
         verifyNoInteractions(vectorStore);
     }
+    @Test void publishingExcerptsRequiresExplicitOptIn() throws Exception {
+        var file=new MockMultipartFile("file","guide.txt","text/plain","Synthetic public trekking advice.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        service.uploadKnowledgeBase(file);
+        verify(vectorStore).add(argThat(docs->docs.stream().allMatch(d->"CONTEXT_ONLY".equals(d.getMetadata().get("visibility")))));
+        clearInvocations(vectorStore);
+        service.uploadKnowledgeBase(file,true);
+        verify(vectorStore).add(argThat(docs->docs.stream().allMatch(d->"PUBLIC".equals(d.getMetadata().get("visibility")))));
+    }
 }

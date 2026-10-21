@@ -13,6 +13,14 @@ import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 class PlannerServiceTest {
+    @Test void forwardsClientModelAndKeepsItInSavedPlan() throws Exception {
+        owner();var r=request();
+        var chosen=new Request(r.destination(),r.startDate(),r.days(),r.people(),r.budgetPerPerson(),r.fitness(),r.preferences(),null,null,null,"gemma-4-31b-it");
+        when(ai.generateStructured(anyString(),eq("gemma-4-31b-it"))).thenReturn(json.writeValueAsString(generated(List.of())));
+        service.generate("owner",chosen);
+        verify(ai).generateStructured(anyString(),eq("gemma-4-31b-it"));
+        verify(store).save(eq("owner"),eq(0L),argThat(c->"gemma-4-31b-it".equals(c.request().modelId())));
+    }
     ChatService ai = mock(ChatService.class); PlanCatalog catalog = mock(PlanCatalog.class); PlanStore store = mock(PlanStore.class);
     UserRepository users = mock(UserRepository.class); SavedPlanRepository plans = mock(SavedPlanRepository.class);
     ObjectMapper json = new ObjectMapper().findAndRegisterModules();
@@ -21,12 +29,12 @@ class PlannerServiceTest {
     void owner() { User u = new User(); u.setId(1L); when(users.findByEmail("owner")).thenReturn(Optional.of(u)); when(catalog.matching(any())).thenReturn(List.of()); }
     Generated generated(List<Long> ids) { return new Generated("Plan","Summary",List.of(new Day(1,"Day one","Morning","Afternoon","Evening")),List.of("Check conditions"),ids); }
     @Test void validatedSuggestionUsesServerOptionsAndSavesOnlyForOwner() throws Exception {
-        owner(); when(ai.generateStructured(anyString())).thenReturn(json.writeValueAsString(generated(List.of())));
+        owner(); when(ai.generateStructured(anyString(),nullable(String.class))).thenReturn(json.writeValueAsString(generated(List.of())));
         service.generate("owner",request());
         verify(store).save(eq("owner"),eq(0L),argThat(c -> c.tours().isEmpty() && c.request().people()==2));
     }
     @Test void inventedTourAndInvalidJsonNeverPersist() throws Exception {
-        owner(); when(ai.generateStructured(anyString())).thenReturn(json.writeValueAsString(generated(List.of(999L))),"not-json");
+        owner(); when(ai.generateStructured(anyString(),nullable(String.class))).thenReturn(json.writeValueAsString(generated(List.of(999L))),"not-json");
         assertThrows(ResponseStatusException.class, () -> service.generate("owner",request()));
         assertThrows(ResponseStatusException.class, () -> service.generate("owner",request()));
         verifyNoInteractions(store);

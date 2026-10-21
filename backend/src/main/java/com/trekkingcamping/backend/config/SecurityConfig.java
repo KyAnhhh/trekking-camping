@@ -48,6 +48,9 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/chat").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/chat/sessions", "/api/chat/history").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/chat/models").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat/sessions/*/state").permitAll()
+                .requestMatchers(HttpMethod.PATCH, "/api/chat/sessions/*/settings").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/guide-invitations/preview", "/api/guide-invitations/accept").permitAll()
                 // The gateway authenticates this callback with HMAC, not a user's JWT.
@@ -96,6 +99,9 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration settings = new CorsConfiguration(configuration);
+        settings.setAllowedMethods(List.of("PATCH", "OPTIONS"));
+        source.registerCorsConfiguration("/api/chat/sessions/*/settings", settings);
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
