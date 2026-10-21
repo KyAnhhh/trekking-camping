@@ -13,8 +13,12 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import EmptyState from "../../components/common/EmptyState";
 import Modal from "../../components/common/Modal";
 
+import { useChat } from '../../context/ChatContext';
+import ModelSelector from '../../components/chat/ModelSelector';
+
 const load = async () => (await plannerService.list()).data.data;
 export default function Planner() {
+  const { selection, models, loading: modelLoading, error: modelError } = useChat();
   const { data: saved, loading, error, reload } = useResource(load);
   const [form, setForm] = useState({
     destination: "",
@@ -49,12 +53,13 @@ export default function Planner() {
   }
   const generate = (e) => {
     e.preventDefault();
+    if (modelLoading || !models.some(m => m.id === selection.modelId)) { setFailure("Hãy chọn model AI trước khi tạo lịch trình."); return; }
     if (form.startDate <= todayInVietnam()) {
       setFailure("Chọn ngày khởi hành từ ngày mai.");
       return;
     }
     action(async () => {
-      const input = { ...form };
+      const input = { ...form, modelId: selection.modelId };
       [
         "maxDistanceKm",
         "maxActiveHoursPerDay",
@@ -94,6 +99,8 @@ export default function Planner() {
       <div className="planner-layout">
         <section className="panel">
           <h2>Bạn muốn đi đâu?</h2>
+          <ModelSelector disabled={busy} />
+          {modelError && <p role="alert" className="notice">{modelError}</p>}
           <form className="form-stack" onSubmit={generate}>
             <fieldset className="form-stack" disabled={busy}>
               <label className="field">
@@ -216,7 +223,7 @@ export default function Planner() {
                 Nhu cầu và thông tin tour công khai được gửi tới AI để tạo gợi
                 ý. Không nhập thông tin cá nhân nhạy cảm.
               </p>
-              <button className="btn">
+              <button className="btn" disabled={modelLoading || !models.some(m => m.id === selection.modelId)}>
                 <Bookmark size={17} />
                 {busy ? "Đang xử lý..." : "Tạo và lưu lịch trình"}
               </button>
@@ -231,6 +238,7 @@ export default function Planner() {
             <article className="panel">
               <p className="eyebrow">LỊCH TRÌNH GỢI Ý · ĐÃ LƯU</p>
               <h2>{content.itinerary.title}</h2>
+              {content.request.modelId && <p className="muted">Model: {content.request.modelId}</p>}
               <p>{content.itinerary.summary}</p>
               <p className="small muted">
                 <CalendarDays size={15} />{" "}

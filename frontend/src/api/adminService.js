@@ -10,9 +10,10 @@ export const adminService = {
     return axiosClient.get('/api/admin/knowledge/files');
   },
 
-  uploadFile: (file) => {
+  uploadFile: (file, publicExcerpt = false) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('publicExcerpt', String(publicExcerpt));
 
     return axiosClient.post('/api/admin/knowledge/upload', formData, {
       headers: {

@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ArrowUp, Compass } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import ChatMessage from './ChatMessage';
+import ModelSelector from './ModelSelector';
 export default function ChatPanel({ compact = false, initialQuestion = '' }) {
-  const { messages, loading, sendMessage } = useChat();
-  const [input, setInput] = useState(initialQuestion);
+  const { messages, loading, sendMessage, models, selection, error, retry, retryMessage, stop, draft: input, setDraft: setInput } = useChat();
   const list = useRef(null);
   useEffect(() => {
-    setInput(initialQuestion);
+    if (initialQuestion) setInput(initialQuestion);
   }, [initialQuestion]);
   useEffect(() => {
     if (compact) document.getElementById('widget-message')?.focus();
@@ -17,7 +17,7 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
   }, [messages, loading]);
   async function submit(event) {
     event.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !models.some(m => m.id === selection.modelId)) return;
     const message = input;
     setInput('');
     await sendMessage(message);
@@ -25,6 +25,8 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
   return (
     <div className={'chat-panel' + (compact ? ' compact' : '')}>
       <button className="btn btn-small btn-outline" disabled={loading} onClick={() => window.dispatchEvent(new Event('chat:reset'))}>Cuộc trò chuyện mới</button>
+      {error && <div className="notice" role="alert">{error}{retry && <button type="button" disabled={loading} onClick={retryMessage}>Thử lại</button>}</div>}
+      {loading && <button type="button" className="btn btn-small btn-outline" onClick={stop}>Dừng chờ</button>}
       <div
         className="chat-messages"
         ref={list}
@@ -65,6 +67,7 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
         </div>
       )}
       <form className="chat-composer" onSubmit={submit}>
+        <ModelSelector />
         <label className="sr-only" htmlFor={compact ? 'widget-message' : 'page-message'}>
           Câu hỏi của bạn
         </label>
@@ -78,7 +81,7 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
         <button
           className="icon-btn send-btn"
           type="submit"
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || !models.some(m => m.id === selection.modelId)}
           aria-label="Gửi câu hỏi"
         >
           <ArrowUp size={20} />

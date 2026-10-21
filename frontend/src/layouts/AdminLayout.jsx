@@ -26,6 +26,7 @@ const links = [
   { to: "/admin/users", label: "Người dùng", icon: Users },
   { to: "/admin/guides", label: "Hướng dẫn viên", icon: Users },
   { to: "/admin/knowledge", label: "Kho tri thức", icon: BookOpen },
+  { to: "/admin/ai-models", label: "Quản trị AI", icon: MessageSquare },
   { to: "/admin/notifications", label: "Thông báo", icon: Bell },
 ];
 export default function AdminLayout() {

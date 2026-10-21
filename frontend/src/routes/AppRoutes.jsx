@@ -36,6 +36,7 @@ const AdminTours = lazy(() => import("../pages/admin/AdminTours"));
 const AdminTourDetail = lazy(() => import("../pages/admin/AdminTourDetail"));
 const AdminUsers = lazy(() => import("../pages/admin/AdminUsers"));
 const AdminKnowledge = lazy(() => import("../pages/admin/AdminKnowledge"));
+const AdminAiModels = lazy(() => import("../pages/admin/AdminAiModels"));
 function NotFound() {
   return (
     <div className="container not-found">
@@ -151,6 +152,7 @@ export default function AppRoutes() {
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="bookings/:id" element={<BookingDetail admin />} />
           <Route path="knowledge" element={<AdminKnowledge />} />
+          <Route path="ai-models" element={<AdminAiModels />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="*" element={<NotFound />} />
         </Route>

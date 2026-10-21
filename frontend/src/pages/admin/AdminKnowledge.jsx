@@ -15,6 +15,7 @@ export default function AdminKnowledge() {
     [error, setError] = useState(''),
     [success, setSuccess] = useState('');
   const input = useRef(null);
+  const [publicExcerpt, setPublicExcerpt] = useState(false);
   async function syncTours() {
     if (busy) return;
     setBusy(true);
@@ -40,9 +41,10 @@ export default function AdminKnowledge() {
     setError('');
     setSuccess('');
     try {
-      await adminService.uploadFile(file);
+      await adminService.uploadFile(file, publicExcerpt);
       setSuccess('Đã cập nhật tài liệu vào kho tri thức.');
       setFile(null);
+      setPublicExcerpt(false);
       input.current.value = '';
       reload();
     } catch (err) {
@@ -163,10 +165,13 @@ export default function AdminKnowledge() {
                 disabled={busy}
                 onChange={(e) => {
                   setFile(e.target.files?.[0] || null);
+                  setPublicExcerpt(false);
                   setError('');
                 }}
               />
             </label>
+            <label><input type="checkbox" checked={publicExcerpt} disabled={busy} onChange={e => setPublicExcerpt(e.target.checked)} /> Cho phép khách xem tên tài liệu và đoạn trích nguồn</label>
+            <p className="small muted">Chỉ nạp nội dung được phép dùng để tư vấn khách. Dù không bật xem đoạn trích, AI vẫn có thể diễn giải nội dung tài liệu. Nguồn đã gửi có thể được lưu trong lịch sử chat.</p>
             <button className="btn full-width" disabled={!file || busy}>
               <Upload size={17} />
               {busy ? 'Đang xử lý...' : 'Tải lên kho tri thức'}

@@ -1,0 +1,11 @@
+.ai-admin { display: grid; gap: 1.5rem; min-width: 0; }
+.ai-admin header p { max-width: 65ch; }
+.ai-admin fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ai-tabs, .ai-actions, .ai-audit { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.ai-model-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 1rem; }
+.ai-model-card { padding: 1.4rem; border: 1px solid #dbe5de; border-radius: 18px; background: #fff; min-width: 0; }
+.ai-model-card code { overflow-wrap: anywhere; }
+.ai-model-card label { display: block; margin: 1rem 0; }
+.ai-model-card input:not([type=checkbox]), .ai-model-card select { display: block; width: 100%; padding: .7rem; margin-top: .4rem; border: 1px solid #a7bab0; border-radius: 8px; }
+.ai-model-card input[type=checkbox] { margin-right: .5rem; }
+.ai-audit { justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid #dbe5de; overflow-wrap: anywhere; }
