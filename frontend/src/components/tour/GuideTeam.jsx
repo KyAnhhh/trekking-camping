@@ -12,7 +12,7 @@ export default function GuideTeam({ members = [], legacyName }) {
     );
   return (
     <div className="guide-team">
-      {members.map(({ guide, role, phone }) => (
+      {members.map(({ guide, role, phone, responseStatus, responseReason }) => (
         <article className="guide-card" key={guide.id}>
           {guide.avatarUrl ? (
             <img
@@ -35,6 +35,8 @@ export default function GuideTeam({ members = [], legacyName }) {
             {guide.specialties && (
               <p className="small muted">{guide.specialties}</p>
             )}
+            {responseStatus && <p className="small">{({PENDING:'Chờ hướng dẫn viên nhận lịch',ACCEPTED:'Đã nhận lịch',DECLINED:'Đã từ chối',LEGACY:'Phân công cũ — chưa ghi nhận phản hồi'})[responseStatus] || responseStatus}</p>}
+            {responseReason && <p className="small">Lý do: {responseReason}</p>}
             {phone && (
               <a className="small text-link" href={`tel:${phone}`}>
                 {phone}

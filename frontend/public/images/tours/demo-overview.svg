@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+ <title id="title">Minh họa tour mô phỏng cho đồ án</title><desc id="desc">Đồ họa núi và lều, không phải ảnh chụp địa điểm tour.</desc>
+ <rect width="1200" height="700" fill="#e5eddf"/><circle cx="940" cy="170" r="75" fill="#efd49a"/>
+ <path d="M0 520L270 120L530 520L760 230L1200 560V700H0Z" fill="#809c82"/>
+ <path d="M0 600L470 230L800 620L1050 340L1200 540V700H0Z" fill="#345f4d"/>
+ <path d="M490 600L620 410L780 600Z" fill="#e8be75"/><path d="M620 410L640 600H780Z" fill="#b77c3c"/>
+ <rect x="32" y="28" width="470" height="58" rx="12" fill="#173e30"/>
+ <text x="56" y="66" fill="#ffffff" font-family="Arial,sans-serif" font-size="26">MÔ PHỎNG ĐỒ ÁN · ẢNH MINH HỌA</text>
+ <rect y="622" width="1200" height="78" fill="#173e30"/>
+ <text x="40" y="670" fill="#ffffff" font-family="Arial,sans-serif" font-size="25">Không phải ảnh thực địa · Không xác nhận lịch mở bán thật</text>
+</svg>

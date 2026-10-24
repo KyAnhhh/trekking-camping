@@ -5,6 +5,7 @@ import useResource from '../../hooks/useResource';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import AdminPager from '../../components/common/AdminPager';
+import BookingChangeQueue from '../../components/tour/BookingChangeQueue';
 import { money, dateLabel } from '../../utils/tour';
 const filters = { ALL: 'Tất cả', REVIEW_REQUIRED: 'Chờ duyệt tham gia', PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy' };
 export default function AdminBookings() {
@@ -13,6 +14,7 @@ export default function AdminBookings() {
   const load = useCallback(async () => (await operationsService.bookings(queue, page)).data.data, [queue, page]);
   const { data, loading, error, reload } = useResource(load);
   return <>
+    <BookingChangeQueue />
     <header className="page-heading"><p className="eyebrow">QUẢN LÝ CHUYẾN ĐI</p><h1>Đơn đặt tour.</h1><p>Duyệt điều kiện tham gia và kiểm tra thanh toán trong chi tiết đơn.</p></header>
     <div className="list-toolbar"><label>Bộ lọc đơn <select value={queue} onChange={e => setParams({ queue: e.target.value, page: '0' })}>{Object.entries(filters).map(([v, l]) => <option value={v} key={v}>{l}</option>)}</select></label><button className="btn btn-outline btn-small" onClick={reload} disabled={loading}>Tải lại</button></div>
     {loading ? <LoadingSpinner /> : error ? <EmptyState error title="Chưa tải được đơn" description={error} onRetry={reload} /> : <>

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from "react";
 import { authService } from "../api/authService";
+import { expireSession, isTokenExpired } from "../api/authSession.js";
 
 export const AuthContext = createContext();
 
@@ -14,7 +15,9 @@ export const AuthProvider = ({ children }) => {
     const role = localStorage.getItem("role");
     const username = localStorage.getItem("username");
 
-    if (token && token !== "undefined" && token !== "null" && role) {
+    if (token && isTokenExpired(token)) {
+      expireSession(token);
+    } else if (token && token !== "undefined" && token !== "null" && role) {
       setUser({ token, role, username, email: username });
     }
     setLoading(false);

@@ -18,6 +18,7 @@ import { AuthContext } from "../context/AuthContext";
 import { Brand } from "../components/common/Navbar";
 import NotificationBell from "../components/common/NotificationBell";
 const links = [
+  { to: "/admin/guide-reports", label: "Báo cáo chuyến đi", icon: BookOpen },
   { to: "/admin", label: "Tổng quan", icon: LayoutDashboard, end: true },
   { to: "/admin/tours", label: "Tour & lịch khởi hành", icon: Mountain },
   { to: "/admin/bookings", label: "Đơn đặt tour", icon: CalendarDays },
@@ -25,6 +26,7 @@ const links = [
   { to: "/admin/reviews", label: "Đánh giá", icon: MessageSquare },
   { to: "/admin/users", label: "Người dùng", icon: Users },
   { to: "/admin/guides", label: "Hướng dẫn viên", icon: Users },
+  { to: "/admin/guide-assignments", label: "Phân công dẫn đoàn", icon: CalendarDays },
   { to: "/admin/knowledge", label: "Kho tri thức", icon: BookOpen },
   { to: "/admin/ai-models", label: "Quản trị AI", icon: MessageSquare },
   { to: "/admin/notifications", label: "Thông báo", icon: Bell },

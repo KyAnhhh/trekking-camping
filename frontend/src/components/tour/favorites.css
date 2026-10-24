@@ -1,0 +1,11 @@
+.favorite-control { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .75rem 0; }
+.favorite-button { display: inline-flex; gap: .45rem; align-items: center; padding: .6rem .85rem; border: 1px solid #bbcfc6; border-radius: 999px; color: #215444; background: #fff; cursor: pointer; font: inherit; font-size: .85rem; }
+.favorite-button[aria-pressed="true"] { background: #e9f3ed; color: #195438; border-color: #38785a; }
+.favorite-button:focus-visible { outline: 3px solid #b97a26; outline-offset: 3px; }
+.favorite-button:disabled { opacity: .6; cursor: wait; }
+.favorite-control small { flex-basis: 100%; color: #a22d25; }
+.favorites-page { padding-top: 2rem; padding-bottom: 3rem; min-height: 60vh; }
+.favorites-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+.favorites-pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; }
+@media(max-width: 900px) { .favorites-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media(max-width: 600px) { .favorites-grid { grid-template-columns: minmax(0,1fr); } }

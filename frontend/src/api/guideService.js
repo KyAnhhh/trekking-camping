@@ -12,8 +12,8 @@ export const guideService = {
   create: (data) => axiosClient.post("/api/admin/guides", data),
   update: (id, data) => axiosClient.put(`/api/admin/guides/${id}`, data),
   team: (id) => axiosClient.get(`/api/admin/schedules/${id}/guides`),
-  assign: (id, data) =>
-    axiosClient.put(`/api/admin/schedules/${id}/guides`, data),
+  assign: (id, data, reason) =>
+    axiosClient.put(`/api/admin/schedules/${id}/guides`, data, { params: { reason } }),
   bookingTeam: (id, admin = false) =>
     axiosClient.get(`/api/${admin ? "admin/" : ""}bookings/${id}/guides`),
   upload: (id, file) => {

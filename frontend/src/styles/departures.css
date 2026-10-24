@@ -1,0 +1,24 @@
+.departures-page { padding-block: 2rem 3rem; min-height: 65vh; }
+.departure-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; padding: 1.25rem; margin-block: 1.5rem; border: 1px solid var(--line); border-radius: 16px; background: #f5f7ef; }
+.departure-filters label { display: flex; flex-direction: column; gap: .4rem; font-size: .9rem; }
+.departure-filters input,.departure-filters select,.departure-toolbar input { min-width: 0; padding: .65rem; border: 1px solid #bbcabd; border-radius: 8px; background: white; color: #234333; font: inherit; }
+.departure-filters .departure-check { flex-direction: row; align-items: center; }
+.departure-check input { width: auto; }
+.departure-toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.departure-toolbar button { margin-right: .5rem; }
+.departures-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin-top: 1.25rem; }
+.departure-card { padding: 1.5rem; border: 1px solid var(--line); border-radius: 16px; background: white; height: 100%; overflow-wrap: anywhere; }
+.departure-card h2 { font-size: 1.2rem; margin-block: .5rem; }
+.departure-demo { font-size: .8rem; color: #744813; background: #fff1d2; padding: .5rem; border-radius: 6px; }
+.departure-open { color: #27633c; font-weight: 600; }
+.departure-actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
+.departure-actions .compare-toggle { margin: 0; }
+.departure-calendar-scroll { overflow-x: auto; margin-block: 1rem; border: 1px solid var(--line); border-radius: 12px; }
+.departure-calendar { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); min-width: 770px; }
+.departure-weekday { text-align: center; padding: .75rem; background: #edf3e5; }
+.departure-day { min-height: 110px; padding: .5rem; border-right: 1px solid var(--line); border-top: 1px solid var(--line); }
+.departure-day a { display: block; margin-top: .4rem; padding: .4rem; background: #eaf1e4; border-radius: 5px; font-size: .75rem; overflow-wrap: anywhere; }
+.departure-day small { display: block; margin-top: .25rem; }
+[id^="departure-"] { scroll-margin-top: 110px; }
+@media(max-width:700px) { .departure-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } .departures-grid { grid-template-columns: minmax(0,1fr); } }
+@media(max-width:400px) { .departure-filters { grid-template-columns: minmax(0,1fr); } }

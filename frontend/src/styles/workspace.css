@@ -6,6 +6,20 @@
 .notification-item p, .attendance-row p { font-size: .8rem; margin-block: 8px; }
 .notification-item.is-unread { border-left: 4px solid var(--sage); background: var(--mist); }
 .notification-item .btn, .attendance-row .btn { flex-shrink: 0; }
+.notification-item { flex-wrap: wrap; }
+.notification-item > div:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.notification-item > .btn { margin-left: auto; }
+.notification-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 16px; margin-left: auto; }
+.notification-detail-container { flex-basis: 100%; min-width: 0; width: 100%; }
+.notification-detail { border-top: 1px solid var(--line); padding-top: 20px; }
+.notification-detail h3 { font-size: 1rem; }
+.notification-history { padding-left: 24px; }
+.notification-history li { margin-block: 20px; overflow-wrap: anywhere; }
+.notification-reason { white-space: pre-wrap; }
+@media(max-width: 650px) {
+  .notification-toolbar { flex-wrap: wrap; gap: 16px; }
+  .notification-detail-container { flex-basis: auto; }
+}
 .notification-bell { position: relative; flex-shrink: 0; }
 .notification-badge { position: absolute; top: -3px; right: -5px; padding: 2px 4px; min-width: 17px; border-radius: 10px; background: var(--forest); color: #fff; font-size: .55rem; text-align: center; border: 2px solid #fff; }
 .guide-trip > p { display: flex; align-items: baseline; gap: 8px; font-size: .8rem; }

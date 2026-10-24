@@ -1,0 +1,7 @@
+.booking-changes { margin-block: 24px; }
+.booking-changes label { display: grid; gap: 8px; margin-block: 16px; }
+.booking-changes textarea { min-height: 90px; width: 100%; resize: vertical; }
+.booking-changes select { max-width: 100%; }
+.booking-change-item { padding-block: 16px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.booking-change-note { white-space: pre-wrap; }
+.booking-change-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }

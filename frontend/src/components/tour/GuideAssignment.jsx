@@ -3,6 +3,7 @@ import { guideService } from "../../api/guideService";
 import Modal from "../common/Modal";
 import { dateLabel, errorMessage } from "../../utils/tour";
 export default function GuideAssignment({ schedule, onClose, onSaved }) {
+  const [reason, setReason] = useState('');
   const [rows, setRows] = useState([]),
     [lead, setLead] = useState(""),
     [helpers, setHelpers] = useState([]);
@@ -55,7 +56,7 @@ export default function GuideAssignment({ schedule, onClose, onSaved }) {
               .map((guideCode) => ({ guideCode, role: "ASSISTANT" })),
           ]
         : [];
-      await guideService.assign(schedule.id, payload);
+      await guideService.assign(schedule.id, payload, reason);
       onSaved();
     } catch (e) {
       setError(errorMessage(e));
@@ -93,6 +94,8 @@ export default function GuideAssignment({ schedule, onClose, onSaved }) {
             </p>
           )}
           <fieldset className="form-stack" disabled={busy}>
+            <label className="field">Lý do phân công/thay đổi<textarea required maxLength={900} value={reason} onChange={e=>setReason(e.target.value)} /></label>
+            <p className="notice">Phân công mới cần hướng dẫn viên nhận lịch trước khi xem danh sách khách. Hồ sơ chưa liên kết tài khoản cần được liên kết trong quản lý hướng dẫn viên.</p>
             <label className="field">
               Trưởng đoàn
               <select
@@ -109,7 +112,7 @@ export default function GuideAssignment({ schedule, onClose, onSaved }) {
                   .filter((g) => g.active)
                   .map((g) => (
                     <option key={g.profile.id} value={g.profile.code}>
-                      {g.profile.fullName} · {g.profile.code}
+                      {g.profile.fullName} · {g.profile.code}{!g.accountLinked ? ' · Chưa có tài khoản hoạt động' : ''}
                     </option>
                   ))}
               </select>

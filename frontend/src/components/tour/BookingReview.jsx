@@ -4,6 +4,7 @@ import useResource from "../../hooks/useResource";
 import { errorMessage } from "../../utils/tour";
 import LoadingSpinner from "../common/LoadingSpinner";
 import EmptyState from "../common/EmptyState";
+import ReviewPhotos from './ReviewPhotos';
 export default function BookingReview({ bookingId }) {
   const load = useCallback(
     async () => (await reviewService.eligibility(bookingId)).data.data,
@@ -34,6 +35,7 @@ export default function BookingReview({ bookingId }) {
   return (
     <section className="panel review-section">
       <h2>Đánh giá chuyến đi</h2>
+      {data?.review?.id && <ReviewPhotos reviewId={data.review.id} mode="owner" />}
       {loading ? (
         <LoadingSpinner />
       ) : error ? (

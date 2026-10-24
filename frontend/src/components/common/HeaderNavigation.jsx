@@ -8,6 +8,7 @@ export default function HeaderNavigation({ open, onNavigate }) {
         if (event.target.closest("a")) onNavigate();
       }}>
       <NavLink to="/tours">Khám phá tour</NavLink>
+      <NavLink to="/departures">Lịch khởi hành</NavLink>
       <NavLink to="/destinations">Điểm đến</NavLink>
       <NavLink to="/planner">Lập lịch trình</NavLink>
       <NavLink to="/handbook">Cẩm nang</NavLink>

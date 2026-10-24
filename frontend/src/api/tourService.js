@@ -36,7 +36,7 @@ export const tourApi = {
   getAllTours: () => axiosClient.get("/api/tours"),
 
   // 3. Lấy thông tin Tour theo Slug
-  getTourBySlug: (slug) => axiosClient.get(`/api/tours/${slug}`),
+  getTourBySlug: (slug, signal) => axiosClient.get(`/api/tours/${encodeURIComponent(slug)}`, { signal }),
 
   // 4. Thêm & Lấy Lịch trình (Itinerary)
   addItinerary: (tourId, data) =>
@@ -47,7 +47,7 @@ export const tourApi = {
   // 5. Thêm & Lấy Lịch khởi hành (Schedule)
   addSchedule: (tourId, data) =>
     axiosClient.post(`/api/tours/${tourId}/schedules`, data),
-  getSchedules: (tourId) => axiosClient.get(`/api/tours/${tourId}/schedules`),
+  getSchedules: (tourId, signal) => axiosClient.get(`/api/tours/${tourId}/schedules`, { signal }),
 
   // 6. Thêm & Lấy Trang thiết bị (Gear)
   addGear: (tourId, data) =>

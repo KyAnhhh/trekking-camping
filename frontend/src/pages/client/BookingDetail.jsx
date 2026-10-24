@@ -17,6 +17,8 @@ import BookingGuideTeam from "../../components/tour/BookingGuideTeam";
 import BookingReview from "../../components/tour/BookingReview";
 import ParticipationPanel from "../../components/tour/ParticipationPanel";
 import PassengerPanel from "../../components/tour/PassengerPanel";
+import BookingChanges from "../../components/tour/BookingChanges";
+import TripPreparation from "../../components/tour/TripPreparation";
 import {
   money,
   dateLabel,
@@ -130,6 +132,8 @@ export default function BookingDetail({ admin = false }) {
             onSaved={reload}
           />
           <PassengerPanel bookingId={id} admin={admin} />
+          <BookingChanges booking={data.booking} admin={admin} onSaved={reload} />
+          {!admin && <TripPreparation bookingId={id} />}
           <div className="booking-layout">
             <section className="panel booking-form">
               <h2>Thông tin chuyến đi</h2>

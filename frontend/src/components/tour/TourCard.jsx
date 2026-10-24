@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import FavoriteButton from './FavoriteButton';
+import CompareButton from './CompareButton';
 import { useState } from 'react';
 import { ArrowUpRight, Clock3, MapPin, Mountain } from 'lucide-react';
 import { duration, formatDifficulty, money, tourImage, landscape } from '../../utils/tour';
@@ -23,6 +25,8 @@ export default function TourCard({ tour }) {
         {fallback && <span className="image-credit">Ảnh minh họa</span>}
       </Link>
       <div className="tour-card-body">
+        <FavoriteButton tour={tour} />
+        <CompareButton tour={tour} />
         <p className="eyebrow">
           <MapPin size={13} />
           {tour.location || 'Địa điểm đang cập nhật'}

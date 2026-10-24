@@ -13,7 +13,7 @@ export default function TimeHero({ theme, mode, setMode }) {
   return (
     <section className="hero time-hero" ref={ref} aria-labelledby="home-title">
       <div className="time-landscape" aria-hidden="true">
-        <img className="hero-photo time-day-photo" src={landscape} alt="" width="1800" height="1200" fetchPriority="high" />
+        <img className="hero-photo time-day-photo" src={landscape} alt="" width="1800" height="1200" fetchpriority="high" />
         <img className="hero-photo time-night-photo" src={landscape} alt="" width="1800" height="1200" decoding="async" />
       </div>
       <div className="time-skies" aria-hidden="true">

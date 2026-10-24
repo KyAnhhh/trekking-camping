@@ -6,6 +6,9 @@ import ClientLayout from "../layouts/ClientLayout";
 import Home from "../pages/client/Home";
 const Login = lazy(() => import("../pages/auth/Login"));
 const Profile = lazy(() => import("../pages/client/Profile"));
+const Favorites = lazy(() => import("../pages/client/Favorites"));
+const TourCompare = lazy(() => import("../pages/client/TourCompare"));
+const Departures = lazy(() => import("../pages/client/Departures"));
 const Planner = lazy(() => import("../pages/client/Planner"));
 const Register = lazy(() => import("../pages/auth/Register"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
@@ -24,6 +27,7 @@ const BookingDetail = lazy(() => import("../pages/client/BookingDetail"));
 const MomoReturn = lazy(() => import("../pages/client/MomoReturn"));
 const VnpayReturn = lazy(() => import("../pages/client/VnpayReturn"));
 const AdminBookings = lazy(() => import("../pages/admin/AdminBookings"));
+const AdminGuideReports = lazy(() => import("../pages/admin/AdminGuideReports"));
 const Notifications = lazy(() => import("../pages/client/Notifications"));
 const AdminNotifications = lazy(() => import("../pages/admin/AdminNotifications"));
 const GuideWorkspace = lazy(() => import("../pages/guide/GuideWorkspace"));
@@ -52,6 +56,7 @@ function NotFound() {
   );
 }
 const AdminGuides = lazy(() => import("../pages/admin/AdminGuides"));
+const AdminGuideAssignments = lazy(() => import("../pages/admin/AdminGuideAssignments"));
 const GuideProfile = lazy(() => import("../pages/client/GuideProfile"));
 export default function AppRoutes() {
   return (
@@ -59,6 +64,9 @@ export default function AppRoutes() {
       <Routes>
         <Route element={<ClientLayout />}>
           <Route index element={<Home />} />
+          <Route path="compare" element={<TourCompare />} />
+          <Route path="departures" element={<Departures />} />
+          <Route path="favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="guide-workspace" element={<ProtectedRoute allowedRoles={["ROLE_GUIDE", "GUIDE"]}><GuideWorkspace /></ProtectedRoute>} />
           <Route path="guide-workspace/:id" element={<ProtectedRoute allowedRoles={["ROLE_GUIDE", "GUIDE"]}><GuideTrip /></ProtectedRoute>} />
@@ -147,7 +155,9 @@ export default function AppRoutes() {
           <Route path="tours/:slug" element={<AdminTourDetail />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="guides" element={<AdminGuides />} />
+          <Route path="guide-assignments" element={<AdminGuideAssignments />} />
           <Route path="bookings" element={<AdminBookings />} />
+          <Route path="guide-reports" element={<AdminGuideReports />} />
           <Route path="payments" element={<AdminPayments />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="bookings/:id" element={<BookingDetail admin />} />

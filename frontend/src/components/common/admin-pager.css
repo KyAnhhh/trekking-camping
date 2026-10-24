@@ -1,0 +1,20 @@
+.admin-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-block: 24px;
+}
+.admin-pager-summary { color: var(--muted); font-size: .85rem; }
+.admin-pager-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+}
+.admin-pager-actions .btn { white-space: nowrap; min-height: 40px; }
+@media (max-width: 480px) {
+  .admin-pager-summary { flex-basis: 100%; }
+  .admin-pager-actions { gap: 8px; }
+}

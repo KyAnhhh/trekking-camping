@@ -14,7 +14,7 @@ export default function NotificationBell() {
     let active = true, pending = false;
     const controller = new AbortController();
     const update = async () => {
-      if (document.hidden || pending) return;
+      if (!active || document.hidden || pending || localStorage.getItem('token') !== identity) return;
       pending = true;
       try { const response = await notificationService.count(controller.signal); if (active) setState({ count: Number(response.data.data) || 0, error: false }); }
       catch { if (active) setState(old => ({ ...old, error: true })); }

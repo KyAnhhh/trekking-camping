@@ -1,4 +1,6 @@
 import { useCallback } from "react";
+import FavoriteButton from '../../components/tour/FavoriteButton';
+import CompareButton from '../../components/tour/CompareButton';
 import { mediaUrl } from "../../utils/tour";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -84,6 +86,8 @@ export default function TourDetail() {
           {tour.location}
         </p>
         <h1>{tour.title}</h1>
+        <FavoriteButton tour={tour} />
+        <CompareButton tour={tour} />
         <div className="detail-meta">
           <span>
             <Clock3 size={17} />

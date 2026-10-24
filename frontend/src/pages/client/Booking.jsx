@@ -37,7 +37,7 @@ export default function Booking() {
     contactEmail: user?.email || "",
     contactPhone: user?.phone || "",
     scheduleId: params.get("schedule") || "",
-    numberOfPax: 1,
+    numberOfPax: /^\d+$/.test(params.get('people') || '') && Number(params.get('people')) >= 1 && Number(params.get('people')) <= 1000 ? Number(params.get('people')) : 1,
     specialRequirements: "",
     emergencyContactName: "",
     emergencyContactPhone: "",

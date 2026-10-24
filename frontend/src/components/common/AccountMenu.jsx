@@ -12,6 +12,7 @@ export default function AccountMenu({ user, onNavigate, onLogout, loggingOut, lo
       <nav aria-label="Điều hướng tài khoản" onClick={(event) => {
         if (event.target.closest("a")) onNavigate();
       }}>
+        <Link to="/favorites"><Compass size={18} aria-hidden="true" />Tour yêu thích</Link>
         <Link to="/profile"><UserRound size={18} aria-hidden="true" />Hồ sơ cá nhân</Link>
         <Link to="/my-bookings"><CalendarDays size={18} aria-hidden="true" />Chuyến đi của tôi</Link>
         <Link to={["ROLE_ADMIN", "ADMIN"].includes(user.role) ? "/admin/notifications" : "/notifications"}><Bell size={18} aria-hidden="true" />Thông báo</Link>

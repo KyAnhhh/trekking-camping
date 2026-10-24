@@ -5,6 +5,7 @@ import useResource from '../../hooks/useResource';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import AdminPager from '../../components/common/AdminPager';
+import ReviewPhotos from '../../components/tour/ReviewPhotos';
 import Modal from '../../components/common/Modal';
 import { errorMessage } from '../../utils/tour';
 const labels = { ALL: 'Tất cả', VISIBLE: 'Đang hiển thị', HIDDEN: 'Đã ẩn' };
@@ -25,6 +26,7 @@ export default function AdminReviews() {
     <div className="list-toolbar"><label>Hiển thị đánh giá <select disabled={busy} value={visibility} onChange={e => setParams({ visibility: e.target.value, page: '0' })}>{Object.entries(labels).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label><button className="btn btn-outline btn-small" disabled={busy || loading} onClick={reload}>Tải lại</button></div>
     {loading ? <LoadingSpinner /> : error ? <EmptyState error title="Chưa tải được đánh giá" description={error} onRetry={reload} /> : <>
       {!data?.items.length ? <EmptyState title="Không có đánh giá trong bộ lọc này" /> : <div className="bookings-list">{data.items.map(r => <article className="booking-card" key={r.id}>
+        <ReviewPhotos reviewId={r.id} mode="admin" />
         <div className="booking-card-top"><strong>{r.author} · {r.rating}/5 sao</strong><span className="status-badge">{r.approved ? 'Đang hiển thị' : 'Đã ẩn'}</span></div>
         <h2>{r.tour}</h2><p className="break-word">{r.comment}</p><p className="muted">{r.createdAt && new Date(r.createdAt).toLocaleString('vi-VN')}</p>
         <div className="booking-card-bottom">{r.bookingId && <Link className="text-link" to={'/admin/bookings/' + r.bookingId}>Xem đơn liên quan →</Link>}<button className="btn btn-outline btn-small" disabled={busy} onClick={() => { setSelected(r); setFailure(''); }}>{r.approved ? 'Ẩn đánh giá' : 'Hiển thị lại'}</button></div>

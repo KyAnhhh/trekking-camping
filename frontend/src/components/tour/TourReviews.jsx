@@ -3,6 +3,7 @@ import { reviewService } from "../../api/reviewService";
 import useResource from "../../hooks/useResource";
 import LoadingSpinner from "../common/LoadingSpinner";
 import EmptyState from "../common/EmptyState";
+import ReviewPhotos from './ReviewPhotos';
 export default function TourReviews({ tourId }) {
   const [page, setPage] = useState(0);
   const load = useCallback(
@@ -35,6 +36,7 @@ export default function TourReviews({ tourId }) {
           </p>
           {data.items.map((r) => (
             <article className="review-item" key={r.id}>
+              <ReviewPhotos reviewId={r.id} />
               <h3>
                 {r.author} · {r.rating}/5 sao
               </h3>
