@@ -26,6 +26,24 @@ class ChatAssistantTest {
         when(sessions.begin(any(),any(),any())).thenReturn(turn);
     }
     @AfterEach void close() { assistant.close(); }
+    @Test void tripToolUsesSessionOwnerAndRejectsExtraOwnerArgument() {
+        var preparation=mock(com.trekkingcamping.backend.module.booking.service.TripPreparationService.class);assistant.setPreparation(preparation);
+        var view=new com.trekkingcamping.backend.module.booking.service.TripPreparationService.View(3L,"Trip","CONFIRMED",null,null,null,null,null,List.of());
+        when(preparation.forAssistant(12L,3L)).thenReturn(view);
+        when(model.converse(any(),any(),anyList(),any())).thenAnswer(c->{
+            BiFunction<String,Map<String,Object>,Object> dispatch=c.getArgument(3);
+            assertTrue(((Map<?,?>)dispatch.apply("get_my_trip_preparation",Map.of("bookingId",3,"userId",99))).containsKey("error"));
+            assertEquals(view,((Map<?,?>)dispatch.apply("get_my_trip_preparation",Map.of("bookingId",3))).get("trip"));
+            return "Booking source has no pickup details.";
+        });
+        assistant.chat(request,"owner");verify(preparation,times(1)).forAssistant(12L,3L);
+    }
+    @Test void guestTripToolDoesNotReadBooking() {
+        var preparation=mock(com.trekkingcamping.backend.module.booking.service.TripPreparationService.class);assistant.setPreparation(preparation);
+        when(sessions.begin(any(),any(),any())).thenReturn(new ChatSessions.Turn("guest",1,null,List.of()));
+        when(model.converse(any(),any(),anyList(),any())).thenAnswer(c->{BiFunction<String,Map<String,Object>,Object> dispatch=c.getArgument(3);assertTrue(((Map<?,?>)dispatch.apply("get_my_trip_preparation",Map.of("bookingId",3))).containsKey("error"));return "Please log in.";});
+        assistant.chat(request,null);verifyNoInteractions(preparation);
+    }
     @Test void followupRetrievalUsesUserContextAndHistoryIsNotCurrentEvidence() {
         var previous=new com.trekkingcamping.backend.module.chat.entity.ChatMessage();previous.setSender("USER");previous.setMessage("Tôi muốn đi Bidoup");
         var bot=new com.trekkingcamping.backend.module.chat.entity.ChatMessage();bot.setSender("BOT");bot.setMessage("Nội dung cũ");

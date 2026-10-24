@@ -13,6 +13,16 @@ public class ScheduleGuide {
     private Guide guide;
     @Column(nullable = false, length = 20)
     private String role;
+    @Column(nullable=false,length=20) private String responseStatus = "LEGACY";
+    @Column(length=1000) private String responseReason;
+    private java.time.Instant respondedAt;
+    public Long getId() { return id; }
+    public String getResponseStatus() { return responseStatus; }
+    public String getResponseReason() { return responseReason; }
+    public java.time.Instant getRespondedAt() { return respondedAt; }
+    public boolean accepted() { return "ACCEPTED".equals(responseStatus)||"LEGACY".equals(responseStatus); }
+    public void pending() { responseStatus="PENDING";responseReason=null;respondedAt=null; }
+    public void respond(String status,String reason) { responseStatus=status;responseReason=reason;respondedAt=java.time.Instant.now(); }
     public ScheduleGuide() {}
     public ScheduleGuide(TourSchedule schedule, Guide guide, String role) { this.schedule = schedule; this.guide = guide; this.role = role; }
     public TourSchedule getSchedule() { return schedule; }

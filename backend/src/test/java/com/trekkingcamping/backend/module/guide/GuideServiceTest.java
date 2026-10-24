@@ -38,6 +38,20 @@ class GuideServiceTest {
         when(assignments.forSchedules(anyCollection())).thenReturn(List.of());
     }
     List<Assignment> team() { return List.of(new Assignment("HDV_01", "LEAD")); }
+    @Test void sameAssignmentRetainsResponseAndIdentity() {
+        var a=new ScheduleGuide(schedule,guide,"LEAD");a.respond("ACCEPTED",null);
+        when(assignments.forSchedules(anyCollection())).thenReturn(List.of(a));
+        assertEquals("ACCEPTED",service.assign(10L,team()).guides().getFirst().responseStatus());
+        verify(assignments).deleteAll(List.of());verify(assignments).saveAll(List.of(a));verify(em,never()).persist(any());
+    }
+    @Test void newAssignmentWaitsForGuideAndPublicHidesPending() {
+        assertEquals("PENDING",service.assign(10L,team()).guides().getFirst().responseStatus());
+        var a=new ScheduleGuide(schedule,guide,"LEAD");a.pending();
+        when(assignments.forSchedules(anyCollection())).thenReturn(List.of(a));
+        when(tours.findById(1L)).thenReturn(Optional.of(schedule.getTour()));when(schedules.findByTourId(1L)).thenReturn(List.of(schedule));
+        assertTrue(service.publicSchedules(1L).getFirst().guides().isEmpty());
+        assertEquals(1,service.adminSchedules(1L).getFirst().guides().size());
+    }
     @Test void locksAndRefreshesBeforeCheckingConflictAndReplacingLegacy() {
         service.assign(10L, team());
         var order = inOrder(guides, em, assignments);

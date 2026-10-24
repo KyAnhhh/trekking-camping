@@ -6,11 +6,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 @Service
 public class NotificationDelivery {
+    private NotificationPreferences preferences;
+    @org.springframework.beans.factory.annotation.Autowired public void setPreferences(NotificationPreferences p){preferences=p;}
     private final NotificationRepository repository;private final PasswordResetMailer mailer;
     public NotificationDelivery(NotificationRepository repository,PasswordResetMailer mailer) {this.repository=repository;this.mailer=mailer;}
     @Transactional public boolean sendNext() {
         var row=repository.nextMail(Instant.now()).orElse(null);if(row==null)return false;
-        if(!Boolean.TRUE.equals(row.getUser().getIsActive())) {row.setEmailStatus("SKIPPED");return true;}
+        if(!Boolean.TRUE.equals(row.getUser().getIsActive()) || preferences!=null&&!preferences.enabled(row.getUser().getId())) {row.setEmailStatus("SKIPPED");return true;}
         row.setAttempts(row.getAttempts()+1);
         try {
             mailer.sendNotification(row.getUser().getEmail(),row.getTitle(),row.getBody(),row.getLink());

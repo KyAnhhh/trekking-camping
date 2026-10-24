@@ -32,7 +32,7 @@ public class GuideController {
     @GetMapping("/api/admin/schedules/{id}/guides")
     public ApiResponse<Team> team(@PathVariable Long id) { return ok(service.team(id)); }
     @PutMapping("/api/admin/schedules/{id}/guides")
-    public ApiResponse<Team> assign(@PathVariable Long id, @RequestBody List<Assignment> request) { return ok(service.assign(id, request)); }
+    public ApiResponse<Team> assign(@PathVariable Long id, @RequestBody List<Assignment> request,@RequestParam(defaultValue="Cập nhật phân công") String reason) { return ok(service.assign(id, request,reason)); }
     @GetMapping("/api/guides/{id}")
     public ApiResponse<PublicProfile> profile(@PathVariable Long id) { return ok(service.profile(id)); }
     @GetMapping("/api/media/guides/{name}")

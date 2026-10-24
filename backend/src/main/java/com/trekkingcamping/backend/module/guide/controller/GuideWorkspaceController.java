@@ -6,6 +6,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @RestController
 public class GuideWorkspaceController {
     private final GuideWorkspaceService service;
+    @PutMapping("/api/guide-workspace/trips/{id}/response") public ApiResponse<?> respond(@AuthenticationPrincipal String email,@PathVariable Long id,@RequestBody GuideWorkspaceService.Response input) {service.respond(email,id,input);return ok(null);}
     public GuideWorkspaceController(GuideWorkspaceService service) {this.service=service;}
     @GetMapping("/api/admin/guides/{id}/account") public ApiResponse<?> account(@AuthenticationPrincipal String email,@PathVariable Long id) {return ok(service.account(email,id));}
     @PutMapping("/api/admin/guides/{id}/account") public ApiResponse<?> link(@AuthenticationPrincipal String email,@PathVariable Long id,@RequestBody GuideWorkspaceService.LinkAccount input) {return ok(service.link(email,id,input));}

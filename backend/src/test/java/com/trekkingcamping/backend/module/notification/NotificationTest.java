@@ -14,6 +14,11 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 class NotificationTest {
+    @Test void optedOutRecipientSkipsQueuedMail() {
+        var n=pending();var worker=new NotificationDelivery(repository,mailer);var prefs=mock(NotificationPreferences.class);
+        worker.setPreferences(prefs);when(prefs.enabled(7L)).thenReturn(false);
+        assertTrue(worker.sendNext());assertEquals("SKIPPED",n.getEmailStatus());verifyNoInteractions(mailer);
+    }
     NotificationRepository repository=mock(NotificationRepository.class);UserRepository users=mock(UserRepository.class);
     JdbcTemplate jdbc=mock(JdbcTemplate.class);PasswordResetMailer mailer=mock(PasswordResetMailer.class);
     NotificationService service=new NotificationService(repository,users,jdbc,false);

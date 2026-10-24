@@ -26,6 +26,34 @@ class GuideWorkspaceTest {
     com.trekkingcamping.backend.module.booking.repository.BookingPassengerRepository passengers=mock(com.trekkingcamping.backend.module.booking.repository.BookingPassengerRepository.class);
     GuideWorkspaceService service=new GuideWorkspaceService(guides,assignments,schedules,bookings,attendance,users,roles,notifications,em,invitations,passengers);
     User user;Guide guide;TourSchedule schedule;Booking booking;
+    ScheduleGuide pending() {
+        schedule.setDepartureDate(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(10));schedule.setReturnDate(schedule.getDepartureDate().plusDays(1));
+        var a=new ScheduleGuide(schedule,guide,"LEAD");a.pending();org.springframework.test.util.ReflectionTestUtils.setField(a,"id",20L);
+        when(assignments.findByScheduleIdAndGuideId(10L,4L)).thenReturn(Optional.of(a));return a;
+    }
+    @Test void acceptIsIdempotentAndAudited() {
+        var a=pending();var input=new GuideWorkspaceService.Response(20L,"ACCEPTED",null);
+        service.respond(user.getEmail(),10L,input);service.respond(user.getEmail(),10L,input);
+        assertTrue(a.accepted());verify(assignments,times(1)).save(a);verify(em,times(1)).persist(any(GuideAssignmentEvent.class));
+    }
+    @Test void declineNeedsReasonAndDoesNotGrantAccess() {
+        var a=pending();assertThrows(IllegalArgumentException.class,()->service.respond(user.getEmail(),10L,new GuideWorkspaceService.Response(20L,"DECLINED"," ")));
+        service.respond(user.getEmail(),10L,new GuideWorkspaceService.Response(20L,"DECLINED","Bận lịch cá nhân"));
+        assertEquals("DECLINED",a.getResponseStatus());assertFalse(a.accepted());
+    }
+    @Test void staleAssignmentCannotRespond() {
+        pending();assertEquals(409,assertThrows(ResponseStatusException.class,()->service.respond(user.getEmail(),10L,new GuideWorkspaceService.Response(19L,"ACCEPTED",null))).getStatusCode().value());
+        verify(assignments,never()).save(any());
+    }
+    @Test void pendingAndUnassignedCannotReadRoster() {
+        pending();assertThrows(ResponseStatusException.class,()->service.roster(user.getEmail(),10L,0));verifyNoInteractions(bookings);
+    }
+    @Test void cannotAcceptConflictingOrCancelledTrip() {
+        pending();when(assignments.countConflicts(eq(4L),eq(10L),any(),any())).thenReturn(1L);
+        assertThrows(ResponseStatusException.class,()->service.respond(user.getEmail(),10L,new GuideWorkspaceService.Response(20L,"ACCEPTED",null)));
+        schedule.setStatus("CANCELLED");assertThrows(ResponseStatusException.class,()->service.respond(user.getEmail(),10L,new GuideWorkspaceService.Response(20L,"ACCEPTED",null)));
+        verify(assignments,never()).save(any());
+    }
     @BeforeEach void setup() {
         user=new User();user.setId(1L);user.setEmail("guide@example.test");user.setRole(new Role(3,"ROLE_GUIDE"));
         when(users.findByEmail(user.getEmail())).thenReturn(Optional.of(user));

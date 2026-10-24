@@ -56,6 +56,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Real controllers, security chain and JWT signatures; business services and DB are mocked. */
 @WebMvcTest(controllers = {AuthController.class, AccountRecoveryController.class,
+        com.trekkingcamping.backend.module.tour.controller.FavoriteController.class,
+        com.trekkingcamping.backend.module.tour.controller.DepartureController.class,
+        com.trekkingcamping.backend.module.guide.controller.GuideAssignmentAdminController.class,
+        com.trekkingcamping.backend.module.booking.controller.BookingChangeController.class,
+        com.trekkingcamping.backend.module.booking.controller.TripPreparationController.class,
+        com.trekkingcamping.backend.module.guide.controller.GuideReportController.class,
+        com.trekkingcamping.backend.module.notification.controller.NotificationPreferencesController.class,
+        com.trekkingcamping.backend.module.review.controller.ReviewPhotoController.class,
         com.trekkingcamping.backend.module.chat.controller.AiModelsController.class,
         com.trekkingcamping.backend.module.notification.controller.NotificationController.class,
         com.trekkingcamping.backend.module.guide.controller.GuideWorkspaceController.class,
@@ -101,6 +109,40 @@ class ApiAuthorizationMatrixTest {
             .header("Access-Control-Request-Method","PATCH")).andExpect(status().isForbidden());
     }
     @Autowired MockMvc mvc;
+    @MockBean org.springframework.jdbc.core.JdbcTemplate assignmentJdbc;
+    @Test void guideResponsesAndAssignmentOverviewAreRoleProtected() throws Exception {
+        mvc.perform(get("/api/admin/guide-assignments")).andExpect(status().isUnauthorized());
+        account("client-response@test","ROLE_USER",true);
+        String clientToken="Bearer "+tokens.generateToken("client-response@test","ROLE_USER");
+        mvc.perform(get("/api/admin/guide-assignments").header("Authorization",clientToken)).andExpect(status().isForbidden());
+        mvc.perform(put("/api/guide-workspace/trips/1/response").header("Authorization",clientToken).contentType("application/json").content("{\"assignmentId\":2,\"decision\":\"ACCEPTED\"}")).andExpect(status().isForbidden());
+        account("guide-response@test","ROLE_GUIDE",true);
+        mvc.perform(put("/api/guide-workspace/trips/1/response").header("Authorization","Bearer "+tokens.generateToken("guide-response@test","ROLE_GUIDE")).contentType("application/json").content("{\"assignmentId\":2,\"decision\":\"ACCEPTED\"}")).andExpect(status().isOk());
+        verify(workspace).respond(eq("guide-response@test"),eq(1L),any());
+    }
+    @MockBean com.trekkingcamping.backend.module.tour.service.DepartureService departures;
+    @Test void departuresArePublicButWritesRemainProtected() throws Exception {
+        mvc.perform(get("/api/tours/departures?from=2026-11-01&to=2026-11-30&people=2"))
+            .andExpect(status().isOk());
+        verify(departures).list(java.time.LocalDate.of(2026,11,1),java.time.LocalDate.of(2026,11,30),"",null,2,true);
+        mvc.perform(get("/api/tours/departures?from=bad&to=2026-11-30")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/tours/departures")).andExpect(status().isUnauthorized());
+    }
+    @MockBean com.trekkingcamping.backend.module.tour.service.FavoriteService favorites;
+    @Test void favoriteEndpointsRequireLoginAndUseJwtOwner() throws Exception {
+        mvc.perform(get("/api/me/favorite-tours")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/me/favorite-tours/ids")).andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/me/favorite-tours/1")).andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/me/favorite-tours/1")).andExpect(status().isUnauthorized());
+        account("favorite@test", "ROLE_USER", true);
+        String token = "Bearer " + tokens.generateToken("favorite@test", "ROLE_USER");
+        mvc.perform(put("/api/me/favorite-tours/1?userId=999").header("Authorization",token))
+            .andExpect(status().isOk());
+        verify(favorites).save("favorite@test",1L);
+        mvc.perform(delete("/api/me/favorite-tours/1?userId=999").header("Authorization",token))
+            .andExpect(status().isOk());
+        verify(favorites).remove("favorite@test",1L);
+    }
     @Autowired JwtTokenProvider tokens;
     @MockBean UserRepository users;
     @MockBean com.trekkingcamping.backend.module.user.service.AdminUserService adminUsers;
@@ -125,6 +167,11 @@ class ApiAuthorizationMatrixTest {
     @MockBean com.trekkingcamping.backend.module.guide.service.GuideImportService guideImport;
     @MockBean BookingService bookingService;
     @MockBean BookingManagementService bookingManagement;
+    @MockBean com.trekkingcamping.backend.module.booking.service.BookingChangeService bookingChanges;
+    @MockBean com.trekkingcamping.backend.module.booking.service.TripPreparationService preparation;
+    @MockBean com.trekkingcamping.backend.module.guide.service.GuideReportService reports;
+    @MockBean com.trekkingcamping.backend.module.notification.service.NotificationPreferences preferences;
+    @MockBean com.trekkingcamping.backend.module.review.service.ReviewPhotoService photos;
     @MockBean com.trekkingcamping.backend.module.booking.service.ParticipationService participation;
     @MockBean MomoPaymentService momoPayment;
     @MockBean ChatService chatService;
@@ -142,6 +189,27 @@ class ApiAuthorizationMatrixTest {
 
     static Stream<Arguments> accessMatrix() {
         var endpoints = List.of(
+                new Endpoint("GET", "/api/guide-workspace/trips/1/report", "GUIDE"),
+                new Endpoint("POST", "/api/guide-workspace/trips/1/report", "GUIDE"),
+                new Endpoint("GET", "/api/bookings/1/preparation", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/bookings/1/preparation", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/bookings/1/preparation/key", "AUTHENTICATED"),
+                new Endpoint("DELETE", "/api/bookings/1/preparation/key", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/notifications/preferences", "AUTHENTICATED"),
+                new Endpoint("PUT", "/api/notifications/preferences", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/admin/guide-reports", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/guide-reports/1", "ADMIN"),
+                new Endpoint("GET", "/api/reviews/1/photos", "PUBLIC"),
+                new Endpoint("POST", "/api/me/reviews/1/photos", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/me/reviews/1/photos", "AUTHENTICATED"),
+                new Endpoint("DELETE", "/api/me/reviews/1/photos/1", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/admin/reviews/1/photos", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/reviews/1/photos/1", "ADMIN"),
+                new Endpoint("GET", "/api/bookings/1/change-requests", "AUTHENTICATED"),
+                new Endpoint("POST", "/api/bookings/1/change-requests", "AUTHENTICATED"),
+                new Endpoint("GET", "/api/admin/booking-change-requests", "ADMIN"),
+                new Endpoint("GET", "/api/admin/bookings/1/change-requests", "ADMIN"),
+                new Endpoint("PUT", "/api/admin/bookings/1/change-requests/1", "ADMIN"),
                 new Endpoint("GET", "/api/admin/guides/1/invitation", "ADMIN"),
                 new Endpoint("POST", "/api/admin/guides/1/invitation", "ADMIN"),
                 new Endpoint("DELETE", "/api/admin/guides/1/invitation", "ADMIN"),
@@ -257,14 +325,14 @@ class ApiAuthorizationMatrixTest {
     @MethodSource("accessMatrix")
     void allExistingEndpointsEnforceTheirAccessLevel(Endpoint endpoint, String actor) throws Exception {
         MockHttpServletRequestBuilder request;
-        if (endpoint.method().equals("POST") && (endpoint.path().endsWith("/avatar") || endpoint.path().endsWith("/upload") || endpoint.path().endsWith("/import") || endpoint.path().endsWith("/images"))) {
+        if (endpoint.method().equals("POST") && (endpoint.path().endsWith("/photos") || endpoint.path().endsWith("/avatar") || endpoint.path().endsWith("/upload") || endpoint.path().endsWith("/import") || endpoint.path().endsWith("/images"))) {
             request = multipart(endpoint.path()).file(new org.springframework.mock.web.MockMultipartFile(
                     "file", "guide.txt", "text/plain", "knowledge".getBytes(StandardCharsets.UTF_8)));
         } else {
             request = request(HttpMethod.valueOf(endpoint.method()), endpoint.path());
             if ("POST".equals(endpoint.method())) request.contentType("application/json")
                     .content(endpoint.path().equals("/api/payments/momo/start") ? "{\"bookingId\":1}" : "{}");
-            if ("PUT".equals(endpoint.method())) request.contentType("application/json").content(endpoint.path().endsWith("/guides") ? "[]" : "{}");
+            if ("PUT".equals(endpoint.method())) request.contentType("application/json").content(endpoint.path().equals("/api/notifications/preferences") ? "{\"emailEnabled\":true}" : endpoint.path().endsWith("/guides") ? "[]" : "{}");
         }
         when(knowledgeService.deleteKnowledgeByFileName("guide.txt")).thenReturn(true);
         var bookingRow = new com.trekkingcamping.backend.module.booking.dto.BookingResponseDto(1L, "test", "Tour", "tour", 10L, null, null, 1, null, "PENDING", null);

@@ -61,6 +61,11 @@ public class GuideService {
     }
     @Transactional
     public Team assign(Long scheduleId, List<Assignment> requested) {
+        return assign(scheduleId,requested,"Cập nhật phân công");
+    }
+    @Transactional
+    public Team assign(Long scheduleId, List<Assignment> requested,String reason) {
+        if(reason==null||reason.isBlank()||reason.length()>900)throw new IllegalArgumentException("Cần lý do thay đổi, tối đa 900 ký tự.");
         validateAssignments(requested);
         TourSchedule schedule = schedules.findByIdForUpdate(scheduleId).orElseThrow(this::notFound);
         if (schedule.getDepartureDate() == null || schedule.getReturnDate() == null
@@ -83,14 +88,21 @@ public class GuideService {
             Guide g = locked.get(selected.get(a.guideCode()).getId());
             if (!g.getActive()) throw conflict("Hướng dẫn viên đã ngừng nhận chuyến.");
             if (assignments.countConflicts(g.getId(), scheduleId, schedule.getDepartureDate(), schedule.getReturnDate()) > 0) throw conflict("Hướng dẫn viên " + g.getCode() + " đã được phân công trong khoảng ngày này.");
-            next.add(new ScheduleGuide(schedule, g, a.role()));
+            var previous=old.stream().filter(x->x.getGuide().getId().equals(g.getId())&&x.getRole().equals(a.role())&&!"DECLINED".equals(x.getResponseStatus())).findFirst();
+            if(previous.isPresent())next.add(previous.get());
+            else {var fresh=new ScheduleGuide(schedule,g,a.role());fresh.pending();next.add(fresh);}
         }
-        assignments.deleteAll(old); assignments.flush(); assignments.saveAll(next);
+        assignments.deleteAll(old.stream().filter(a->!next.contains(a)).toList()); assignments.flush(); assignments.saveAll(next);
+        var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String actor=auth==null?"SYSTEM":auth.getName();
+        for(var a:old)if(!next.contains(a))entityManager.persist(new GuideAssignmentEvent(scheduleId,a.getGuide().getId(),actor,"REMOVED",reason));
+        for(var a:next)if(!old.contains(a))entityManager.persist(new GuideAssignmentEvent(scheduleId,a.getGuide().getId(),actor,"ASSIGNED",reason+" · "+a.getRole()));
         String change=UUID.randomUUID().toString();
         for(Guide g:locked.values()) {
             String before=old.stream().filter(a->a.getGuide().getId().equals(g.getId())).map(ScheduleGuide::getRole).findFirst().orElse(null);
             String after=next.stream().filter(a->a.getGuide().getId().equals(g.getId())).map(ScheduleGuide::getRole).findFirst().orElse(null);
-            if(g.getUser()!=null && !Objects.equals(before,after))
+            boolean changed=old.stream().anyMatch(a->a.getGuide().getId().equals(g.getId())&&!next.contains(a))||next.stream().anyMatch(a->a.getGuide().getId().equals(g.getId())&&!old.contains(a));
+            if(g.getUser()!=null && changed)
                 notifications.emit(g.getUser(),"assignment:"+scheduleId+":"+change,"Cập nhật phân công hướng dẫn",
                     after==null?"Bạn đã được gỡ khỏi lịch phân công. Xem lịch làm việc hiện tại.":"Bạn có phân công mới hoặc thay đổi vai trò. Đăng nhập để xem lịch làm việc.","/guide-workspace");
         }
@@ -112,36 +124,36 @@ public class GuideService {
     @Transactional(readOnly = true)
     public List<Schedule> publicSchedules(Long tourId) {
         tours.findById(tourId).filter(t -> Boolean.TRUE.equals(t.getIsActive())).orElseThrow(this::notFound);
-        return scheduleRows(tourId);
+        return scheduleRows(tourId,true);
     }
     @Transactional(readOnly = true)
     public List<Schedule> adminSchedules(Long tourId) {
         tours.findById(tourId).orElseThrow(this::notFound);
-        return scheduleRows(tourId);
+        return scheduleRows(tourId,false);
     }
-    private List<Schedule> scheduleRows(Long tourId) {
+    private List<Schedule> scheduleRows(Long tourId,boolean publicOnly) {
         var rows = schedules.findByTourId(tourId);
-        var grouped = members(rows.stream().map(TourSchedule::getId).toList());
+        var grouped = members(rows.stream().map(TourSchedule::getId).toList(),publicOnly);
         return rows.stream().map(s -> new Schedule(s.getId(), s.getDepartureDate(), s.getReturnDate(), s.getAvailableSlots(),
                 s.getStatus(), s.getGuideName(), grouped.getOrDefault(s.getId(), List.of()),s.getPickupAt(),s.getPickupPoint())).toList();
     }
     @Transactional(readOnly = true)
     public Team team(Long scheduleId) {
         var s = schedules.findById(scheduleId).orElseThrow(this::notFound);
-        return new Team(members(List.of(scheduleId)).getOrDefault(scheduleId, List.of()), s.getGuideName(), s.getGuidePhone());
+        return new Team(members(List.of(scheduleId),false).getOrDefault(scheduleId, List.of()), s.getGuideName(), s.getGuidePhone());
     }
-    private Map<Long, List<Member>> members(List<Long> ids) {
+    private Map<Long, List<Member>> members(List<Long> ids,boolean publicOnly) {
         if (ids.isEmpty()) return Map.of();
-        return assignments.forSchedules(ids).stream().collect(Collectors.groupingBy(a -> a.getSchedule().getId(), Collectors.mapping(this::member, Collectors.toList())));
+        return assignments.forSchedules(ids).stream().filter(a->!publicOnly||a.accepted()).collect(Collectors.groupingBy(a -> a.getSchedule().getId(), Collectors.mapping(a->publicOnly?new Member(PublicProfile.from(a.getGuide()),a.getRole(),a.getResponseStatus(),null,false):member(a), Collectors.toList())));
     }
     @Transactional(readOnly = true)
     public BookingTeam bookingTeam(Long scheduleId, boolean contactAllowed) {
         var s = schedules.findById(scheduleId).orElseThrow(this::notFound);
-        var contacts = assignments.forSchedules(List.of(scheduleId)).stream().map(a -> new Contact(
+        var contacts = assignments.forSchedules(List.of(scheduleId)).stream().filter(ScheduleGuide::accepted).map(a -> new Contact(
                 PublicProfile.from(a.getGuide()), a.getRole(), contactAllowed ? a.getGuide().getPhone() : null)).toList();
         return new BookingTeam(contacts, s.getGuideName(), contactAllowed ? s.getGuidePhone() : null);
     }
-    private Member member(ScheduleGuide a) { return new Member(PublicProfile.from(a.getGuide()), a.getRole()); }
+    private Member member(ScheduleGuide a) { return new Member(PublicProfile.from(a.getGuide()), a.getRole(),a.getResponseStatus(),a.getResponseReason(),a.getGuide().getUser()!=null&&Boolean.TRUE.equals(a.getGuide().getUser().getIsActive())); }
     void validate(Edit r) {
         if (r == null) throw new IllegalArgumentException("Thiếu hồ sơ hướng dẫn viên.");
         if (r.code() == null || !r.code().matches("[A-Z0-9_-]{2,40}")) throw new IllegalArgumentException("Mã gồm 2–40 chữ in hoa, số, dấu gạch ngang hoặc gạch dưới.");

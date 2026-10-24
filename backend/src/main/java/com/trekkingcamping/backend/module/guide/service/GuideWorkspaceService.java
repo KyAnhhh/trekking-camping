@@ -23,7 +23,8 @@ public class GuideWorkspaceService {
     public record PageResult<T>(List<T> items,int page,int totalPages,long totalElements) {
         static <T> PageResult<T> of(Page<T> p) {return new PageResult<>(p.getContent(),p.getNumber(),p.getTotalPages(),p.getTotalElements());}
     }
-    public record Trip(Long id,String title,LocalDate departureDate,LocalDate returnDate,String status,String role,LocalDateTime pickupAt,String pickupPoint) {}
+    public record Trip(Long id,String title,LocalDate departureDate,LocalDate returnDate,String status,String role,LocalDateTime pickupAt,String pickupPoint,Long assignmentId,String responseStatus,String responseReason) {}
+    public record Response(Long assignmentId,String decision,String reason) {}
     public record Guest(Long bookingId,String code,String contactName,String contactPhone,int people,String status,Integer presentCount,long revision,Instant markedAt,int namedPassengers) {}
     public record Roster(Trip trip,PageResult<Guest> guests,boolean canCheckIn) {}
     public record CheckIn(Integer presentCount,Long revision) {}
@@ -71,7 +72,26 @@ public class GuideWorkspaceService {
     }
     @Transactional(readOnly=true) public PageResult<Trip> trips(String email,int page) {
         var g=guide(email);
-        return PageResult.of(assignments.findByGuideIdOrderByScheduleDepartureDateDesc(g.getId(),page(page)).map(a->trip(a.getSchedule(),a.getRole())));
+        return PageResult.of(assignments.findByGuideIdOrderByScheduleDepartureDateDesc(g.getId(),page(page)).map(a->new Trip(a.getSchedule().getId(),a.getSchedule().getTour().getTitle(),a.getSchedule().getDepartureDate(),a.getSchedule().getReturnDate(),a.getSchedule().getStatus(),a.getRole(),a.getSchedule().getPickupAt(),a.getSchedule().getPickupPoint(),a.getId(),a.getResponseStatus(),a.getResponseReason())));
+    }
+    @Transactional public void respond(String email,Long id,Response input) {
+        if(input==null||input.assignmentId()==null||!Set.of("ACCEPTED","DECLINED").contains(Objects.toString(input.decision(),""))
+            ||input.reason()!=null&&input.reason().length()>1000||"DECLINED".equals(input.decision())&&(input.reason()==null||input.reason().isBlank()))
+            throw new IllegalArgumentException("Chọn nhận/từ chối; khi từ chối cần lý do tối đa 1000 ký tự.");
+        var g=guide(email);
+        var s=schedules.findByIdForUpdate(id).orElseThrow(GuideWorkspaceService::missing);em.refresh(s);
+        g=guides.lockById(g.getId()).orElseThrow(GuideWorkspaceService::missing);em.refresh(g);
+        if(!g.getActive()||g.getUser()==null||!email.equals(g.getUser().getEmail()))throw missing();
+        var a=assignments.findByScheduleIdAndGuideId(id,g.getId()).orElseThrow(GuideWorkspaceService::missing);em.refresh(a);
+        if(!input.assignmentId().equals(a.getId()))throw conflict("Phân công đã thay đổi. Tải lại lịch.");
+        if(input.decision().equals(a.getResponseStatus()))return;
+        if(!"PENDING".equals(a.getResponseStatus()))throw conflict("Đã phản hồi; liên hệ admin nếu cần thay đổi.");
+        if(s.getDepartureDate()==null||!s.getDepartureDate().isAfter(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")))||"CANCELLED".equals(s.getStatus()))throw conflict("Chuyến đã khởi hành hoặc bị hủy.");
+        if("ACCEPTED".equals(input.decision())&&assignments.countConflicts(g.getId(),id,s.getDepartureDate(),s.getReturnDate())>0)throw conflict("Trùng lịch phân công. Liên hệ admin.");
+        a.respond(input.decision(),input.reason()==null?null:input.reason().trim());assignments.save(a);
+        em.persist(new GuideAssignmentEvent(id,g.getId(),email,input.decision(),a.getResponseReason()));
+        for(var admin:users.findByRoleNameAndIsActiveTrue("ROLE_ADMIN"))notifications.emit(admin,"guide-response:"+a.getId()+":"+input.decision(),
+            "Hướng dẫn viên đã phản hồi lịch","Phân công lịch #"+id+": "+("ACCEPTED".equals(input.decision())?"đã nhận đoàn":"từ chối; xem lý do trong quản trị"),"/admin/guide-assignments");
     }
     @Transactional(readOnly=true) public Roster roster(String email,Long id,int page) {
         var g=guide(email);var s=schedules.findById(id).orElseThrow(GuideWorkspaceService::missing);assigned(g,id);
@@ -117,7 +137,7 @@ public class GuideWorkspaceService {
         var today=LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));return Set.of("OPEN","FULL","CLOSED").contains(Objects.toString(s.getStatus(),""))
             && s.getDepartureDate()!=null && s.getReturnDate()!=null && !today.isBefore(s.getDepartureDate().minusDays(1)) && !today.isAfter(s.getReturnDate());
     }
-    private Trip trip(TourSchedule s,String role) {return new Trip(s.getId(),s.getTour().getTitle(),s.getDepartureDate(),s.getReturnDate(),s.getStatus(),role,s.getPickupAt(),s.getPickupPoint());}
+    private Trip trip(TourSchedule s,String role) {return new Trip(s.getId(),s.getTour().getTitle(),s.getDepartureDate(),s.getReturnDate(),s.getStatus(),role,s.getPickupAt(),s.getPickupPoint(),null,null,null);}
     private static PageRequest page(int n) {if(n<0 || n>10000)throw new IllegalArgumentException("Trang không hợp lệ.");return PageRequest.of(n,20);}
     private static ResponseStatusException missing() {return new ResponseStatusException(HttpStatus.NOT_FOUND,"Không tìm thấy dữ liệu hoặc bạn chưa được phân công.");}
     private static ResponseStatusException conflict(String m) {return new ResponseStatusException(HttpStatus.CONFLICT,m);}
