@@ -8,9 +8,12 @@ function PrivateImage({url}){
  useEffect(()=>{let active=true,objectUrl;const controller=new AbortController();setSrc('');setFailed(false);api.get(url,{responseType:'blob',signal:controller.signal}).then(r=>{if(active){objectUrl=URL.createObjectURL(r.data);setSrc(objectUrl);}}).catch(()=>{if(active)setFailed(true);});return()=>{active=false;controller.abort();if(objectUrl)URL.revokeObjectURL(objectUrl);};},[url]);
  return src?<img src={src} alt="Ảnh đánh giá chuyến đi"/>:<span role="status">{failed?'Không tải được ảnh':'Đang tải ảnh…'}</span>;
 }
-export default function ReviewPhotos({reviewId,mode='public'}){
+export default function ReviewPhotos({reviewId,mode='public',initialPhotos=null}){
+ const hasInitial = mode === 'public' && Array.isArray(initialPhotos);
  const path=mode==='admin'?`/api/admin/reviews/${reviewId}/photos`:mode==='owner'?`/api/me/reviews/${reviewId}/photos`:`/api/reviews/${reviewId}/photos`;
- const load=useCallback(async()=>(await api.get(path)).data.data,[path]);const {data,loading,error,reload}=useResource(load);
+ const load=useCallback(async(signal)=>(await api.get(path,{signal})).data.data,[path]);
+ const initialLoader = useCallback(async()=>initialPhotos,[initialPhotos]);
+ const {data,loading,error,reload}=useResource(hasInitial ? initialLoader : load);
  const [busy,setBusy]=useState(false),[failure,setFailure]=useState('');
  async function act(fn){if(busy)return;setBusy(true);setFailure('');try{await fn();reload();}catch(e){setFailure(errorMessage(e));}finally{setBusy(false);}}
  function upload(e){const file=e.target.files?.[0];e.target.value='';if(!file)return;if(file.size>5*1024*1024||!['image/jpeg','image/png'].includes(file.type)){setFailure('Chọn ảnh JPEG/PNG tối đa 5 MB.');return;}const form=new FormData();form.append('file',file);act(()=>api.post(path,form,{headers:{'Content-Type':'multipart/form-data'}}));}

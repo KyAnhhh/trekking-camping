@@ -9,8 +9,8 @@ import java.util.Objects;
 @Component
 @ConfigurationProperties(prefix = "gemini")
 public class GeminiProperties {
-    public static final String DEFAULT_MODEL = "gemini-3.5-flash";
-    public static final List<String> DEFAULT_MODELS = List.of(DEFAULT_MODEL, "gemini-3.8-flash");
+    public static final String DEFAULT_MODEL = "gemini-3.5-flash-lite";
+    public static final List<String> DEFAULT_MODELS = List.of(DEFAULT_MODEL, "gemini-3.5-flash");
 
     private String apiKey = "";
     private List<String> models = DEFAULT_MODELS;

@@ -226,6 +226,152 @@ public class ChatService {
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"AI chưa hoàn tất câu trả lời. Vui lòng thử lại.");
     }
 
+    public String streamConverse(String system, String prompt, List<Map<String, Object>> declarations,
+            java.util.function.BiFunction<String, Map<String, Object>, Object> dispatcher, String model,
+            java.util.function.Consumer<String> tokenConsumer,
+            java.util.function.Consumer<String> statusConsumer) {
+        ChatCallBudget.CURRENT.set(new ChatCallBudget(model != null && model.startsWith("gemma-")));
+        try {
+            return streamConverseWithinBudget(system, prompt, declarations, dispatcher, model, tokenConsumer, statusConsumer);
+        } finally {
+            ChatCallBudget.CURRENT.remove();
+        }
+    }
+
+    private String streamConverseWithinBudget(String system, String prompt, List<Map<String, Object>> declarations,
+            java.util.function.BiFunction<String, Map<String, Object>, Object> dispatcher, String model,
+            java.util.function.Consumer<String> tokenConsumer,
+            java.util.function.Consumer<String> statusConsumer) {
+        if (gemini.configurationIssue() != null)
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        List<Object> contents = new ArrayList<>();
+        contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", prompt))));
+        StringBuilder fullAnswer = new StringBuilder();
+
+        for (int round = 0; round < 3; round++) {
+            ChatCallBudget.CURRENT.get().remaining();
+            if (Thread.currentThread().isInterrupted())
+                throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Lượt chat đã hết thời gian chờ.");
+            try {
+                if (json.writeValueAsString(contents).length() > 60000)
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Câu hỏi cần quá nhiều dữ liệu. Vui lòng thu hẹp tour hoặc hỏi từng nhóm ý.");
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new IllegalStateException(e);
+            }
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("contents", contents);
+            requestBody.put("systemInstruction", Map.of("parts", List.of(Map.of("text", system))));
+            requestBody.put("tools", List.of(Map.of("functionDeclarations", declarations)));
+            if (round == 2) requestBody.put("toolConfig", Map.of("functionCallingConfig", Map.of("mode", "NONE")));
+
+            if (model != null && model.startsWith("gemma-4-")) {
+                requestBody.put("generationConfig", Map.of("maxOutputTokens", 4096, "thinkingConfig", Map.of("thinkingLevel", "minimal")));
+            } else if ("gemini-3.5-flash".equals(model)) {
+                requestBody.put("generationConfig", Map.of("maxOutputTokens", 4096, "thinkingConfig", Map.of("thinkingBudget", 0)));
+            } else {
+                requestBody.put("generationConfig", Map.of("maxOutputTokens", 4096));
+            }
+
+            List<String> candidates = new ArrayList<>(model == null ? gemini.getModels() : List.of(model));
+            String selectedModelName = candidates.get(0);
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + selectedModelName.trim() + ":streamGenerateContent?alt=sse";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-goog-api-key", gemini.getApiKey());
+
+            List<Object> functionResponses = new ArrayList<>();
+            List<Map<String, Object>> modelParts = new ArrayList<>();
+            StringBuilder roundText = new StringBuilder();
+
+            try {
+                var budget = ChatCallBudget.CURRENT.get();
+                if (budget != null) budget.claim();
+
+                restTemplate.execute(url, HttpMethod.POST, clientRequest -> {
+                    clientRequest.getHeaders().addAll(headers);
+                    byte[] bodyBytes = json.writeValueAsBytes(requestBody);
+                    clientRequest.getBody().write(bodyBytes);
+                }, clientResponse -> {
+                    int status = clientResponse.getStatusCode().value();
+                    if (status != 200) {
+                        throw providerFailure(status);
+                    }
+                    try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(clientResponse.getBody(), java.nio.charset.StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            if (Thread.currentThread().isInterrupted()) break;
+                            if (!line.startsWith("data: ")) continue;
+                            String jsonChunk = line.substring(6).trim();
+                            if (jsonChunk.isEmpty() || "[DONE]".equals(jsonChunk)) continue;
+                            com.fasterxml.jackson.databind.JsonNode rootNode;
+                            try {
+                                rootNode = json.readTree(jsonChunk);
+                            } catch (Exception e) {
+                                continue;
+                            }
+                            var cand = rootNode.path("candidates").path(0);
+                            var contentNode = cand.path("content");
+                            for (var part : contentNode.path("parts")) {
+                                if (part.has("functionCall")) {
+                                    var callNode = part.get("functionCall");
+                                    String name = callNode.path("name").asText();
+                                    Map<String, Object> args = json.convertValue(callNode.get("args"),
+                                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                                    Map<String, Object> modelPart = new HashMap<>();
+                                    modelPart.put("functionCall", json.convertValue(callNode, Map.class));
+                                    if (part.has("thoughtSignature")) {
+                                        modelPart.put("thoughtSignature", part.get("thoughtSignature").asText());
+                                    }
+                                    modelParts.add(modelPart);
+
+                                    if (statusConsumer != null) {
+                                        if ("search_tours".equals(name)) statusConsumer.accept("Đang tra cứu cơ sở dữ liệu tour...");
+                                        else if ("get_my_trip_preparation".equals(name)) statusConsumer.accept("Đang kiểm tra thông tin chuyến đi...");
+                                        else if ("propose_booking".equals(name)) statusConsumer.accept("Đang chuẩn bị đề xuất đặt tour...");
+                                    }
+
+                                    Object result = dispatcher.apply(name, args);
+                                    Map<String, Object> funcResp = new HashMap<>();
+                                    funcResp.put("name", name);
+                                    funcResp.put("response", Map.of("result", result));
+                                    if (callNode.hasNonNull("id")) funcResp.put("id", callNode.get("id").asText());
+                                    functionResponses.add(Map.of("functionResponse", funcResp));
+                                } else if (part.has("text") && !Boolean.TRUE.equals(part.path("thought").asBoolean(false))) {
+                                    String t = part.get("text").asText();
+                                    if (!t.isEmpty()) {
+                                        roundText.append(t);
+                                        if (tokenConsumer != null) {
+                                            tokenConsumer.accept(t);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                });
+            } catch (HttpStatusCodeException e) {
+                throw providerFailure(e.getStatusCode().value());
+            }
+
+            if (!functionResponses.isEmpty()) {
+                Map<String, Object> modelTurn = new HashMap<>();
+                modelTurn.put("role", "model");
+                modelTurn.put("parts", modelParts);
+                contents.add(modelTurn);
+                contents.add(Map.of("role", "user", "parts", functionResponses));
+                continue;
+            }
+
+            fullAnswer.append(roundText);
+            return fullAnswer.toString().trim();
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI chưa hoàn tất câu trả lời. Vui lòng thử lại.");
+    }
+
     private String generateReply(String fullPrompt, boolean structured,Map<String,Object> extra,
             java.util.function.Function<Map<?,?>,String> extract) {
         return generateReply(fullPrompt,structured,extra,extract,null);
@@ -251,6 +397,13 @@ public class ChatService {
             var generation=new HashMap<String,Object>();
             generation.put("maxOutputTokens",4096);
             generation.put("thinkingConfig",Map.of("thinkingLevel","minimal"));
+            if(structured)generation.put("responseMimeType","application/json");
+            requestBody.put("generationConfig",generation);
+        }
+        else if("gemini-3.5-flash".equals(selectedModel)) {
+            var generation=new HashMap<String,Object>();
+            generation.put("maxOutputTokens",4096);
+            generation.put("thinkingConfig",Map.of("thinkingBudget",0));
             if(structured)generation.put("responseMimeType","application/json");
             requestBody.put("generationConfig",generation);
         }
@@ -292,7 +445,21 @@ public class ChatService {
                 // Đổi model không sửa được lỗi xác thực của cùng một khóa.
                 int status = e.getStatusCode().value();
                 if (status == 401 || status == 403 || status == 400) break;
-                if (status == 429 || status >= 500) candidates.add(modelName);
+                if (status == 429) {
+                    String errBody = e.getResponseBodyAsString();
+                    boolean dailyExhausted = errBody != null && (errBody.contains("per day") || errBody.contains("PerDay") || errBody.contains("RESOURCE_EXHAUSTED"));
+                    if (dailyExhausted) {
+                        log.warn("Gemini model {} reached daily Free Tier quota limit; skipping retries", modelName);
+                        continue;
+                    }
+                    if (attempt + 1 < gemini.getMaxAttempts()) {
+                        candidates.add(modelName);
+                        try { Thread.sleep(Math.min(parseRetryAfterMillis(e), 2500L) + java.util.concurrent.ThreadLocalRandom.current().nextLong(200, 600)); }
+                        catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                    }
+                } else if (status >= 500) {
+                    candidates.add(modelName);
+                }
             } catch (ResourceAccessException e) {
                 boolean timeout = hasTimeoutCause(e);
                 Throwable cause = e;
@@ -346,6 +513,17 @@ public class ChatService {
                     .contains(Objects.toString(candidate.get("finishReason"), ""));
         }
         return false;
+    }
+
+    private static long parseRetryAfterMillis(HttpStatusCodeException e) {
+        try {
+            var headers = e.getResponseHeaders();
+            if (headers != null && headers.getFirst("Retry-After") != null) {
+                String val = headers.getFirst("Retry-After").trim();
+                return Math.max(1000L, Long.parseLong(val) * 1000L);
+            }
+        } catch (Exception ignored) {}
+        return 1500L;
     }
 
     private static boolean hasTimeoutCause(Throwable error) {

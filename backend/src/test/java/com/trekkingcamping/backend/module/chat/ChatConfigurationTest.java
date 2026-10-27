@@ -99,7 +99,7 @@ class ChatConfigurationTest {
         ChatService service = new ChatService(vectorStore, repository, config, mock(com.trekkingcamping.backend.module.guide.service.GuideChatContext.class), mock(com.trekkingcamping.backend.module.chat.service.TourChatContext.class));
         RestTemplate client = (RestTemplate) ReflectionTestUtils.getField(service, "restTemplate");
         MockRestServiceServer server = MockRestServiceServer.bindTo(client).build();
-        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"))
+        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/" + GeminiProperties.DEFAULT_MODEL + ":generateContent"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("x-goog-api-key", "test-only-key"))
                 .andExpect(jsonPath("$.contents[0].parts[0].text").isString())

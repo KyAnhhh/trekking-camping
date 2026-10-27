@@ -31,6 +31,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, org.spr
     List<Booking> participationExpiryCandidates(@Param("deadline") java.time.LocalDateTime deadline, org.springframework.data.domain.Pageable page);
     boolean existsByScheduleId(Long scheduleId);
     boolean existsByScheduleIdAndStatusNot(Long scheduleId, String status);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"schedule", "schedule.tour"})
     List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Booking> findByBookingCode(String bookingCode);
     List<Booking> findAllByOrderByCreatedAtDesc();

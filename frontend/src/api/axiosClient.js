@@ -8,6 +8,20 @@ const axiosClient = axios.create({
   },
 });
 
+const PUBLIC_PREFIXES = [
+  '/api/auth',
+  '/api/tours',
+  '/api/reviews',
+  '/api/media',
+  '/api/guides',
+  '/api/chat',
+];
+
+function isPublicEndpoint(url) {
+  if (!url) return false;
+  return PUBLIC_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
 // Interceptor tự động gắn JWT Token
 axiosClient.interceptors.request.use(
   (config) => {
@@ -16,10 +30,13 @@ axiosClient.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token && isTokenExpired(token)) {
       expireSession(token);
-      throw new axios.CanceledError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      if (!isPublicEndpoint(config.url)) {
+        throw new axios.CanceledError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
     }
-    if (token && token !== 'undefined' && token !== 'null') {
-      config.headers.Authorization = `Bearer ${token}`;
+    const currentToken = localStorage.getItem('token');
+    if (currentToken && currentToken !== 'undefined' && currentToken !== 'null') {
+      config.headers.Authorization = `Bearer ${currentToken}`;
     }
     return config;
   },

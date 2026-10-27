@@ -139,4 +139,21 @@ class ChatAssistantTest {
         assertFalse(answer.sources().get(1).cited());assertNull(answer.sources().get(1).excerpt());
         assertFalse(answer.sources().get(1).label().contains("internal.txt"));
     }
+    @Test void streamReturnsEmitterAndStreamsTokensAndFinishesSession() throws Exception {
+        when(model.streamConverse(any(),any(),anyList(),any(),any(),any(),any())).thenAnswer(c -> {
+            java.util.function.Consumer<String> tokenConsumer = c.getArgument(5);
+            java.util.function.Consumer<String> statusConsumer = c.getArgument(6);
+            if (statusConsumer != null) statusConsumer.accept("Đang tra cứu...");
+            if (tokenConsumer != null) {
+                tokenConsumer.accept("Xin ");
+                tokenConsumer.accept("chào!");
+            }
+            return "Xin chào!";
+        });
+        var emitter = assistant.stream(request, "owner");
+        assertNotNull(emitter);
+        // Wait briefly for worker to complete
+        Thread.sleep(300);
+        verify(sessions, atLeastOnce()).finish(eq(turn), eq("Need a tour"), eq("Xin chào!"), anyList());
+    }
 }

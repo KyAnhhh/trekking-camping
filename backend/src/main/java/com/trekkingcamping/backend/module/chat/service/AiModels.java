@@ -31,15 +31,39 @@ public class AiModels {
     }
     Settings defaults() {
         var rows=new ArrayList<Model>();
-        for(String id:properties.getModels()) if(!id.startsWith("gemma-")) rows.add(new Model(id,id,true,true,true));
-        if(rows.isEmpty()) rows.add(new Model(GeminiProperties.DEFAULT_MODEL,"Gemini",true,true,true));
+        for(String id:properties.getModels()) if(!id.startsWith("gemma-")) {
+            String label = id.equals("gemini-3.5-flash-lite") ? "Gemini 3.5 Flash Lite" :
+                           id.equals("gemini-3.5-flash") ? "Gemini 3.5 Flash" : id;
+            rows.add(new Model(id,label,true,true,true));
+        }
+        if(rows.isEmpty()) rows.add(new Model(GeminiProperties.DEFAULT_MODEL,"Gemini 3.5 Flash Lite",true,true,true));
         rows.add(new Model("gemma-4-31b-it","Gemma 4 · 31B",false,false,false));
         rows.add(new Model("gemma-4-26b-a4b-it","Gemma 4 · 26B A4B",false,false,false));
-        return new Settings(List.copyOf(rows),null,null);
+        return new Settings(List.copyOf(rows),GeminiProperties.DEFAULT_MODEL,null);
     }
     private Settings decode(String value) {
         if("{}".equals(value)) return defaults();
-        try { var old=json.readValue(value,Settings.class);return new Settings(old.models(),null,null); }
+        try {
+            var old=json.readValue(value,Settings.class);
+            var defModels = defaults().models();
+            var allowed = new HashSet<>(defModels.stream().map(Model::id).toList());
+            var validOld = old.models() == null ? List.<Model>of() : old.models().stream().filter(m -> allowed.contains(m.id())).toList();
+            String chatDef = old.chatDefault() != null && !old.chatDefault().isBlank() ? old.chatDefault() : GeminiProperties.DEFAULT_MODEL;
+            List<Model> merged;
+            if (validOld.size() == defModels.size()) {
+                merged = new ArrayList<>(validOld);
+            } else {
+                merged = new ArrayList<>(validOld);
+                var existingIds = new HashSet<>(validOld.stream().map(Model::id).toList());
+                for (var def : defModels) {
+                    if (!existingIds.contains(def.id())) {
+                        merged.add(def);
+                    }
+                }
+            }
+            merged.sort(Comparator.comparingInt(m -> m.id().equals(GeminiProperties.DEFAULT_MODEL) ? 0 : (m.enabled() && m.visible() ? 1 : 2)));
+            return new Settings(List.copyOf(merged), chatDef, null);
+        }
         catch(Exception e) { throw new IllegalStateException("Invalid stored AI configuration",e); }
     }
     private String encode(Settings value) {
@@ -51,13 +75,18 @@ public class AiModels {
     }
     public PublicModels available() {
         var s=view().settings();
-        return new PublicModels(s.models().stream().filter(m->m.enabled() && m.visible()).toList(),null);
+        String rawDef = s.chatDefault() != null && !s.chatDefault().isBlank() ? s.chatDefault() : GeminiProperties.DEFAULT_MODEL;
+        String finalDef = s.models().stream().anyMatch(m -> m.id().equals(rawDef) && m.enabled() && m.visible())
+            ? rawDef
+            : s.models().stream().filter(m -> m.enabled() && m.visible()).map(Model::id).findFirst().orElse(GeminiProperties.DEFAULT_MODEL);
+        return new PublicModels(s.models().stream().filter(m->m.enabled() && m.visible()).toList(), finalDef);
     }
     public String resolve(String requested,boolean planner) {
         var s=view().settings();
-        if(requested==null || requested.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Hãy chọn model AI trước khi gửi yêu cầu.");
-        String id=requested;
-        return s.models().stream().filter(m->m.id().equals(id) && m.enabled() && m.visible())
+        final String targetId = (requested != null && !requested.isBlank()) 
+            ? requested 
+            : (s.chatDefault() != null && !s.chatDefault().isBlank() ? s.chatDefault() : GeminiProperties.DEFAULT_MODEL);
+        return s.models().stream().filter(m->m.id().equals(targetId) && m.enabled() && m.visible())
             .findFirst().orElseThrow(()->new ResponseStatusException(HttpStatus.CONFLICT,"Model không còn khả dụng. Hãy chọn model khác.")).id();
     }
     void validate(Settings s) {
@@ -73,7 +102,9 @@ public class AiModels {
     @Transactional public View save(Update input,String actor) {
         if(input==null) throw new IllegalArgumentException("Thiếu cấu hình.");
         validate(input.settings());
-        input=new Update(input.revision(),new Settings(input.settings().models(),null,null));
+        String chatDef = input.settings().chatDefault() != null && !input.settings().chatDefault().isBlank() 
+            ? input.settings().chatDefault() : GeminiProperties.DEFAULT_MODEL;
+        input=new Update(input.revision(),new Settings(input.settings().models(),chatDef,null));
         var row=configs.locked().orElseGet(()->{
             configs.insertDefaultIfMissing();
             return configs.locked().orElseThrow(()->new IllegalStateException("AI configuration initialization failed"));

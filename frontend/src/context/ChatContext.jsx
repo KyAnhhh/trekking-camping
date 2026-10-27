@@ -12,8 +12,17 @@ export function ChatProvider({ children }) {
   const applySelection = s => { choice.current = s; setSelection(s); };
   useEffect(() => {
     let disposed = false;
-    chatService.models().then(({ data }) => { if (!disposed) { setModels(data.data.models); } })
-      .catch(() => { if (!disposed) setError('Chưa tải được danh sách model. Hãy tải lại.'); });
+    chatService.models().then(({ data }) => {
+      if (!disposed) {
+        const list = data.data.models || [];
+        const def = data.data.defaultModel || (list.find(m => m.id === 'gemini-3.5-flash-lite')?.id) || list[0]?.id || 'gemini-3.5-flash-lite';
+        setModels(list);
+        if (!choice.current.modelId) {
+          applySelection({ modelId: def, revision: 0 });
+        }
+      }
+    })
+    .catch(() => { if (!disposed) setError('Chưa tải được danh sách model. Hãy tải lại.'); });
     const reset = () => {
       generation.current++; controller.current?.abort(); credentials.current = null;
       busy.current = false; setLoading(false); setMessages(welcome); setError(''); setDraft(''); setRetry(null);
@@ -27,7 +36,9 @@ export function ChatProvider({ children }) {
         busy.current = true; setLoading(true);
         const [history, state] = await Promise.all([chatService.history(stored), chatService.state(stored.sessionId, stored.sessionToken)]);
         if (disposed || version !== generation.current) return;
-        credentials.current = stored; applySelection(state.data.data);
+        credentials.current = stored;
+        const serverModel = state.data.data?.modelId || 'gemini-3.5-flash-lite';
+        applySelection({ ...state.data.data, modelId: serverModel });
         setMessages(history.data.data.length ? history.data.data.map(m => ({ sender: m.sender === 'USER' ? 'user' : 'ai', text: m.message, modelId: m.modelId, sources: m.sources, historical: true })) : welcome);
       } catch { if (!disposed && version === generation.current) { sessionStorage.removeItem(key); setError('Không khôi phục được phiên chat. Bạn có thể bắt đầu phiên mới.'); } }
       finally { if (!disposed && version === generation.current) { busy.current = false; setLoading(false); } }
@@ -41,7 +52,8 @@ export function ChatProvider({ children }) {
       const { data } = await chatService.createSession();
       if (version !== generation.current) return null;
       credentials.current = data.data; sessionStorage.setItem(key, JSON.stringify(data.data));
-      applySelection({ modelId: null, revision: 0 });
+      const def = choice.current.modelId || models.find(m => m.id === 'gemini-3.5-flash-lite')?.id || models[0]?.id || 'gemini-3.5-flash-lite';
+      applySelection({ modelId: def, revision: 0 });
     }
     return credentials.current;
   }
@@ -61,28 +73,123 @@ export function ChatProvider({ children }) {
   }
   async function sendMessage(input, isRetry = false) {
     const message = input.trim(); if (!message || busy.current) return;
-    if (!models.some(m => m.id === choice.current.modelId)) { setError("Hãy chọn model AI trước khi gửi."); return; }
+    const activeModelId = choice.current.modelId || models.find(m => m.id === 'gemini-3.5-flash-lite')?.id || models[0]?.id || 'gemini-3.5-flash-lite';
+    if (!models.some(m => m.id === activeModelId)) {
+      if (models.length > 0) {
+        applySelection({ ...choice.current, modelId: models[0].id });
+      } else {
+        setError("Hãy chọn model AI trước khi gửi.");
+        return;
+      }
+    } else if (!choice.current.modelId) {
+      applySelection({ ...choice.current, modelId: activeModelId });
+    }
     const version = generation.current; busy.current = true; setLoading(true); setError(''); setRetry(null);
     if (!isRetry) setMessages(old => [...old, { sender: 'user', text: message }]);
+
+    // Add initial placeholder streaming message
+    setMessages(old => [...old, {
+      sender: 'ai',
+      text: '',
+      streaming: true,
+      status: 'Đang kết nối...',
+      modelId: choice.current.modelId
+    }]);
+
     try {
       const c = await ensureSession(version); if (!c) return;
       controller.current = new AbortController();
-      const { data: response } = await chatService.sendMessage(message, c.sessionId, c.sessionToken, choice.current.revision, controller.current.signal);
-      if (version !== generation.current) return;
-      const data = response.data;
-      if (typeof data?.reply !== 'string') throw new Error('Invalid response');
-      setMessages(old => [...old, { sender: 'ai', text: data.reply, sources: data.sources, tours: data.tours, proposal: data.proposal, notices: data.notices, modelId: data.modelId }]);
+
+      await chatService.streamMessage({
+        message,
+        sessionId: c.sessionId,
+        sessionToken: c.sessionToken,
+        settingsRevision: choice.current.revision,
+        signal: controller.current.signal,
+        onDelta: (delta) => {
+          if (version !== generation.current) return;
+          setMessages(old => {
+            const copy = [...old];
+            const last = copy[copy.length - 1];
+            if (last && last.sender === 'ai' && last.streaming) {
+              copy[copy.length - 1] = { ...last, text: last.text + delta, status: null };
+            }
+            return copy;
+          });
+        },
+        onStatus: (status) => {
+          if (version !== generation.current) return;
+          setMessages(old => {
+            const copy = [...old];
+            const last = copy[copy.length - 1];
+            if (last && last.sender === 'ai' && last.streaming) {
+              copy[copy.length - 1] = { ...last, status };
+            }
+            return copy;
+          });
+        },
+        onDone: (data) => {
+          if (version !== generation.current) return;
+          setMessages(old => {
+            const copy = [...old];
+            const last = copy[copy.length - 1];
+            if (last && last.sender === 'ai') {
+              copy[copy.length - 1] = {
+                sender: 'ai',
+                text: data.reply || last.text,
+                sources: data.sources,
+                tours: data.tours,
+                proposal: data.proposal,
+                notices: data.notices,
+                modelId: data.modelId,
+                streaming: false,
+                status: null
+              };
+            }
+            return copy;
+          });
+        }
+      });
     } catch (e) {
       if (version !== generation.current) return;
-      if (e.code === 'ERR_CANCELED' || !e.response) {
+      if (e.name === 'AbortError' || e.code === 'ERR_CANCELED' || !e.response) {
+        setMessages(old => {
+          const copy = [...old];
+          const last = copy[copy.length - 1];
+          if (last && last.sender === 'ai' && last.streaming) {
+            copy[copy.length - 1] = {
+              ...last,
+              streaming: false,
+              status: null,
+              text: last.text ? last.text + '\n\n*(Đã dừng trả lời)*' : '*(Đã dừng chờ)*'
+            };
+          }
+          return copy;
+        });
         setError('Đã dừng chờ hoặc mất kết nối. Tải lại hội thoại để kiểm tra kết quả trước khi gửi lại.');
       } else {
-        setError(e.response?.data?.message || 'Chưa nhận được câu trả lời.');
-        if ([429, 502, 503, 504].includes(e.response.status)) setRetry(message);
-        if (e.response.status === 409) await syncSelection(version);
-        if (e.response.status === 404) { credentials.current = null; sessionStorage.removeItem(key); }
+        setMessages(old => {
+          const copy = [...old];
+          const last = copy[copy.length - 1];
+          if (last && last.sender === 'ai' && last.streaming && !last.text) {
+            return copy.slice(0, -1);
+          } else if (last && last.sender === 'ai' && last.streaming) {
+            copy[copy.length - 1] = { ...last, streaming: false, status: null };
+          }
+          return copy;
+        });
+        setError(e.response?.data?.message || e.message || 'Chưa nhận được câu trả lời.');
+        if ([429, 502, 503, 504].includes(e.response?.status)) setRetry(message);
+        if (e.response?.status === 409) await syncSelection(version);
+        if (e.response?.status === 404) { credentials.current = null; sessionStorage.removeItem(key); }
       }
-    } finally { if (version === generation.current) { busy.current = false; setLoading(false); controller.current = null; } }
+    } finally {
+      if (version === generation.current) {
+        busy.current = false;
+        setLoading(false);
+        controller.current = null;
+      }
+    }
   }
   return <ChatContext.Provider value={{ messages, loading, sendMessage, models, selection, changeModel, error, retry, retryMessage: () => retry && sendMessage(retry, true), stop: () => controller.current?.abort(), draft, setDraft }}>{children}</ChatContext.Provider>;
 }

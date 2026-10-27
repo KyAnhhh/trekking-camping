@@ -3,6 +3,10 @@ package com.trekkingcamping.backend.module.tour.service;
 import com.trekkingcamping.backend.module.tour.entity.TourImage;
 import com.trekkingcamping.backend.module.tour.repository.*;
 import org.springframework.http.HttpStatus;
+import com.trekkingcamping.backend.config.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -23,6 +27,7 @@ public class TourImageService {
     public TourImageService(TourImageRepository images, TourRepository tours, TourImageStorage storage) {
         this.images = images; this.tours = tours; this.storage = storage;
     }
+    @Cacheable(value = CacheConfig.CACHE_IMAGES, key = "#tourId", sync = true)
     @Transactional(readOnly = true)
     public List<ImageDto> list(Long tourId) {
         var tour = tours.findById(tourId).filter(t -> Boolean.TRUE.equals(t.getIsActive())).orElseThrow(this::notFound);
@@ -33,6 +38,7 @@ public class TourImageService {
         tours.findById(tourId).orElseThrow(this::notFound);
         return images.findByTourIdOrderByIsCoverDescIdAsc(tourId).stream().map(ImageDto::from).toList();
     }
+    @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_IMAGES, key = "#tourId"), @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true) })
     @Transactional(rollbackFor = Exception.class)
     public ImageDto upload(Long tourId, MultipartFile file) throws IOException {
         var tour = tours.findByIdForUpdate(tourId).orElseThrow(this::notFound);
@@ -45,6 +51,7 @@ public class TourImageService {
         var image = new TourImage(); image.setTour(tour); image.setImageUrl(url); image.setIsCover(existing.isEmpty());
         return ImageDto.from(images.save(image));
     }
+    @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_IMAGES, key = "#tourId"), @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_TOUR_DETAIL, allEntries = true) })
     @Transactional
     public void cover(Long tourId, Long imageId) {
         tours.findByIdForUpdate(tourId).orElseThrow(this::notFound);
@@ -52,6 +59,7 @@ public class TourImageService {
         if (all.stream().noneMatch(i -> Objects.equals(i.getId(), imageId))) throw notFound();
         all.forEach(i -> i.setIsCover(Objects.equals(i.getId(), imageId))); images.saveAll(all);
     }
+    @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_IMAGES, key = "#tourId"), @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_TOUR_DETAIL, allEntries = true) })
     @Transactional
     public void delete(Long tourId, Long imageId) {
         tours.findByIdForUpdate(tourId).orElseThrow(this::notFound);

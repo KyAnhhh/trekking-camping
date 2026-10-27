@@ -15,7 +15,11 @@ function ReviewList({ tours }) {
       items: responses.flatMap((r, i) => r.status === 'fulfilled' ? (r.value.data.data?.items || []).slice(0, 1).map((review) => ({ ...review, tour: selected[i] })) : []),
     };
   }, [tours]);
-  const { data, loading, error, reload } = useResource(load);
+  const { data, loading, error, reload } = useResource(load, {
+    key: ["home-reviews", (tours || []).map((t) => t.id).join(",")],
+    ttl: 180000,
+    persist: false,
+  });
   if (loading) return <LoadingSpinner label="Đang tải chia sẻ từ các chuyến đi..." />;
   if (error || (data?.partial && !data.items.length)) return <EmptyState error title="Chưa tải được đánh giá" description="Bạn có thể thử lại hoặc xem đánh giá trong trang tour." onRetry={reload} />;
   if (!data?.items.length) return <EmptyState title="Chờ những câu chuyện sau chuyến đi" description="Các tour đang giới thiệu chưa có đánh giá. Khách có đơn hoàn tất có thể chia sẻ từ Chuyến đi của tôi."><Link to="/my-bookings" className="text-link">Chuyến đi của tôi</Link></EmptyState>;

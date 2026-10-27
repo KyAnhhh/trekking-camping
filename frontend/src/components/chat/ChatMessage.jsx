@@ -51,12 +51,25 @@ export default function ChatMessage({ message }) {
       )}
       <div className="chat-bubble">
         {message.modelId && <small className="muted">{message.modelId}</small>}
+        {message.status && (
+          <div className="chat-status-pill">
+            <Compass size={14} className="spin-icon" />
+            <span>{message.status}</span>
+          </div>
+        )}
         {message.sender === 'user' ? (
           <p>{message.text}</p>
         ) : (
-          <ReactMarkdown remarkPlugins={[remarkGfm, citations]} components={{ a: sourceLink }}>
-            {message.text}
-          </ReactMarkdown>
+          <>
+            {message.text && (
+              <ReactMarkdown remarkPlugins={[remarkGfm, citations]} components={{ a: sourceLink }}>
+                {message.text}
+              </ReactMarkdown>
+            )}
+            {message.streaming && (
+              <span className="streaming-cursor" aria-label="Đang trả lời">▍</span>
+            )}
+          </>
         )}
         {message.notices?.map((notice, i) => <p className="notice" key={i}>{notice}</p>)}
         {!!sources.length && <section className="chat-sources" id={panelId} aria-label="Nguồn tham khảo">

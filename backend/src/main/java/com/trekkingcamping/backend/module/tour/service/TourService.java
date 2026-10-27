@@ -4,6 +4,9 @@ import com.trekkingcamping.backend.module.tour.dto.*;
 import com.trekkingcamping.backend.module.tour.entity.*;
 import com.trekkingcamping.backend.module.tour.repository.*;
 
+import com.trekkingcamping.backend.config.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,6 +36,7 @@ public class TourService {
         this.guides = guides;
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true)
     public Tour createTour(CreateTourRequestDto request) {
         TourValidation.tour(request);
         if (tourRepository.existsBySlug(request.getSlug())) {
@@ -59,12 +63,14 @@ public class TourService {
         return tourRepository.save(tour);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_TOURS, key = "'all'", sync = true)
     @Transactional(readOnly = true)
     public List<Tour> getAllTours() {
         return withCovers(tourRepository.findByIsActiveTrue());
     }
 
     
+    @Cacheable(value = CacheConfig.CACHE_TOURS, key = "(#difficulty == null ? 'all' : #difficulty) + '-' + (#search == null ? '' : #search.trim().toLowerCase())", sync = true)
     @Transactional(readOnly = true)
     public List<Tour> filterTours(Integer difficulty, String search) {
 
@@ -97,6 +103,7 @@ public class TourService {
     }
 
 
+    @Cacheable(value = CacheConfig.CACHE_TOUR_DETAIL, key = "#slug", sync = true)
     @Transactional(readOnly = true)
     public Tour getTourBySlug(String slug) {
         Tour tour = tourRepository.findBySlug(slug)
@@ -115,6 +122,7 @@ public class TourService {
     }
 
     // --- XỬ LÝ ITINERARY (LỊCH TRÌNH CÁC NGÀY) ---
+    @CacheEvict(value = CacheConfig.CACHE_ITINERARIES, key = "#tourId")
     public TourItinerary addItinerary(Long tourId, CreateItineraryRequestDto request) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Tour với ID: " + tourId));
@@ -129,6 +137,7 @@ public class TourService {
         return itineraryRepository.save(itinerary);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_ITINERARIES, key = "#tourId", sync = true)
     public List<TourItinerary> getItinerariesByTourId(Long tourId) {
         return itineraryRepository.findByTourIdOrderByDayNumberAsc(tourId);
     }
@@ -162,6 +171,7 @@ public class TourService {
     }
 
     // --- XỬ LÝ GEAR (THIẾT BỊ ĐI KÈM) ---
+    @CacheEvict(value = CacheConfig.CACHE_GEARS, key = "#tourId")
     public TourGear addGear(Long tourId, CreateGearRequestDto request) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Tour với ID: " + tourId));
@@ -176,6 +186,7 @@ public class TourService {
         return gearRepository.save(gear);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_GEARS, key = "#tourId", sync = true)
     public List<TourGear> getGearsByTourId(Long tourId) {
         return gearRepository.findByTourId(tourId);
     }

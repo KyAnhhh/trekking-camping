@@ -27,7 +27,11 @@ const loadTours = async () => (await tourApi.getAllTours()).data.data;
 
 export default function Home() {
   const { theme, mode, setMode } = useTimeTheme();
-  const { data: tours, loading, error, reload } = useResource(loadTours);
+  const { data: tours, loading, error, reload } = useResource(loadTours, {
+    key: 'tours',
+    ttl: 300000,
+    persist: true,
+  });
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const navigate = useNavigate();

@@ -8,6 +8,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.time.*;
@@ -32,6 +33,7 @@ public class ChatAssistant {
     private final ChatCatalog catalog; private final TourRepository tours; private final ObjectMapper json;
     private final TourKnowledgeContent tourContent;
     private final com.trekkingcamping.backend.module.guide.service.GuideChatContext guides;
+
     // A timed-out provider call cannot create a booking or save a late answer. Capacity is bounded even if I/O ignores interruption.
     private final ExecutorService workers=new ThreadPoolExecutor(4,4,0L,TimeUnit.SECONDS,new SynchronousQueue<>(),
             r -> { var t=new Thread(r,"chat-assistant");t.setDaemon(true);return t; },new ThreadPoolExecutor.AbortPolicy());
@@ -46,6 +48,45 @@ public class ChatAssistant {
                 .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT).disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
     }
     @jakarta.annotation.PreDestroy public void close() { workers.shutdownNow();retrieval.shutdownNow(); }
+    public SseEmitter stream(ChatRequestDto request, String email) {
+        if (request == null || request.getMessage() == null || request.getMessage().isBlank() || request.getMessage().length() > 4000)
+            throw new IllegalArgumentException("Câu hỏi phải có từ 1 đến 4000 ký tự.");
+        var turn = request.getSettingsRevision() == null
+                ? sessions.begin(request.getSessionId(), request.getSessionToken(), email)
+                : sessions.begin(request.getSessionId(), request.getSessionToken(), email, request.getSettingsRevision());
+
+        SseEmitter emitter = new SseEmitter(90_000L);
+        java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        emitter.onCompletion(() -> { if (!completed.get()) sessions.release(turn); });
+        emitter.onTimeout(() -> { if (!completed.get()) sessions.release(turn); emitter.complete(); });
+        emitter.onError(e -> { if (!completed.get()) sessions.release(turn); });
+
+        long started = System.nanoTime();
+        workers.submit(() -> {
+            String failure = null;
+            try {
+                Answer result = answerStream(request.getMessage(), turn, emitter);
+                sessions.finish(turn, request.getMessage(), result.reply(), result.sources());
+                completed.set(true);
+                emitter.send(SseEmitter.event().name("done").data(result));
+                emitter.complete();
+            } catch (Exception e) {
+                failure = e instanceof ResponseStatusException r ? String.valueOf(r.getStatusCode().value()) : "INTERNAL";
+                try {
+                    String errorMsg = e instanceof ResponseStatusException r ? r.getReason() : "Chưa xử lý được câu hỏi. Vui lòng thử lại.";
+                    emitter.send(SseEmitter.event().name("error").data(Map.of("message", errorMsg != null ? errorMsg : "Lỗi hệ thống")));
+                    emitter.complete();
+                } catch (Exception ignored) {}
+            } finally {
+                if (modelRegistry != null && turn.modelId() != null)
+                    modelRegistry.measured(turn.modelId(), (System.nanoTime() - started) / 1_000_000, failure);
+                if (!completed.get()) sessions.release(turn);
+            }
+        });
+        return emitter;
+    }
+
     public Answer chat(ChatRequestDto request,String email) {
         if(request==null || request.getMessage()==null || request.getMessage().isBlank() || request.getMessage().length()>4000)
             throw new IllegalArgumentException("Câu hỏi phải có từ 1 đến 4000 ký tự.");
@@ -66,7 +107,12 @@ public class ChatAssistant {
         } catch(RuntimeException e) { failure=e instanceof ResponseStatusException r?String.valueOf(r.getStatusCode().value()):"INTERNAL";throw e;
         } finally { if(modelRegistry!=null && turn.modelId()!=null)modelRegistry.measured(turn.modelId(),(System.nanoTime()-started)/1_000_000,failure);if(work!=null && !work.isDone())work.cancel(true);sessions.release(turn); }
     }
-    private Answer answer(String question,ChatSessions.Turn turn) {
+
+    private record TurnPreparation(String prompt, List<ChatCatalog.Option> options, Proposal[] proposal,
+            boolean[] searched, List<Source> sources, List<String> notices,
+            java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher) {}
+
+    private TurnPreparation prepareTurn(String question, ChatSessions.Turn turn) {
         List<String> notices=new ArrayList<>();List<Source> sources=new ArrayList<>();
         String query=question;
         if(question.length()<300 && question.toLowerCase(Locale.ROOT).matches("(?s).*(tour đó|chuyến đó|còn nó|vậy còn|ở đó|bao nhiêu tiền|ngày nào).*")) {
@@ -121,19 +167,46 @@ public class ChatAssistant {
             } catch(IllegalArgumentException e) { return Map.of("error","Bộ lọc hoặc tham số chưa hợp lệ. Hỏi khách làm rõ, không tự nới điều kiện bắt buộc."); }
             catch(Exception e) { notices.add("Tra cứu lịch tour chưa thành công; hãy thử lại trước khi đặt.");options.clear();proposal[0]=null;return Map.of("error","Không đọc được dữ liệu hiện tại. Không xác nhận giá/chỗ."); }
         };
-        String reply=turn.modelId()==null?gemini.converse(SYSTEM,prompt,tools(),dispatcher):gemini.converse(SYSTEM,prompt,tools(),dispatcher,turn.modelId());
+        return new TurnPreparation(prompt, options, proposal, searched, sources, notices, dispatcher);
+    }
+
+    private Answer answer(String question,ChatSessions.Turn turn) {
+        var prep = prepareTurn(question, turn);
+        String reply=turn.modelId()==null?gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher()):gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher(),turn.modelId());
+        return finalizeAnswer(reply, turn, prep);
+    }
+
+    private Answer answerStream(String question, ChatSessions.Turn turn, SseEmitter emitter) {
+        var prep = prepareTurn(question, turn);
+        String reply = gemini.streamConverse(SYSTEM, prep.prompt(), tools(), prep.dispatcher(), turn.modelId(),
+                token -> {
+                    try {
+                        emitter.send(SseEmitter.event().name("delta").data(Map.of("delta", token)));
+                    } catch (Exception ex) {
+                        throw new RuntimeException("Client disconnected", ex);
+                    }
+                },
+                status -> {
+                    try {
+                        emitter.send(SseEmitter.event().name("status").data(Map.of("message", status)));
+                    } catch (Exception ignored) {}
+                });
+        return finalizeAnswer(reply, turn, prep);
+    }
+
+    private Answer finalizeAnswer(String reply, ChatSessions.Turn turn, TurnPreparation prep) {
         var citation=java.util.regex.Pattern.compile("\\[S(\\d+)\\]").matcher(reply);
         while(citation.find()) {
             String id="S"+citation.group(1);
-            if(sources.stream().noneMatch(s -> s.id().equals(id)))
+            if(prep.sources().stream().noneMatch(s -> s.id().equals(id)))
             {
-                log.warn("AI citation rejected: model={}, availableSources={}, invalidId={}",turn.modelId(),sources.size(),clip(id,20));
+                log.warn("AI citation rejected: model={}, availableSources={}, invalidId={}",turn.modelId(),prep.sources().size(),clip(id,20));
                 // Do not strip citations and present unsupported claims as verified advice.
-                notices.add("Phản hồi AI đã bị chặn vì dẫn nguồn không tồn tại. Nội dung tư vấn đó không được hiển thị.");
-                reply=searched[0] && !options.isEmpty()
+                prep.notices().add("Phản hồi AI đã bị chặn vì dẫn nguồn không tồn tại. Nội dung tư vấn đó không được hiển thị.");
+                reply=prep.searched()[0] && !prep.options().isEmpty()
                     ? "Tôi chưa xác minh được phần tư vấn từ AI. Bạn có thể xem các thẻ tour vừa tra cứu từ hệ thống bên dưới và hỏi lại một nội dung cụ thể. Chưa có booking nào được tạo."
                     : "Tôi chưa có câu trả lời tư vấn được xác minh cho câu hỏi này. Bạn hãy nêu tên tour và thông tin cần biết, hoặc liên hệ nhà tổ chức để xác nhận. Chưa có booking nào được tạo.";
-                proposal[0]=null;
+                prep.proposal()[0]=null;
                 break;
             }
         }
@@ -141,10 +214,10 @@ public class ChatAssistant {
         var citedIds=new HashSet<String>();
         var finalCitations=java.util.regex.Pattern.compile("\\[S(\\d+)\\]").matcher(reply);
         while(finalCitations.find())citedIds.add("S"+finalCitations.group(1));
-        var evidence=sources.stream().map(s->new Source(s.id(),s.label(),s.updatedAt(),s.excerpt(),s.kind(),citedIds.contains(s.id()))).toList();
-        if(!citedIds.isEmpty())notices.add("Mã nguồn đã được đối chiếu với tài liệu truy xuất; nội dung từng nhận định chưa được xác minh độc lập. Hãy mở đoạn trích để kiểm tra.");
-        if(searched[0] && !options.isEmpty())notices.add("Thẻ tour lấy từ database lúc "+Instant.now()+". Giá/chỗ được kiểm tra lại khi đặt; đây chưa phải xác nhận booking.");
-        return new Answer(turn.sessionId(),reply,evidence,searched[0]?List.copyOf(options):List.of(),proposal[0],List.copyOf(notices),turn.modelId());
+        var evidence=prep.sources().stream().map(s->new Source(s.id(),s.label(),s.updatedAt(),s.excerpt(),s.kind(),citedIds.contains(s.id()))).toList();
+        if(!citedIds.isEmpty())prep.notices().add("Mã nguồn đã được đối chiếu với tài liệu truy xuất; nội dung từng nhận định chưa được xác minh độc lập. Hãy mở đoạn trích để kiểm tra.");
+        if(prep.searched()[0] && !prep.options().isEmpty())prep.notices().add("Thẻ tour lấy từ database lúc "+Instant.now()+". Giá/chỗ được kiểm tra lại khi đặt; đây chưa phải xác nhận booking.");
+        return new Answer(turn.sessionId(),reply,evidence,prep.searched()[0]?List.copyOf(prep.options()):List.of(),prep.proposal()[0],List.copyOf(prep.notices()),turn.modelId());
     }
     private String retrieve(String query,List<Source> sources,List<String> notices) {
         Future<List<Document>> task=null;
@@ -165,7 +238,7 @@ public class ChatAssistant {
             var context=new StringBuilder();var seen=new HashSet<String>();
             var fingerprints=new HashMap<Long,Optional<String>>();boolean stale=false;
             for(var d:docs) {
-                if(sources.size()>=6)break;
+                if(sources.size()>=4)break;
                 if(d.getContent()==null || !seen.add(d.getId()))continue;
                 var meta=d.getMetadata();
                 if("PRIVATE".equalsIgnoreCase(Objects.toString(meta.get("visibility"),"")))continue;
@@ -173,6 +246,7 @@ public class ChatAssistant {
                     try {
                         var hash=fingerprints.computeIfAbsent(Long.valueOf(String.valueOf(meta.get("tour_id"))),id ->
                                 tours.findById(id).filter(t->Boolean.TRUE.equals(t.getIsActive())).map(t->tourContent.snapshot(t).fingerprint()));
+
                         if(!TourKnowledgeContent.VERSION.equals(meta.get("content_version")) || hash.isEmpty()
                                 || !hash.get().equals(meta.get("content_fingerprint"))) { stale=true;continue; }
                     } catch(Exception e) { stale=true;continue; }
@@ -181,9 +255,9 @@ public class ChatAssistant {
                 String at=Objects.toString(meta.get("ingested_at"),"Chưa có ngày nạp; chưa xác minh tính cập nhật");
                 boolean publicExcerpt="TOUR_INFO".equals(meta.get("category")) || "PUBLIC".equalsIgnoreCase(Objects.toString(meta.get("visibility"),""));
                 String safeLabel=publicExcerpt?clip(label.replace('\\','/').substring(label.replace('\\','/').lastIndexOf('/')+1),200):"Tài liệu tri thức (chưa công khai đoạn trích)";
-                sources.add(new Source(id,safeLabel,at,publicExcerpt?clip(d.getContent(),1800):null,"TOUR_INFO".equals(meta.get("category"))?"TOUR_SNAPSHOT":"DOCUMENT",false));
+                sources.add(new Source(id,safeLabel,at,publicExcerpt?clip(d.getContent(),1400):null,"TOUR_INFO".equals(meta.get("category"))?"TOUR_SNAPSHOT":"DOCUMENT",false));
                 context.append('[').append(id).append("] ").append(clip(label,200)).append(" | ").append(at).append('\n')
-                        .append(clip(d.getContent(),1800)).append("\n---\n");
+                        .append(clip(d.getContent(),1400)).append("\n---\n");
             }
             if(stale)notices.add("Đã bỏ qua tài liệu tour cũ hoặc chưa xác minh được phiên bản. Cần đồng bộ lại kho tour.");
             return context.toString();
@@ -198,10 +272,10 @@ public class ChatAssistant {
             item.put("availableSlots",o.availableSlots());item.put("difficulty",o.difficulty());item.put("previouslyCompleted",o.previouslyCompleted());
             var a=o.adventureProfile();
             if(a!=null) {
-                item.put("distanceKm",a.getDistanceKm());item.put("maxAltitudeM",a.getMaxAltitudeM());item.put("totalAscentM",a.getTotalAscentM());
-                item.put("activeHoursPerDay",a.getActiveHoursPerDay());item.put("medicalAccessHours",a.getMedicalAccessHours());
-                item.put("medicalAccessNotes",clip(a.getMedicalAccessNotes(),300));item.put("participationRequirements",clip(a.getParticipationRequirements(),600));
-                item.put("sourceNote",clip(a.getSourceNote(),300));item.put("verifiedOn",a.getVerifiedOn());
+                item.put("distanceKm",a.getDistanceKm());item.put("maxAltitudeM",a.getMaxAltitudeM());
+
+
+
             }
             return item;
         }).toList();

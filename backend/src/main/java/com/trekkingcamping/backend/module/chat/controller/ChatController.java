@@ -46,6 +46,16 @@ public class ChatController {
         return response;
     }
 
+    // API nhắn tin SSE Streaming với AI Chatbot
+    @PostMapping(value = "/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter stream(
+            @RequestBody ChatRequestDto request,
+            @AuthenticationPrincipal String email,
+            HttpServletRequest http) {
+        limits.check(http.getRemoteAddr(), "chat", 20);
+        return chatService.stream(request, email);
+    }
+
     @PostMapping("/sessions")
     public ApiResponse<ChatSessions.Credentials> createSession(@AuthenticationPrincipal String email,HttpServletRequest http) {
         limits.check(http.getRemoteAddr(),"sessions",10);

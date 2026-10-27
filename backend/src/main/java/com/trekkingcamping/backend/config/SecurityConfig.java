@@ -39,6 +39,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .headers(headers -> headers.cacheControl(cache -> cache.disable()))
             .authorizeHttpRequests(auth -> auth
                 // 1. Preflight CORS requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -46,7 +47,7 @@ public class SecurityConfig {
 
                 // 2. Public API Chatbot & Auth
                 .requestMatchers("/error").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/chat").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/chat", "/api/chat/stream").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/chat/sessions", "/api/chat/history").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/chat/models").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/chat/sessions/*/state").permitAll()

@@ -10,7 +10,11 @@ import Reveal from '../../components/common/Reveal';
 
 const loadTours = async () => (await tourApi.getAllTours()).data.data;
 export default function Destinations() {
-  const { data, loading, error, reload } = useResource(loadTours);
+  const { data, loading, error, reload } = useResource(loadTours, {
+    key: 'tours',
+    ttl: 300000,
+    persist: true,
+  });
   const [query, setQuery] = useState('');
   const tours = (data || []).filter((tour) => (tour.location || '').toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')));
   return <div className="container page-space">

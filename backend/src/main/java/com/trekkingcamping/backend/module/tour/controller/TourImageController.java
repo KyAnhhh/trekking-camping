@@ -25,7 +25,8 @@ public class TourImageController {
     @GetMapping("/api/media/tours/{name}")
     public ResponseEntity<Resource> read(@PathVariable String name) {
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).header("X-Content-Type-Options", "nosniff")
-                .cacheControl(CacheControl.maxAge(java.time.Duration.ofHours(1))).body(storage.read(name));
+                .cacheControl(CacheControl.maxAge(30, java.util.concurrent.TimeUnit.DAYS).cachePublic().immutable())
+                .eTag("\"" + name + "\"").body(storage.read(name));
     }
     private <T> ApiResponse<T> response(T value) { return new ApiResponse<>(1000, "Thành công", value); }
 }

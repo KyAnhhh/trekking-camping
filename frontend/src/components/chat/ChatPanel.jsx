@@ -38,7 +38,7 @@ export default function ChatPanel({ compact = false, initialQuestion = '' }) {
         {messages.map((message, index) => (
           <ChatMessage key={index} message={message} />
         ))}
-        {loading && (
+        {loading && !messages.some(m => m.streaming) && (
           <div className="chat-message from-ai">
             <span className="chat-avatar">
               <Compass size={19} />

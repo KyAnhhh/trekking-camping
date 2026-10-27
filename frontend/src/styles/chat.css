@@ -321,4 +321,32 @@
 .chat-source-toggle { display: block; text-align: left; background: transparent; border: 0; color: var(--forest); cursor: pointer; font: inherit; padding: 8px 0; max-width: 100%; overflow-wrap: anywhere; }
 .chat-source-excerpt { padding: 10px; background: var(--mist); border-radius: 8px; }
 .chat-source-excerpt blockquote { margin: 8px 0 0; white-space: pre-wrap; max-height: 240px; overflow: auto; }
+.chat-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(18, 52, 35, 0.08);
+  color: var(--forest);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  margin-bottom: 8px;
+}
+.spin-icon {
+  animation: spin 1.5s linear infinite;
+}
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+.streaming-cursor {
+  display: inline-block;
+  color: var(--forest);
+  font-weight: bold;
+  animation: blink 0.8s infinite;
+  margin-left: 2px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 @media (max-width: 480px) { .chat-composer .chat-model-selector { flex-basis: 100px; width: 100px; } .chat-composer { gap: 5px; padding: 7px; } }

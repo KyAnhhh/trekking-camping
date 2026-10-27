@@ -82,4 +82,20 @@ class ChatSessionsTest {
         verify(messages,never()).saveAll(any());
         service.finish(second,"new","answer");verify(messages).saveAll(any());assertNull(saved.getBusyUntil());
     }
+    @Test void cooldownEnforcedOnlyAfterSuccessfulFinishAndNotOnRelease() {
+        var c=service.create(null);
+        var turn=service.begin(c.sessionId(),c.sessionToken(),null);
+        assertNull(saved.getNextTurnAt());
+        service.finish(turn,"question","answer");
+        assertNotNull(saved.getNextTurnAt());
+        assertTrue(saved.getNextTurnAt().isAfter(Instant.now()));
+        assertEquals(429,assertThrows(ResponseStatusException.class,()->service.begin(c.sessionId(),c.sessionToken(),null)).getStatusCode().value());
+
+        saved.setNextTurnAt(Instant.now().minusSeconds(1));
+        var turn2=service.begin(c.sessionId(),c.sessionToken(),null);
+        service.release(turn2);
+        assertNull(saved.getNextTurnAt());
+        var turn3=service.begin(c.sessionId(),c.sessionToken(),null);
+        assertNotNull(turn3);
+    }
 }

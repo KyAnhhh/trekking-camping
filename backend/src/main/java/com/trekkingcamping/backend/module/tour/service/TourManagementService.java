@@ -7,6 +7,9 @@ import com.trekkingcamping.backend.module.guide.repository.ScheduleGuideReposito
 import com.trekkingcamping.backend.module.guide.service.GuideService;
 import com.trekkingcamping.backend.module.guide.dto.GuideDtos;
 import jakarta.persistence.EntityManager;
+import com.trekkingcamping.backend.config.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
@@ -35,6 +38,7 @@ public class TourManagementService {
         Tour t=tours.findBySlug(slug).orElseThrow(this::notFound);
         return new Detail(t,itineraries.findByTourIdOrderByDayNumberAsc(t.getId()),guides.adminSchedules(t.getId()),gears.findByTourId(t.getId()));
     }
+    @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_TOUR_DETAIL, allEntries = true) })
     @Transactional public Tour update(Long id, CreateTourRequestDto r) {
         TourValidation.tour(r);
         Tour t=locked(id);
@@ -59,6 +63,7 @@ public class TourManagementService {
         t.setEmergencyHotline(r.getEmergencyHotline()); t.setUpdatedAt(LocalDateTime.now());
         return tours.save(t);
     }
+    @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_TOUR_DETAIL, allEntries = true) })
     @Transactional public Tour active(Long id, Active input) {
         if (input==null || input.active()==null) throw new IllegalArgumentException("Thiếu trạng thái mở bán.");
         Tour t=locked(id); var rows=lockSchedules(id);

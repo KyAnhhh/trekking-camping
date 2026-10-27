@@ -7,10 +7,14 @@ import ReviewPhotos from './ReviewPhotos';
 export default function TourReviews({ tourId }) {
   const [page, setPage] = useState(0);
   const load = useCallback(
-    async () => (await reviewService.list(tourId, page)).data.data,
+    async (signal) => (await reviewService.list(tourId, page, signal)).data.data,
     [tourId, page],
   );
-  const { data, loading, error, reload } = useResource(load);
+  const { data, loading, error, reload } = useResource(load, {
+    key: ["reviews", tourId, page],
+    ttl: 180000,
+    persist: false,
+  });
   return (
     <section className="panel review-section">
       <h2>Trải nghiệm từ người đã đi</h2>
@@ -36,7 +40,7 @@ export default function TourReviews({ tourId }) {
           </p>
           {data.items.map((r) => (
             <article className="review-item" key={r.id}>
-              <ReviewPhotos reviewId={r.id} />
+              <ReviewPhotos reviewId={r.id} initialPhotos={r.photos} />
               <h3>
                 {r.author} · {r.rating}/5 sao
               </h3>

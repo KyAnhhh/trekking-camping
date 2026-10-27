@@ -3,6 +3,9 @@ package com.trekkingcamping.backend.module.tour.service;
 import com.fasterxml.jackson.databind.*;
 import com.trekkingcamping.backend.module.tour.dto.*;
 import com.trekkingcamping.backend.module.tour.repository.TourRepository;
+import com.trekkingcamping.backend.config.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +28,7 @@ public class TourImportService {
         this.repository = repository; this.tours = tours;
     }
 
+    @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_TOUR_DETAIL, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_ITINERARIES, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_GEARS, allEntries = true) })
     @Transactional(rollbackFor = Exception.class)
     public Result importFile(MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > 1024 * 1024 || file.getOriginalFilename() == null

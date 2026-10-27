@@ -31,6 +31,7 @@ public interface TourScheduleRepository extends JpaRepository<TourSchedule, Long
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from TourSchedule s where s.id = :id")
     Optional<TourSchedule> findByIdForUpdate(@Param("id") Long id);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tour"})
     List<TourSchedule> findByTourId(Long tourId);
     List<TourSchedule> findByTourIdInAndDepartureDateAfterOrderByDepartureDateAsc(List<Long> tourIds, java.time.LocalDate today);
        

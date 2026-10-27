@@ -10,7 +10,11 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Reveal from '../../components/common/Reveal';
 const loadTours = async () => (await tourApi.getAllTours()).data.data;
 export default function TourList() {
-  const { data, loading, error, reload } = useResource(loadTours);
+  const { data, loading, error, reload } = useResource(loadTours, {
+    key: 'tours',
+    ttl: 300000,
+    persist: true,
+  });
   const [params, setParams] = useSearchParams();
   const query = params.get('q') || '',
     difficulty = params.get('difficulty') || '',

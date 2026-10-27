@@ -54,7 +54,11 @@ export default function TourDetail() {
       partialError: results.some((r) => r.status === "rejected"),
     };
   }, [slug]);
-  const { data, loading, error, reload } = useResource(loader);
+  const { data, loading, error, reload } = useResource(loader, {
+    key: ["tour", slug],
+    ttl: 300000,
+    persist: true,
+  });
   if (loading) return <LoadingSpinner label="Đang mở hành trình..." />;
   if (error || !data)
     return (

@@ -15,20 +15,46 @@ import java.util.*;
 @Service
 public class ReviewService {
     public record Input(Integer rating, String comment) {}
-    public record Item(Long id, String author, Integer rating, String comment, LocalDateTime createdAt, boolean verified) {}
+    public record PhotoItem(Long id, String url) {}
+    public record Item(Long id, String author, Integer rating, String comment, LocalDateTime createdAt, boolean verified, List<PhotoItem> photos) {
+        public Item(Long id, String author, Integer rating, String comment, LocalDateTime createdAt, boolean verified) {
+            this(id, author, rating, comment, createdAt, verified, List.of());
+        }
+    }
     public record Summary(double average, long total, List<Item> items, int page) {}
     public record Eligibility(boolean canReview, Item review, String message) {}
     private final TourReviewRepository reviews; private final BookingRepository bookings;
     private final TourRepository tours; private final EntityManager em;
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     public ReviewService(TourReviewRepository reviews, BookingRepository bookings, TourRepository tours, EntityManager em) {
-        this.reviews=reviews; this.bookings=bookings; this.tours=tours; this.em=em;
+        this(reviews, bookings, tours, em, null);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ReviewService(TourReviewRepository reviews, BookingRepository bookings, TourRepository tours, EntityManager em,
+                         org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this.reviews=reviews; this.bookings=bookings; this.tours=tours; this.em=em; this.jdbc=jdbc;
+    }
+
     @Transactional(readOnly=true) public Summary list(Long tourId, int page) {
         if (page < 0 || page > 10000) throw new IllegalArgumentException("Trang không hợp lệ.");
         tours.findById(tourId).filter(t -> Boolean.TRUE.equals(t.getIsActive())).orElseThrow(this::notFound);
         Double avg=reviews.average(tourId);
+        var reviewList = reviews.findByTourIdAndIsApprovedTrueOrderByCreatedAtDesc(tourId, PageRequest.of(page, 20));
+        Map<Long, List<PhotoItem>> photoMap = new HashMap<>();
+        List<Long> reviewIds = reviewList.stream().map(TourReview::getId).toList();
+        if (!reviewIds.isEmpty() && jdbc != null) {
+            String placeholders = String.join(",", Collections.nCopies(reviewIds.size(), "?"));
+            String sql = "SELECT id, review_id, url FROM review_photos WHERE review_id IN (" + placeholders + ") AND approved=true ORDER BY id";
+            jdbc.query(sql, rs -> {
+                long rid = rs.getLong("review_id");
+                photoMap.computeIfAbsent(rid, k -> new ArrayList<>())
+                        .add(new PhotoItem(rs.getLong("id"), rs.getString("url")));
+            }, reviewIds.toArray());
+        }
         return new Summary(avg == null ? 0 : Math.round(avg*10)/10.0, reviews.countByTourIdAndIsApprovedTrue(tourId),
-                reviews.findByTourIdAndIsApprovedTrueOrderByCreatedAtDesc(tourId,PageRequest.of(page,20)).stream().map(this::item).toList(),page);
+                reviewList.stream().map(r -> item(r, photoMap.getOrDefault(r.getId(), List.of()))).toList(), page);
     }
     @Transactional(readOnly=true) public Eligibility eligibility(String email, Long bookingId) {
         Booking booking=bookings.findById(bookingId).orElseThrow(this::notFound); owner(booking,email);
@@ -55,8 +81,11 @@ public class ReviewService {
         if(email==null || b.getUser()==null || !email.equals(b.getUser().getEmail())) throw notFound();
     }
     private Item item(TourReview r) {
+        return item(r, List.of());
+    }
+    private Item item(TourReview r, List<PhotoItem> photos) {
         String name=r.getUser().getFullName();
-        return new Item(r.getId(),name==null || name.isBlank() ? "Khách du lịch" : name,r.getRating(),r.getComment(),r.getCreatedAt(),Boolean.TRUE.equals(r.getIsVerifiedBuyer()));
+        return new Item(r.getId(),name==null || name.isBlank() ? "Khách du lịch" : name,r.getRating(),r.getComment(),r.getCreatedAt(),Boolean.TRUE.equals(r.getIsVerifiedBuyer()),photos);
     }
     private ResponseStatusException notFound() { return new ResponseStatusException(HttpStatus.NOT_FOUND,"Không tìm thấy dữ liệu."); }
 }

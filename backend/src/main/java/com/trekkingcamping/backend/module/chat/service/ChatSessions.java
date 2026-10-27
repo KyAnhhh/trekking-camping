@@ -44,7 +44,17 @@ public class ChatSessions {
         User user=owner(email);
         String secret=UUID.randomUUID()+"-"+UUID.randomUUID();
         var s=new ChatSession(); s.setId(UUID.randomUUID().toString()); s.setUserId(user==null?null:user.getId());
-        s.setSecretHash(hash(secret)); s.setExpiresAt(Instant.now().plusSeconds(86400)); sessions.save(s);
+        s.setSecretHash(hash(secret)); s.setExpiresAt(Instant.now().plusSeconds(86400));
+        String defaultModel = null;
+        if (models != null) {
+            try {
+                var pub = models.available();
+                if (pub != null) defaultModel = pub.defaultModel();
+            } catch (Exception ignored) {}
+        }
+        if (defaultModel == null) defaultModel = com.trekkingcamping.backend.config.GeminiProperties.DEFAULT_MODEL;
+        s.setSelectedModelId(defaultModel);
+        sessions.save(s);
         return new Credentials(s.getId(),secret);
     }
     @Transactional public Turn begin(String id,String token,String email) {
@@ -59,7 +69,7 @@ public class ChatSessions {
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Một câu trả lời đang được xử lý trong phiên này.");
         if(s.getNextTurnAt()!=null && s.getNextTurnAt().isAfter(now))
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"Vui lòng chờ vài giây trước câu hỏi tiếp theo.");
-        s.setTurn(s.getTurn()+1); s.setBusyUntil(now.plusSeconds(120)); s.setNextTurnAt(now.plusSeconds(3));
+        s.setTurn(s.getTurn()+1); s.setBusyUntil(now.plusSeconds(120)); s.setNextTurnAt(null);
         var history=new ArrayList<>(messages.findTop6BySessionIdOrderByCreatedAtDescIdDesc(id));
         Collections.reverse(history);
         return new Turn(id,s.getTurn(),user,history,model);
@@ -75,7 +85,7 @@ public class ChatSessions {
         var b=new ChatMessage(); b.setSessionId(s.getId()); b.setUser(turn.owner()); b.setSender("BOT"); b.setMessage(answer);
         try { b.setSourceMetadata(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(sources)); }
         catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException("Cannot serialize source metadata",e);}
-        b.setModelId(turn.modelId());messages.saveAll(List.of(a,b)); s.setBusyUntil(null);
+        b.setModelId(turn.modelId());messages.saveAll(List.of(a,b)); s.setBusyUntil(null); s.setNextTurnAt(Instant.now().plusSeconds(3));
     }
     public static List<ChatAssistant.Source> sources(ChatMessage message) {
         if(message.getSourceMetadata()==null)return List.of();
