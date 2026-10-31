@@ -8,6 +8,10 @@ server:
   port: 8080
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+
   main:
     allow-bean-definition-overriding: true # Cho phép Spring Boot tự động kết nối các Bean RAG
 
@@ -15,9 +19,9 @@ spring:
     name: trekking-camping-backend
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/trekking_camping_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:kyanh3305}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -36,8 +40,8 @@ gemini:
   models: ${GEMINI_MODELS:}
 
 vnpay:
-  tmn-code: ${VNPAY_TMN_CODE}
-  hash-secret: ${VNPAY_HASH_SECRET}
-  payment-url: ${VNPAY_PAYMENT_URL}
+  tmn-code: ${VNPAY_TMN_CODE:SANDBOX1}
+  hash-secret: ${VNPAY_HASH_SECRET:SANDBOXHASHSECRET}
+  payment-url: ${VNPAY_PAYMENT_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
   return-url: ${VNPAY_RETURN_URL:http://localhost:8080/api/payments/vnpay/return}
   frontend-url: ${APP_FRONTEND_URL:http://localhost:5173}

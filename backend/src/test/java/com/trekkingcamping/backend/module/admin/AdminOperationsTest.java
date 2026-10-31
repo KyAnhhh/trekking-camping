@@ -23,7 +23,8 @@ class AdminOperationsTest {
     UserRepository users=mock(UserRepository.class);
     VnpayPaymentService vnpay=mock(VnpayPaymentService.class);MomoPaymentService momo=mock(MomoPaymentService.class);
     VnpayGateway gateway=mock(VnpayGateway.class);
-    AdminOperationsService service=new AdminOperationsService(bookings,payments,reviews,users,vnpay,momo,gateway);
+    MomoPaymentStore store=mock(MomoPaymentStore.class);
+    AdminOperationsService service=new AdminOperationsService(bookings,payments,reviews,users,vnpay,momo,gateway,store);
     User admin=new User();
     @BeforeEach void setup() {
         var role=new Role();role.setName("ROLE_ADMIN");admin.setRole(role);admin.setIsActive(true);
@@ -77,5 +78,21 @@ class AdminOperationsTest {
         assertThrows(IllegalArgumentException.class,()->service.reviews("admin","ALL",10001));
         assertThrows(IllegalArgumentException.class,()->service.moderate("admin",1L,new AdminOperationsService.Moderation(null,true)));
         verifyNoInteractions(bookings,payments,reviews);
+    }
+    @Test void resolveManualUpdatesPendingPaymentViaStore() {
+        MomoPaymentStore store = mock(MomoPaymentStore.class);
+        AdminOperationsService s = new AdminOperationsService(bookings,payments,reviews,users,vnpay,momo,gateway,store);
+        var p = new PaymentTransaction(); p.setId(2L); p.setStatus("PENDING"); p.setTransactionCode("tx-123");
+        when(payments.findById(2L)).thenReturn(Optional.of(p));
+        when(store.applyManualResolution("tx-123", "SUCCESS")).thenReturn(new MomoPaymentStore.Attempt(10L, "tx-123", 100000L, "info", "SUCCESS"));
+        var result = s.resolve("admin", 2L, new AdminOperationsService.ResolveInput("SUCCESS"));
+        assertEquals(2L, result.id());
+        assertEquals(10L, result.bookingId());
+        assertEquals("SUCCESS", result.status());
+
+        p.setStatus("SUCCESS");
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> s.resolve("admin", 2L, new AdminOperationsService.ResolveInput("SUCCESS"))).getStatusCode().value());
+        p.setStatus("PENDING");
+        assertThrows(IllegalArgumentException.class, () -> s.resolve("admin", 2L, new AdminOperationsService.ResolveInput("UNKNOWN")));
     }
 }

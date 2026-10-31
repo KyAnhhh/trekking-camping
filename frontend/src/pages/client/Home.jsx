@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -19,14 +19,34 @@ import { campsite, forest } from '../../utils/tour';
 import TimeHero from '../../components/home/TimeHero';
 import HomeReviews from '../../components/home/HomeReviews';
 import DestinationGrid from '../../components/tour/DestinationGrid';
+import FieldMoments3D from '../../components/home/FieldMoments3D';
 import Reveal from '../../components/common/Reveal';
 import TravelFaq from '../../components/common/TravelFaq';
 import useTimeTheme from '../../hooks/useTimeTheme';
+import use3DTilt from '../../hooks/use3DTilt';
 import '../../styles/home.css';
+
+function ExperienceCardItem({ to, img, alt, eyebrow, title, desc }) {
+  const cardRef = useRef(null);
+  use3DTilt(cardRef, { maxTilt: 6, scale: 1.02 });
+  return (
+    <Link ref={cardRef} className="experience-card" to={to}>
+      <img src={img} alt={alt} loading="lazy" />
+      <div>
+        <span className="eyebrow light">{eyebrow}</span>
+        <h3>{title}</h3>
+        <p>{desc}</p>
+      </div>
+      <div className="card-glare" aria-hidden="true" />
+      <ArrowUpRight className="experience-arrow" />
+    </Link>
+  );
+}
+
 const loadTours = async () => (await tourApi.getAllTours()).data.data;
 
 export default function Home() {
-  const { theme, mode, setMode } = useTimeTheme();
+  const { theme, timeString } = useTimeTheme();
   const { data: tours, loading, error, reload } = useResource(loadTours, {
     key: 'tours',
     ttl: 300000,
@@ -43,8 +63,8 @@ export default function Home() {
     navigate('/tours?' + params);
   }
   return (
-    <div className="home-page" data-time-theme={theme} data-theme-mode={mode}>
-      <TimeHero theme={theme} mode={mode} setMode={setMode} />
+    <div className="home-page" data-time-theme={theme}>
+      <TimeHero theme={theme} timeString={timeString} />
       <div className="container search-dock">
         <form className="trip-search" onSubmit={search}>
           <label>
@@ -121,6 +141,9 @@ export default function Home() {
         </div>
         {loading ? <LoadingSpinner label="Đang tải điểm đến..." /> : error ? <p className="notice">Điểm đến sẽ xuất hiện khi danh sách tour tải thành công.</p> : <DestinationGrid tours={tours || []} limit={4} />}
       </Reveal>
+      <Reveal>
+        <FieldMoments3D />
+      </Reveal>
       <Reveal className="experience-section">
         <div className="container section">
           <div className="section-heading">
@@ -135,24 +158,22 @@ export default function Home() {
             </p>
           </div>
           <div className="experience-grid">
-            <Link className="experience-card" to="/tours?difficulty=1">
-              <img src={forest} alt="Lối đi giữa cánh rừng xanh" loading="lazy" />
-              <div>
-                <span className="eyebrow light">BẮT ĐẦU THẬT NHẸ NHÀNG</span>
-                <h3>Bước đầu vào rừng</h3>
-                <p>Các cung đường dễ cho người mới.</p>
-              </div>
-              <ArrowUpRight className="experience-arrow" />
-            </Link>
-            <Link className="experience-card" to="/tours?duration=short">
-              <img src={campsite} alt="Lều cắm trại giữa thiên nhiên" loading="lazy" />
-              <div>
-                <span className="eyebrow light">DÀNH MỘT CHÚT THỜI GIAN CHO MÌNH</span>
-                <h3>Cuối tuần ngoài trời</h3>
-                <p>Tìm chuyến đi trong một đến hai ngày.</p>
-              </div>
-              <ArrowUpRight className="experience-arrow" />
-            </Link>
+            <ExperienceCardItem
+              to="/tours?difficulty=1"
+              img={forest}
+              alt="Lối đi giữa cánh rừng xanh"
+              eyebrow="BẮT ĐẦU THẬT NHẸ NHÀNG"
+              title="Bước đầu vào rừng"
+              desc="Các cung đường dễ cho người mới."
+            />
+            <ExperienceCardItem
+              to="/tours?duration=short"
+              img={campsite}
+              alt="Lều cắm trại giữa thiên nhiên"
+              eyebrow="DÀNH MỘT CHÚT THỜI GIAN CHO MÌNH"
+              title="Cuối tuần ngoài trời"
+              desc="Tìm chuyến đi trong một đến hai ngày."
+            />
           </div>
         </div>
       </Reveal>

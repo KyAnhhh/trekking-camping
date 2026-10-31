@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { bookingService } from "../../api/bookingService";
 import { paymentService } from "../../api/paymentService";
+import { participationService } from "../../api/participationService";
 import useResource from "../../hooks/useResource";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import EmptyState from "../../components/common/EmptyState";
@@ -174,11 +175,9 @@ export default function BookingDetail({ admin = false }) {
                     </p>
                     <span>
                       {money(payment.amount)} ·{" "}
-                      {payment.paymentMethod === "VNPAY_SANDBOX"
-                        ? "VNPAY Sandbox"
-                        : payment.paymentMethod === "MOMO_SANDBOX"
-                          ? "MoMo Sandbox (giao dịch cũ)"
-                          : payment.paymentMethod}
+                      {payment.paymentMethod?.includes("VNPAY")
+                        ? "Cổng thanh toán VNPAY"
+                        : payment.paymentMethod}
                     </span>
                     {payment.status === "REFUND_REQUIRED" && (
                       <p className="notice">
@@ -217,6 +216,71 @@ export default function BookingDetail({ admin = false }) {
             <aside className="panel payment-summary">
               <p className="eyebrow">TỔNG THANH TOÁN</p>
               <h2>{money(data.booking.totalAmount)}</h2>
+              {/* Status Banner for Client */}
+              {!admin && data.booking.status === "PENDING" && (
+                <div style={{ margin: "10px 0" }}>
+                  {data.participationStatus === "READY" ? (
+                    <div className="notice notice-success">
+                      <strong>✓ Đơn đã được duyệt điều kiện tham gia!</strong>
+                      <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>
+                        Đơn của bạn đã sẵn sàng thanh toán. Hãy bấm nút <strong>Thanh toán VNPAY Sandbox</strong> bên dưới để hoàn tất giữ chỗ.
+                      </p>
+                    </div>
+                  ) : data.participationStatus === "REVIEW_REQUIRED" ? (
+                    <div className="notice" style={{ background: "#fef3c7", borderColor: "#fde68a", color: "#92400e" }}>
+                      <strong>⏳ Đang chờ người phụ trách xem xét</strong>
+                      <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>
+                        Bạn đã gửi khai báo người tham gia. Người phụ trách sẽ duyệt thông tin trước khi mở cổng thanh toán.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="notice" style={{ background: "#eff6ff", borderColor: "#bfdbfe", color: "#1e40af" }}>
+                      <strong>📝 Khai báo người tham gia</strong>
+                      <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>
+                        Vui lòng hoàn tất biểu mẫu <strong>Khai báo người tham gia</strong> bên dưới để Admin duyệt và mở cổng thanh toán cho bạn nhé.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Status & Quick Action for Admin */}
+              {admin && data.booking.status === "PENDING" && (
+                <div style={{ margin: "10px 0" }}>
+                  {data.participationStatus === "READY" ? (
+                    <div className="notice notice-success">
+                      <strong>✓ Đã duyệt điều kiện tham gia</strong>
+                      <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>
+                        Cổng thanh toán VNPAY đã sẵn sàng cho khách. Khi khách thanh toán thành công, đơn sẽ tự động chuyển sang CONFIRMED.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="notice" style={{ background: "#f0fdf4", borderColor: "#86efac", color: "#166534" }}>
+                      <strong>Duyệt điều kiện tham gia</strong>
+                      <p style={{ margin: "6px 0", fontSize: "0.85rem" }}>
+                        {data.participationStatus === "REVIEW_REQUIRED"
+                          ? "Khách đã gửi khai báo. Bấm nút dưới để duyệt và mở cổng thanh toán VNPAY cho khách."
+                          : "Khách chưa gửi khai báo. Admin có thể duyệt nhanh ngay nếu đã xác nhận điều kiện qua điện thoại/liên hệ."}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-full btn-lime"
+                        style={{ marginTop: "6px" }}
+                        disabled={busy}
+                        onClick={() =>
+                          action(async () => {
+                            await participationService.quickApprove(id);
+                            setNotice("Đã duyệt điều kiện tham gia thành công! Cổng thanh toán VNPAY đã mở cho khách.");
+                          })
+                        }
+                      >
+                        ✓ Duyệt tham gia (Mở cổng thanh toán)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {!admin &&
                 data.booking.status === "PENDING" &&
                 data.booking.departureDate > todayInVietnam() &&

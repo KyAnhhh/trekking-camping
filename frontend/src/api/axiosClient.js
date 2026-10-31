@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { expireSession, isTokenExpired } from './authSession.js';
 
+const rawBaseURL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080';
+const baseURL = String(rawBaseURL).replace(/\/api\/?$/, '');
+
 const axiosClient = axios.create({
-  baseURL: import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

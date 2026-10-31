@@ -24,7 +24,6 @@ const TourDetail = lazy(() => import("../pages/client/TourDetail"));
 const Booking = lazy(() => import("../pages/client/Booking"));
 const MyBookings = lazy(() => import("../pages/client/MyBookings"));
 const BookingDetail = lazy(() => import("../pages/client/BookingDetail"));
-const MomoReturn = lazy(() => import("../pages/client/MomoReturn"));
 const VnpayReturn = lazy(() => import("../pages/client/VnpayReturn"));
 const AdminBookings = lazy(() => import("../pages/admin/AdminBookings"));
 const AdminGuideReports = lazy(() => import("../pages/admin/AdminGuideReports"));
@@ -121,14 +120,6 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute>
                 <BookingDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="payment/momo/return"
-            element={
-              <ProtectedRoute>
-                <MomoReturn />
               </ProtectedRoute>
             }
           />

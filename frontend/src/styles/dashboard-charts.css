@@ -86,3 +86,177 @@
 @media (prefers-reduced-motion: reduce) {
   .booking-donut circle, .dashboard-chart-legend a, .payment-chart-fill { transition: none; }
 }
+
+/* ==========================================================================
+   Revenue Overview Chart Styles
+   ========================================================================== */
+
+.dashboard-analytics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  margin-bottom: 25px;
+}
+
+.revenue-chart-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f7faf5 100%);
+  border: 1px solid var(--line);
+  padding: 28px 32px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(22, 61, 44, 0.04);
+}
+
+.revenue-hero-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e5ece2;
+  flex-wrap: wrap;
+}
+
+.revenue-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.revenue-hero-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.revenue-hero-value {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  color: var(--forest);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.revenue-hero-subtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #19733e;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.revenue-metric-pills {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.revenue-pill {
+  background: #ffffff;
+  border: 1px solid #dbe5de;
+  border-radius: 12px;
+  padding: 12px 18px;
+  min-width: 130px;
+  box-shadow: 0 2px 8px rgba(22, 61, 44, 0.03);
+}
+
+.revenue-pill .pill-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.revenue-pill .pill-val {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.15rem;
+  color: var(--forest);
+}
+
+.revenue-stream-wrap {
+  padding-top: 22px;
+}
+
+.revenue-stream-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--forest);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.revenue-stream-header small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.revenue-stream-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e6eee3;
+  margin-bottom: 14px;
+}
+
+.revenue-stream-segment {
+  height: 100%;
+  transition: opacity 0.2s ease;
+}
+
+.revenue-stream-segment:hover {
+  opacity: 0.85;
+}
+
+.revenue-stream-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.revenue-stream-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e8efe5;
+}
+
+.revenue-stream-legend li:last-child {
+  border-bottom: none;
+}
+
+.stream-legend-text {
+  flex: 1;
+  color: var(--ink);
+}
+
+.revenue-stream-legend strong {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.9rem;
+}
+
+.revenue-stream-legend small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.revenue-chart-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5ece2;
+  flex-wrap: wrap;
+}
+

@@ -78,6 +78,48 @@ public class ParticipationService {
         if("READY".equals(input.decision())) b.setParticipationDeadline(ParticipationGate.deadline(b.getSchedule().getDepartureDate(),24));
         bookings.save(b); audit(b,user,"REVIEW_"+input.decision()); return view(b,p);
     }
+    @Transactional public View quickApprove(String email, Long id) {
+        User user = user(email, true);
+        Booking b = locked(id);
+        mutable(b);
+        Packet p = packet(id);
+        if (p == null) {
+            List<Person> defaultPeople = new ArrayList<>();
+            int pax = b.getNumberOfPax() == null || b.getNumberOfPax() < 1 ? 1 : b.getNumberOfPax();
+            for (int i = 0; i < pax; i++) {
+                defaultPeople.add(new Person(
+                    i == 0 ? b.getContactName() : "Khách đi kèm " + (i + 1),
+                    "NONE",
+                    "Đã xác nhận đủ điều kiện bởi quản trị viên",
+                    b.getContactName(),
+                    b.getContactPhone() != null && !b.getContactPhone().isBlank() ? b.getContactPhone() : "0900000000",
+                    true
+                ));
+            }
+            p = new Packet(defaultPeople, requirements(b), "v1", "Quản trị viên đã duyệt nhanh điều kiện tham gia.");
+            var row = new ParticipationDeclaration();
+            row.setBookingId(id);
+            row.setPurgeAfter(b.getSchedule().getDepartureDate().plusDays(30).atStartOfDay(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant());
+            try { row.setEncryptedContent(cipher.encrypt(id, json.writeValueAsString(p))); }
+            catch(Exception e) { throw invalid(); }
+            declarations.save(row);
+        } else {
+            p = new Packet(p.people(), p.requirements(), p.consentVersion(), "Quản trị viên đã duyệt điều kiện tham gia.");
+            var row = declarations.findById(id).orElseThrow(this::notFound);
+            try { row.setEncryptedContent(cipher.encrypt(id, json.writeValueAsString(p))); }
+            catch(Exception e) { throw invalid(); }
+            declarations.save(row);
+        }
+        b.setParticipationStatus("READY");
+        b.setParticipationRevision(revisionOf(b) + 1);
+        b.setParticipationDeadline(ParticipationGate.deadline(b.getSchedule().getDepartureDate(), 24));
+        notifications.booking(b, "PARTICIPATION:" + b.getParticipationRevision(),
+            "Khai báo tham gia đã được duyệt",
+            "Đơn của bạn đã sẵn sàng thanh toán. Bạn hãy mở chi tiết đơn để thanh toán qua cổng VNPAY.");
+        bookings.save(b);
+        audit(b, user, "QUICK_APPROVE_READY");
+        return view(b, p);
+    }
     @Transactional public void delete(String email,Long id) {
         User user=user(email,false); Booking b=locked(id); authorize(b,user,false);
         if(!Set.of("CANCELLED","COMPLETED").contains(b.getStatus())) throw conflict("Khai báo đang phục vụ chuyến đi. Hủy đơn chưa thanh toán trước, hoặc liên hệ người phụ trách để xử lý đơn đang hoạt động.");

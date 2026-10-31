@@ -275,7 +275,7 @@ public class ChatService {
             }
 
             List<String> candidates = new ArrayList<>(model == null ? gemini.getModels() : List.of(model));
-            String selectedModelName = candidates.get(0);
+            String selectedModelName = normalizeModelName(candidates.get(0));
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + selectedModelName.trim() + ":streamGenerateContent?alt=sse";
 
             HttpHeaders headers = new HttpHeaders();
@@ -422,7 +422,7 @@ public class ChatService {
                     throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Yêu cầu AI đã bị gián đoạn. Vui lòng thử lại.");
                 }
             }
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName.trim() + ":generateContent";
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + normalizeModelName(modelName).trim() + ":generateContent";
             
             try {
                 var budget=ChatCallBudget.CURRENT.get();
@@ -513,6 +513,13 @@ public class ChatService {
                     .contains(Objects.toString(candidate.get("finishReason"), ""));
         }
         return false;
+    }
+
+    public static String normalizeModelName(String model) {
+        if (model == null || model.isBlank()) return GeminiProperties.DEFAULT_MODEL;
+        String m = model.trim();
+        if (m.startsWith("models/")) m = m.substring("models/".length());
+        return m;
     }
 
     private static long parseRetryAfterMillis(HttpStatusCodeException e) {

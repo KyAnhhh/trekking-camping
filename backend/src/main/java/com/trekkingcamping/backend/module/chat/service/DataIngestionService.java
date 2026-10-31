@@ -57,6 +57,23 @@ public class DataIngestionService {
         // Only replace generated tour documents; user-uploaded TXT knowledge is preserved.
         jdbc.update("DELETE FROM " + PgVectorStore.VECTOR_TABLE_NAME + " WHERE metadata->>'category' = ?", "TOUR_INFO");
         if (!documents.isEmpty()) {
+            if (vectorStore instanceof org.springframework.ai.vectorstore.SimpleVectorStore) {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                for (Document doc : documents) {
+                    java.util.UUID docId;
+                    try {
+                        docId = java.util.UUID.fromString(doc.getId());
+                    } catch (Exception e) {
+                        docId = java.util.UUID.randomUUID();
+                    }
+                    String metaJson = "{}";
+                    try {
+                        metaJson = mapper.writeValueAsString(doc.getMetadata());
+                    } catch (Exception ignored) {}
+                    jdbc.update("INSERT INTO " + PgVectorStore.VECTOR_TABLE_NAME + " (id, content, metadata) VALUES (?, ?, ?::jsonb) ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, metadata = EXCLUDED.metadata",
+                            docId, doc.getContent(), metaJson);
+                }
+            }
             vectorStore.add(documents);
         }
 

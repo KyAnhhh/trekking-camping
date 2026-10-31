@@ -108,6 +108,10 @@ test('admin operations use paged filters and explicit state-safe writes', async 
   assert.equal(request.url, '/api/admin/operations/payments/42/reconcile');
   assert.equal(request.method, 'post');
   assert.equal(JSON.parse(request.data), null); // No client amount, provider or payment status is trusted.
+  await api.operationsService.resolve(42, 'SUCCESS', 'Manual bank check');
+  assert.equal(request.url, '/api/admin/operations/payments/42/resolve');
+  assert.equal(request.method, 'post');
+  assert.deepEqual(JSON.parse(request.data), { status: 'SUCCESS', note: 'Manual bank check' });
   await api.operationsService.reviews('HIDDEN', 1);
   assert.deepEqual(request.params, { visibility: 'HIDDEN', page: 1 });
   await api.operationsService.moderate(3, true, false);

@@ -1,7 +1,8 @@
 import axiosClient from "./axiosClient";
 import { isTokenExpired, expireSession } from "./authSession.js";
 
-const BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080';
+const rawBaseURL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = String(rawBaseURL).replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
 export const chatService = {
   models: () => axiosClient.get('/api/chat/models'),
@@ -17,9 +18,9 @@ export const chatService = {
     if (token && token !== 'undefined' && token !== 'null') {
       if (isTokenExpired(token)) {
         expireSession(token);
-        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else {
+        headers.Authorization = `Bearer ${token}`;
       }
-      headers.Authorization = `Bearer ${token}`;
     }
 
     const res = await fetch(`${BASE_URL}/api/chat/stream`, {
@@ -32,6 +33,9 @@ export const chatService = {
     if (!res.ok) {
       let errData = {};
       try { errData = await res.json(); } catch (_) {}
+      if (res.status === 401 && headers.Authorization) {
+        expireSession(token);
+      }
       const err = new Error(errData.message || `Lỗi kết nối (${res.status})`);
       err.response = { status: res.status, data: errData };
       throw err;

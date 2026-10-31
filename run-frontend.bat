@@ -26,7 +26,14 @@ echo [2/4] Da tim thay: frontend\package.json
 if not exist "node_modules\" goto :err_no_modules
 echo [3/4] Da tim thay thu muc: frontend\node_modules
 
-:: 4. Xac dinh package manager dua tren lockfile
+:: 4. Uu tien khoi chay truc tiep Vite qua Node.js de tranh loi npm wrapper tren Windows
+if exist "node_modules\vite\bin\vite.js" (
+    set "RUN_CMD=node node_modules\vite\bin\vite.js"
+    echo [4/4] Khoi dong truc tiep Vite qua Node.js: node node_modules\vite\bin\vite.js
+    goto :start_frontend
+)
+
+:: 5. Xac dinh package manager dua tren lockfile
 if exist "package-lock.json" goto :check_npm_lock
 if exist "yarn.lock" goto :check_yarn_lock
 goto :check_default_pm

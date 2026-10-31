@@ -14,11 +14,23 @@ import java.util.*;
 public class ChatCatalog {
     public record Filter(String destination,LocalDate departure,Integer days,Integer people,Integer fitness,
             BigDecimal budgetPerPerson,BigDecimal maxDistanceKm,BigDecimal maxActiveHoursPerDay,BigDecimal maxMedicalAccessHours) {}
-    public record Option(Long tourId,Long scheduleId,String title,String url,LocalDate departureDate,LocalDate returnDate,
-            BigDecimal pricePerPerson,int availableSlots,int difficulty,boolean previouslyCompleted,AdventureProfile adventureProfile) {}
+
+    public record Option(Long tourId, Long scheduleId, String title, String slug, String bannerUrl, String location,
+            String url, LocalDate departureDate, LocalDate returnDate,
+            BigDecimal pricePerPerson, int availableSlots, int difficulty, Integer durationDays,
+            boolean previouslyCompleted, AdventureProfile adventureProfile) {
+
+        // Backward-compatible constructor for existing tests and components
+        public Option(Long tourId, Long scheduleId, String title, String url, LocalDate departureDate, LocalDate returnDate,
+                BigDecimal pricePerPerson, int availableSlots, int difficulty, boolean previouslyCompleted, AdventureProfile adventureProfile) {
+            this(tourId, scheduleId, title, null, null, null, url, departureDate, returnDate, pricePerPerson, availableSlots, difficulty, null, previouslyCompleted, adventureProfile);
+        }
+    }
+
     private final EntityManager em;
     private final BookingRepository bookings;
     public ChatCatalog(EntityManager em,BookingRepository bookings) { this.em=em; this.bookings=bookings; }
+
     @Transactional(readOnly=true,timeout=5)
     public List<Option> search(Filter f,Long userId) {
         if(f==null) f=new Filter(null,null,null,null,null,null,null,null,null);
@@ -47,8 +59,10 @@ public class ChatCatalog {
         q.orderBy(cb.asc(rank),cb.asc(s.get("departureDate")),cb.asc(t.get("pricePerPax")),cb.asc(s.get("id")));
         return em.createQuery(q).setMaxResults(10).setHint("jakarta.persistence.query.timeout",4000).getResultList().stream().map(row -> {
             var tour=row.getTour();
-            return new Option(tour.getId(),row.getId(),tour.getTitle(),"/tours/"+tour.getSlug(),row.getDepartureDate(),row.getReturnDate(),
-                    tour.getPricePerPax(),row.getAvailableSlots(),tour.getDifficultyLevel(),visited.contains(tour.getId()),tour.getAdventureProfile());
+            return new Option(tour.getId(),row.getId(),tour.getTitle(),tour.getSlug(),tour.getBannerUrl(),tour.getLocation(),
+                    "/tours/"+tour.getSlug(),row.getDepartureDate(),row.getReturnDate(),
+                    tour.getPricePerPax(),row.getAvailableSlots(),tour.getDifficultyLevel(),tour.getDurationDays(),
+                    visited.contains(tour.getId()),tour.getAdventureProfile());
         }).toList();
     }
     public static void validate(Filter f) {

@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 title Trekking and Camping - Backend Server
 
 cd /d "%~dp0backend"
@@ -20,7 +20,14 @@ echo.
 
 :: 2. Kiem tra file cau hinh .env
 if not exist ".env" goto :warn_no_env
-echo [2/3] Da tim thay file cau hinh: backend\.env
+echo [2/3] Da tim thay file cau hinh: backend\.env (dang nap bien moi truong...)
+for /f "usebackq tokens=1* delims==" %%a in (".env") do (
+    set "KEY=%%a"
+    set "VAL=%%b"
+    if not "!KEY:~0,1!"=="#" (
+        if not "!KEY!"=="" set "!KEY!=!VAL!"
+    )
+)
 goto :check_maven
 
 :warn_no_env

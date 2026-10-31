@@ -109,6 +109,24 @@ public class MomoPaymentStore {
         return applyResult(orderId, amount, -2, null, orderInfo, "VNPAY_SANDBOX");
     }
 
+    /** Direct manual resolution by administrator when external gateway is unreachable or offline. */
+    @Transactional
+    public Attempt applyManualResolution(String orderId, String targetStatus) {
+        PaymentTransaction payment = payments.findByTransactionCode(orderId).orElseThrow(this::notFound);
+        String method = payment.getPaymentMethod();
+        long amount = payment.getAmount().longValueExact();
+        String info = orderInfo(payment.getBooking(), method);
+        int resultCode;
+        if ("SUCCESS".equalsIgnoreCase(targetStatus)) {
+            resultCode = 0;
+        } else if ("EXPIRED".equalsIgnoreCase(targetStatus)) {
+            resultCode = -2;
+        } else {
+            resultCode = 1006;
+        }
+        return applyResult(orderId, amount, resultCode, null, info, method);
+    }
+
     private Attempt applyResult(String orderId, long amount, int resultCode, String requestId, String orderInfo, String method) {
         // This is a new, self-contained write transaction after any HTTP call. Discard OSIV's
         // earlier read-only snapshots so they cannot suppress dirty checking or overwrite an IPN.
@@ -145,7 +163,7 @@ public class MomoPaymentStore {
                 booking.setUpdatedAt(LocalDateTime.now());
                 bookings.save(booking);
             }
-        } else if (resultCode == -2 && "VNPAY_SANDBOX".equals(method) && "PENDING".equals(payment.getStatus())) {
+        } else if (resultCode == -2 && Set.of("VNPAY_SANDBOX", "MOMO_SANDBOX").contains(method) && "PENDING".equals(payment.getStatus())) {
             payment.setStatus("EXPIRED");
         } else if (FINAL_FAILURES.contains(resultCode)) {
             payment.setStatus("FAILED");

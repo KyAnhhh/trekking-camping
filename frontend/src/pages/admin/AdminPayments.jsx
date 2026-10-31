@@ -23,6 +23,15 @@ export default function AdminPayments() {
       setSelected(null); reload();
     } catch (e) { setFailure(errorMessage(e)); } finally { setBusy(false); }
   }
+  async function handleManualResolve(targetStatus) {
+    if (busy) return;
+    setBusy(true); setFailure(''); setNotice('');
+    try {
+      const result = (await operationsService.resolve(selected.id, targetStatus)).data.data;
+      setNotice('Đã cập nhật trạng thái giao dịch: ' + (labels[result.status] || result.status));
+      setSelected(null); reload();
+    } catch (e) { setFailure(errorMessage(e)); } finally { setBusy(false); }
+  }
   return <>
     <header className="page-heading"><p className="eyebrow">KIỂM SOÁT THANH TOÁN</p><h1>Giao dịch & đối soát.</h1><p>Đối soát truy vấn cổng thanh toán và chỉ cập nhật kết quả được backend xác minh.</p></header>
     <div className="list-toolbar"><label>Trạng thái giao dịch <select disabled={busy} value={status} onChange={e => setParams({ status: e.target.value, page: '0' })}>{Object.entries(labels).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label><button className="btn btn-outline btn-small" disabled={busy || loading} onClick={reload}>Tải lại</button></div>
@@ -38,9 +47,55 @@ export default function AdminPayments() {
       <AdminPager data={data} busy={busy} onPage={p => setParams({ status, page: String(p) })} />
     </>}
     {selected && <Modal title="Đối soát giao dịch" onClose={() => { if (!busy) setSelected(null); }}>
-      <p className="break-word">{selected.orderId}</p><p>Kiểm tra kết quả tại cổng cho đơn {selected.bookingCode}. Thao tác không tạo thanh toán mới.</p>
-      {failure && <p role="alert" className="notice notice-error">{failure}</p>}
-      <button className="btn" disabled={busy} onClick={reconcile}>{busy ? 'Đang kiểm tra…' : 'Kiểm tra giao dịch'}</button>
+      <p className="break-word"><strong>Mã giao dịch:</strong> {selected.orderId}</p>
+      <p>Kiểm tra kết quả tại cổng cho đơn <strong>{selected.bookingCode}</strong> ({money(selected.amount)}). Thao tác không tạo thanh toán mới.</p>
+      {failure && (
+        <div style={{ margin: '12px 0' }}>
+          <p role="alert" className="notice notice-error">{failure}</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted, #666)', marginTop: '6px' }}>
+            Nếu cổng thanh toán không phản hồi (502 Bad Gateway) hoặc đây là giao dịch kiểm thử/sao kê chuyển khoản trực tiếp, bạn có thể chọn xác nhận trạng thái trực tiếp bằng các nút bên dưới:
+          </p>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
+        <button className="btn" disabled={busy} onClick={reconcile}>
+          {busy ? 'Đang kiểm tra cổng thanh toán…' : 'Kiểm tra tự động với cổng thanh toán'}
+        </button>
+        <div style={{ borderTop: '1px solid var(--line, #e2e8f0)', paddingTop: '12px', marginTop: '6px' }}>
+          <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--forest, #1d4034)', marginBottom: '8px' }}>
+            Đối soát thủ công / Xác nhận trực tiếp (Admin):
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-lime btn-small"
+              disabled={busy}
+              onClick={() => handleManualResolve('SUCCESS')}
+              title="Xác nhận giao dịch thành công và cập nhật đơn đặt sang CONFIRMED"
+            >
+              ✓ Xác nhận thành công (SUCCESS)
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-small"
+              disabled={busy}
+              onClick={() => handleManualResolve('FAILED')}
+              title="Đánh dấu giao dịch thất bại"
+            >
+              ✕ Đánh dấu thất bại (FAILED)
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-small"
+              disabled={busy}
+              onClick={() => handleManualResolve('EXPIRED')}
+              title="Đánh dấu giao dịch hết hạn thanh toán"
+            >
+              ⏰ Đánh dấu hết hạn (EXPIRED)
+            </button>
+          </div>
+        </div>
+      </div>
     </Modal>}
   </>;
 }

@@ -3,6 +3,8 @@ package com.trekkingcamping.backend.module.chat.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trekkingcamping.backend.config.GeminiProperties;
 import com.trekkingcamping.backend.module.chat.entity.AiConfigurationAudit;
+import com.trekkingcamping.backend.module.chat.entity.AiModelActivity;
+import com.trekkingcamping.backend.module.chat.entity.AiModelMetric;
 import com.trekkingcamping.backend.module.chat.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,14 +23,38 @@ public class AiModels {
     public record Update(long revision,Settings settings) {}
     public record PublicModels(List<Model> models,String defaultModel) {}
     public record Usage(long calls,long failures,long totalMillis,String lastError,Instant lastCall) {}
+    public record ActivityItem(Long id, String modelId, String actionType, long durationMs, String status, String errorCode, Instant createdAt) {}
+
     private final AiConfigurationRepository configs;
     private final AiConfigurationAuditRepository audits;
     private final GeminiProperties properties;
     private final ObjectMapper json;
+    private final AiModelMetricRepository metricRepo;
+    private final AiModelActivityRepository activityRepo;
     private final Map<String,Usage> usage=new ConcurrentHashMap<>();
+
     public AiModels(AiConfigurationRepository configs,AiConfigurationAuditRepository audits,GeminiProperties properties,ObjectMapper json) {
-        this.configs=configs;this.audits=audits;this.properties=properties;this.json=json;
+        this(configs, audits, properties, json, null, null);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AiModels(AiConfigurationRepository configs,AiConfigurationAuditRepository audits,GeminiProperties properties,ObjectMapper json,
+            AiModelMetricRepository metricRepo, AiModelActivityRepository activityRepo) {
+        this.configs=configs;this.audits=audits;this.properties=properties;this.json=json;
+        this.metricRepo=metricRepo;this.activityRepo=activityRepo;
+        loadPersistedMetrics();
+    }
+
+    private void loadPersistedMetrics() {
+        if (metricRepo != null) {
+            try {
+                for (var row : metricRepo.findAll()) {
+                    usage.put(row.getModelId(), new Usage(row.getCalls(), row.getFailures(), row.getTotalMillis(), row.getLastError(), row.getLastCall()));
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
     Settings defaults() {
         var rows=new ArrayList<Model>();
         for(String id:properties.getModels()) if(!id.startsWith("gemma-")) {
@@ -39,7 +65,7 @@ public class AiModels {
         if(rows.isEmpty()) rows.add(new Model(GeminiProperties.DEFAULT_MODEL,"Gemini 3.5 Flash Lite",true,true,true));
         rows.add(new Model("gemma-4-31b-it","Gemma 4 · 31B",false,false,false));
         rows.add(new Model("gemma-4-26b-a4b-it","Gemma 4 · 26B A4B",false,false,false));
-        return new Settings(List.copyOf(rows),GeminiProperties.DEFAULT_MODEL,null);
+        return new Settings(List.copyOf(rows),null,null);
     }
     private Settings decode(String value) {
         if("{}".equals(value)) return defaults();
@@ -48,7 +74,6 @@ public class AiModels {
             var defModels = defaults().models();
             var allowed = new HashSet<>(defModels.stream().map(Model::id).toList());
             var validOld = old.models() == null ? List.<Model>of() : old.models().stream().filter(m -> allowed.contains(m.id())).toList();
-            String chatDef = old.chatDefault() != null && !old.chatDefault().isBlank() ? old.chatDefault() : GeminiProperties.DEFAULT_MODEL;
             List<Model> merged;
             if (validOld.size() == defModels.size()) {
                 merged = new ArrayList<>(validOld);
@@ -62,7 +87,7 @@ public class AiModels {
                 }
             }
             merged.sort(Comparator.comparingInt(m -> m.id().equals(GeminiProperties.DEFAULT_MODEL) ? 0 : (m.enabled() && m.visible() ? 1 : 2)));
-            return new Settings(List.copyOf(merged), chatDef, null);
+            return new Settings(List.copyOf(merged), null, null);
         }
         catch(Exception e) { throw new IllegalStateException("Invalid stored AI configuration",e); }
     }
@@ -75,18 +100,13 @@ public class AiModels {
     }
     public PublicModels available() {
         var s=view().settings();
-        String rawDef = s.chatDefault() != null && !s.chatDefault().isBlank() ? s.chatDefault() : GeminiProperties.DEFAULT_MODEL;
-        String finalDef = s.models().stream().anyMatch(m -> m.id().equals(rawDef) && m.enabled() && m.visible())
-            ? rawDef
-            : s.models().stream().filter(m -> m.enabled() && m.visible()).map(Model::id).findFirst().orElse(GeminiProperties.DEFAULT_MODEL);
-        return new PublicModels(s.models().stream().filter(m->m.enabled() && m.visible()).toList(), finalDef);
+        return new PublicModels(s.models().stream().filter(m->m.enabled() && m.visible()).toList(), GeminiProperties.DEFAULT_MODEL);
     }
     public String resolve(String requested,boolean planner) {
         var s=view().settings();
-        final String targetId = (requested != null && !requested.isBlank()) 
-            ? requested 
-            : (s.chatDefault() != null && !s.chatDefault().isBlank() ? s.chatDefault() : GeminiProperties.DEFAULT_MODEL);
-        return s.models().stream().filter(m->m.id().equals(targetId) && m.enabled() && m.visible())
+        if(requested==null || requested.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Hãy chọn model AI trước khi gửi yêu cầu.");
+        String id=requested;
+        return s.models().stream().filter(m->m.id().equals(id) && m.enabled() && m.visible())
             .findFirst().orElseThrow(()->new ResponseStatusException(HttpStatus.CONFLICT,"Model không còn khả dụng. Hãy chọn model khác.")).id();
     }
     void validate(Settings s) {
@@ -102,9 +122,7 @@ public class AiModels {
     @Transactional public View save(Update input,String actor) {
         if(input==null) throw new IllegalArgumentException("Thiếu cấu hình.");
         validate(input.settings());
-        String chatDef = input.settings().chatDefault() != null && !input.settings().chatDefault().isBlank() 
-            ? input.settings().chatDefault() : GeminiProperties.DEFAULT_MODEL;
-        input=new Update(input.revision(),new Settings(input.settings().models(),chatDef,null));
+        input=new Update(input.revision(),new Settings(input.settings().models(),null,null));
         var row=configs.locked().orElseGet(()->{
             configs.insertDefaultIfMissing();
             return configs.locked().orElseThrow(()->new IllegalStateException("AI configuration initialization failed"));
@@ -124,8 +142,30 @@ public class AiModels {
         return save(new Update(expected,decode(a.getDocument())),actor);
     }
     public void measured(String id,long millis,String error) {
-        usage.compute(id,(key,old)->new Usage(old==null?1:old.calls()+1,(old==null?0:old.failures())+(error==null?0:1),
+        if (id == null || id.isBlank()) return;
+        var updated = usage.compute(id,(key,old)->new Usage(old==null?1:old.calls()+1,(old==null?0:old.failures())+(error==null?0:1),
             (old==null?0:old.totalMillis())+millis,error,Instant.now()));
+
+        if (metricRepo != null) {
+            try {
+                metricRepo.save(new AiModelMetric(id, updated.calls(), updated.failures(), updated.totalMillis(), updated.lastError(), updated.lastCall()));
+            } catch (Exception ignored) {}
+        }
+        if (activityRepo != null) {
+            try {
+                activityRepo.save(new AiModelActivity(id, "STREAM_CHAT", millis, error == null ? "SUCCESS" : "FAILED", error));
+            } catch (Exception ignored) {}
+        }
     }
     public Map<String,Usage> metrics() { return Map.copyOf(usage); }
+    public List<ActivityItem> recentActivities() {
+        if (activityRepo == null) return List.of();
+        try {
+            return activityRepo.findTop50ByOrderByCreatedAtDesc().stream()
+                .map(a -> new ActivityItem(a.getId(), a.getModelId(), a.getActionType(), a.getDurationMs(), a.getStatus(), a.getErrorCode(), a.getCreatedAt()))
+                .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
 }

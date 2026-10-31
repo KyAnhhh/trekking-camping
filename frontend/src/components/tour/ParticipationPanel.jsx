@@ -139,14 +139,14 @@ export default function ParticipationPanel({
           {data.editable && data.declaration && (
             <div className="payment-actions">
               {[
-                ["READY", "Hoàn tất xem xét"],
+                ["READY", "✓ Hoàn tất xem xét (Duyệt tham gia)"],
                 ["NEEDS_CONTACT", "Cần trao đổi"],
                 ["UNSUPPORTED", "Chưa thể đáp ứng"],
               ].map(([key, label]) => (
                 <button
                   key={key}
                   disabled={busy}
-                  className="btn btn-outline"
+                  className={key === "READY" ? "btn btn-lime" : "btn btn-outline"}
                   onClick={() => setDecision(key)}
                 >
                   {label}

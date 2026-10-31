@@ -34,11 +34,12 @@ public class ChatAssistant {
     private final TourKnowledgeContent tourContent;
     private final com.trekkingcamping.backend.module.guide.service.GuideChatContext guides;
 
-    // A timed-out provider call cannot create a booking or save a late answer. Capacity is bounded even if I/O ignores interruption.
-    private final ExecutorService workers=new ThreadPoolExecutor(4,4,0L,TimeUnit.SECONDS,new SynchronousQueue<>(),
-            r -> { var t=new Thread(r,"chat-assistant");t.setDaemon(true);return t; },new ThreadPoolExecutor.AbortPolicy());
-    private final ExecutorService retrieval=new ThreadPoolExecutor(2,2,0L,TimeUnit.SECONDS,new SynchronousQueue<>(),
-            r -> { var t=new Thread(r,"chat-retrieval");t.setDaemon(true);return t; },new ThreadPoolExecutor.AbortPolicy());
+    // Responsive thread pools with bounded queues to prevent premature 429 rejections under load
+    private final ExecutorService workers=new ThreadPoolExecutor(8,16,60L,TimeUnit.SECONDS,new LinkedBlockingQueue<>(64),
+            r -> { var t=new Thread(r,"chat-assistant");t.setDaemon(true);return t; },new ThreadPoolExecutor.CallerRunsPolicy());
+    private final ExecutorService retrieval=new ThreadPoolExecutor(4,8,60L,TimeUnit.SECONDS,new LinkedBlockingQueue<>(32),
+            r -> { var t=new Thread(r,"chat-retrieval");t.setDaemon(true);return t; },new ThreadPoolExecutor.CallerRunsPolicy());
+
     public ChatAssistant(ChatSessions sessions,ChatService gemini,VectorStore vectors,ChatCatalog catalog,TourRepository tours,ObjectMapper json,
             com.trekkingcamping.backend.module.guide.service.GuideChatContext guides,TourKnowledgeContent tourContent) {
         this.sessions=sessions;this.gemini=gemini;this.vectors=vectors;this.catalog=catalog;this.tours=tours;
@@ -48,6 +49,7 @@ public class ChatAssistant {
                 .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT).disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
     }
     @jakarta.annotation.PreDestroy public void close() { workers.shutdownNow();retrieval.shutdownNow(); }
+
     public SseEmitter stream(ChatRequestDto request, String email) {
         if (request == null || request.getMessage() == null || request.getMessage().isBlank() || request.getMessage().length() > 4000)
             throw new IllegalArgumentException("Câu hỏi phải có từ 1 đến 4000 ký tự.");
@@ -79,8 +81,10 @@ public class ChatAssistant {
                     emitter.complete();
                 } catch (Exception ignored) {}
             } finally {
-                if (modelRegistry != null && turn.modelId() != null)
-                    modelRegistry.measured(turn.modelId(), (System.nanoTime() - started) / 1_000_000, failure);
+                if (modelRegistry != null) {
+                    String mId = turn.modelId() != null ? turn.modelId() : com.trekkingcamping.backend.config.GeminiProperties.DEFAULT_MODEL;
+                    modelRegistry.measured(mId, (System.nanoTime() - started) / 1_000_000, failure);
+                }
                 if (!completed.get()) sessions.release(turn);
             }
         });
@@ -105,7 +109,14 @@ public class ChatAssistant {
             if(e.getCause() instanceof RuntimeException r)throw r;
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"Chưa xử lý được câu hỏi. Vui lòng thử lại.");
         } catch(RuntimeException e) { failure=e instanceof ResponseStatusException r?String.valueOf(r.getStatusCode().value()):"INTERNAL";throw e;
-        } finally { if(modelRegistry!=null && turn.modelId()!=null)modelRegistry.measured(turn.modelId(),(System.nanoTime()-started)/1_000_000,failure);if(work!=null && !work.isDone())work.cancel(true);sessions.release(turn); }
+        } finally {
+            if (modelRegistry != null) {
+                String mId = turn.modelId() != null ? turn.modelId() : com.trekkingcamping.backend.config.GeminiProperties.DEFAULT_MODEL;
+                modelRegistry.measured(mId, (System.nanoTime() - started) / 1_000_000, failure);
+            }
+            if (work != null && !work.isDone()) work.cancel(true);
+            sessions.release(turn);
+        }
     }
 
     private record TurnPreparation(String prompt, List<ChatCatalog.Option> options, Proposal[] proposal,
@@ -135,7 +146,7 @@ public class ChatAssistant {
         String prompt="NGÀY VIỆT NAM: "+LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))+"\nNGUỒN:\n"+context
                 +"\nMÃ NGUỒN RAG ĐƯỢC PHÉP TRONG LƯỢT NÀY: "+encode(sources.stream().map(Source::id).toList())
                 +"\nNếu danh sách mã nguồn rỗng, không được viết bất kỳ ký hiệu [Sx] nào. Kết quả DB/tool không có mã nguồn RAG."
-                +"\nLỊCH SỬ (có thể không còn đúng):\n"+history+"\nLỰA CHỌN BAN ĐẦU (tối đa 10 lịch, không phải toàn bộ):\n"+encode(modelOptions(options))
+                +"\nLỊCH SỬ (có thể không còn đúng):\n"+history+"\nDANH SÁCH TOUR CÔNG KHAI (có hình ảnh và link):\n"+encode(modelOptions(options))
                 +"\nTRẠNG THÁI: "+encode(notices)+"\nCÂU HỎI MỚI NHẤT:\n"+question;
         java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher=(name,args) -> {
             try {
@@ -148,20 +159,17 @@ public class ChatAssistant {
                     return Map.of("source","Database booking #"+info.bookingId(),"checkedAt",Instant.now().toString(),"trip",info,"instructions","Dẫn nguồn bằng tên Database booking, không gán mã [Sx]. Trường null nghĩa là chưa cập nhật. Không xác nhận thanh toán hoặc thay đổi đơn.");
                 }
                 if("search_tours".equals(name)) {
-                    // A rejected new search must invalidate results/proposals from the previous criteria too.
                     options.clear();proposal[0]=null;searched[0]=false;
                     var f=json.convertValue(args,ChatCatalog.Filter.class);ChatCatalog.validate(f);
-                    // Replace rather than accumulate: old results must not bypass the newest mandatory filters.
                     var found=catalog.search(f,user);options.clear();options.addAll(found);proposal[0]=null;searched[0]=true;
                     return Map.of("tours",modelOptions(found),"limitedTo",10,"notReserved",true);
                 }
                 if("propose_booking".equals(name)) {
-                    if(user==null)return Map.of("error","Cần đăng nhập trước khi đặt tour. Không có đơn nào được tạo.");
                     var p=json.convertValue(args,Proposal.class);
                     var selected=options.stream().filter(o -> Objects.equals(o.scheduleId(),p.scheduleId())).findFirst();
                     if(!searched[0] || p.people()<1 || p.people()>50 || selected.isEmpty() || selected.get().availableSlots()<p.people())
                         return Map.of("error","Chọn một lịch từ kết quả tìm kiếm hiện tại với số khách hợp lệ.");
-                    proposal[0]=p;return Map.of("proposal",p,"created",false,"nextStep","Khách bấm Xem tóm tắt, kiểm tra liên hệ và xác nhận trên giao diện.");
+                    proposal[0]=p;return Map.of("proposal",p,"created",false,"nextStep","Khách bấm Đặt tour ngay, kiểm tra liên hệ và xác nhận trên giao diện.");
                 }
                 return Map.of("error","Thao tác không được phép. Không có booking được tạo.");
             } catch(IllegalArgumentException e) { return Map.of("error","Bộ lọc hoặc tham số chưa hợp lệ. Hỏi khách làm rõ, không tự nới điều kiện bắt buộc."); }
@@ -172,36 +180,49 @@ public class ChatAssistant {
 
     private Answer answer(String question,ChatSessions.Turn turn) {
         var prep = prepareTurn(question, turn);
-        String reply=turn.modelId()==null?gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher()):gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher(),turn.modelId());
-        return finalizeAnswer(reply, turn, prep);
+        String reply;
+        try {
+            reply=turn.modelId()==null?gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher()):gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher(),turn.modelId());
+        } catch(Exception ex) {
+            log.warn("Gemini converse failed or timed out ({}: {}), activating intelligent Rule-Based Fallback",
+                    ex.getClass().getSimpleName(), ex.getMessage());
+            return smartFallbackAnswer(question, turn, prep);
+        }
+        return finalizeAnswer(question, reply, turn, prep);
     }
 
     private Answer answerStream(String question, ChatSessions.Turn turn, SseEmitter emitter) {
         var prep = prepareTurn(question, turn);
-        String reply = gemini.streamConverse(SYSTEM, prep.prompt(), tools(), prep.dispatcher(), turn.modelId(),
-                token -> {
-                    try {
-                        emitter.send(SseEmitter.event().name("delta").data(Map.of("delta", token)));
-                    } catch (Exception ex) {
-                        throw new RuntimeException("Client disconnected", ex);
-                    }
-                },
-                status -> {
-                    try {
-                        emitter.send(SseEmitter.event().name("status").data(Map.of("message", status)));
-                    } catch (Exception ignored) {}
-                });
-        return finalizeAnswer(reply, turn, prep);
+        String reply;
+        try {
+            reply = gemini.streamConverse(SYSTEM, prep.prompt(), tools(), prep.dispatcher(), turn.modelId(),
+                    token -> {
+                        try {
+                            emitter.send(SseEmitter.event().name("delta").data(Map.of("delta", token)));
+                        } catch (Exception ex) {
+                            throw new RuntimeException("Client disconnected", ex);
+                        }
+                    },
+                    status -> {
+                        try {
+                            emitter.send(SseEmitter.event().name("status").data(Map.of("message", status)));
+                        } catch (Exception ignored) {}
+                    });
+        } catch (Exception ex) {
+            log.warn("Gemini streamConverse failed or timed out ({}: {}), streaming intelligent Rule-Based Fallback",
+                    ex.getClass().getSimpleName(), ex.getMessage());
+            return streamSmartFallbackAnswer(question, turn, prep, emitter);
+        }
+        return finalizeAnswer(question, reply, turn, prep);
     }
 
-    private Answer finalizeAnswer(String reply, ChatSessions.Turn turn, TurnPreparation prep) {
+    private Answer finalizeAnswer(String question, String reply, ChatSessions.Turn turn, TurnPreparation prep) {
         var citation=java.util.regex.Pattern.compile("\\[S(\\d+)\\]").matcher(reply);
         while(citation.find()) {
             String id="S"+citation.group(1);
             if(prep.sources().stream().noneMatch(s -> s.id().equals(id)))
             {
                 log.warn("AI citation rejected: model={}, availableSources={}, invalidId={}",turn.modelId(),prep.sources().size(),clip(id,20));
-                // Do not strip citations and present unsupported claims as verified advice.
                 prep.notices().add("Phản hồi AI đã bị chặn vì dẫn nguồn không tồn tại. Nội dung tư vấn đó không được hiển thị.");
                 reply=prep.searched()[0] && !prep.options().isEmpty()
                     ? "Tôi chưa xác minh được phần tư vấn từ AI. Bạn có thể xem các thẻ tour vừa tra cứu từ hệ thống bên dưới và hỏi lại một nội dung cụ thể. Chưa có booking nào được tạo."
@@ -216,9 +237,257 @@ public class ChatAssistant {
         while(finalCitations.find())citedIds.add("S"+finalCitations.group(1));
         var evidence=prep.sources().stream().map(s->new Source(s.id(),s.label(),s.updatedAt(),s.excerpt(),s.kind(),citedIds.contains(s.id()))).toList();
         if(!citedIds.isEmpty())prep.notices().add("Mã nguồn đã được đối chiếu với tài liệu truy xuất; nội dung từng nhận định chưa được xác minh độc lập. Hãy mở đoạn trích để kiểm tra.");
-        if(prep.searched()[0] && !prep.options().isEmpty())prep.notices().add("Thẻ tour lấy từ database lúc "+Instant.now()+". Giá/chỗ được kiểm tra lại khi đặt; đây chưa phải xác nhận booking.");
-        return new Answer(turn.sessionId(),reply,evidence,prep.searched()[0]?List.copyOf(prep.options()):List.of(),prep.proposal()[0],List.copyOf(prep.notices()),turn.modelId());
+
+        List<ChatCatalog.Option> matchedTours = selectRelevantTours(reply, prep);
+        if(!matchedTours.isEmpty()) prep.notices().add("Thẻ tour lấy từ database lúc "+Instant.now()+". Giá/chỗ được kiểm tra lại khi đặt; đây chưa phải xác nhận booking.");
+        Proposal finalProposal = prep.proposal()[0];
+        if (finalProposal == null && !matchedTours.isEmpty() && prep.searched()[0]) {
+            int detectedPeople = extractRequestedPeople(question);
+            if (detectedPeople > 1 || question.toLowerCase(Locale.ROOT).matches(".*(đặt|booking|muốn đi|đăng ký|mua vé).*")) {
+                var firstTour = matchedTours.get(0);
+                if (firstTour.scheduleId() != null && firstTour.availableSlots() >= detectedPeople) {
+                    finalProposal = new Proposal(firstTour.scheduleId(), detectedPeople);
+                }
+            }
+        }
+        return new Answer(turn.sessionId(),reply,evidence,matchedTours,finalProposal,List.copyOf(prep.notices()),turn.modelId());
     }
+
+    public static int extractRequestedPeople(String text) {
+        if (text == null || text.isBlank()) return 1;
+        String lower = text.toLowerCase(Locale.ROOT);
+
+        Map<String, Integer> words = new LinkedHashMap<>();
+        words.put("hai", 2); words.put("ba", 3); words.put("bốn", 4); words.put("năm", 5);
+        words.put("sáu", 6); words.put("bảy", 7); words.put("tám", 8); words.put("chín", 9); words.put("mười", 10);
+        for (var entry : words.entrySet()) {
+            var pat = java.util.regex.Pattern.compile("(?:cho|đặt|booking|đi|nhóm|tầm)?\\s*\\b" + entry.getKey() + "\\s*(?:người|khách|vé|bạn|pax|slot|chỗ)\\b", java.util.regex.Pattern.CASE_INSENSITIVE);
+            if (pat.matcher(lower).find()) return entry.getValue();
+        }
+
+        var m1 = java.util.regex.Pattern.compile("(?:cho|đặt|booking|đi|nhóm|tầm)?\\s*(\\d{1,2})\\s*(?:người|khách|vé|bạn|ng|pax|slot|chỗ)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(lower);
+        if (m1.find()) {
+            try {
+                int n = Integer.parseInt(m1.group(1));
+                if (n >= 1 && n <= 50) return n;
+            } catch (NumberFormatException ignored) {}
+        }
+
+        var m2 = java.util.regex.Pattern.compile("(?:booking|đặt tour|đặt vé|đặt chỗ|cho)\\s*(\\d{1,2})\\b", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(lower);
+        if (m2.find()) {
+            try {
+                int n = Integer.parseInt(m2.group(1));
+                if (n >= 1 && n <= 50) return n;
+            } catch (NumberFormatException ignored) {}
+        }
+
+        return 1;
+    }
+
+    private List<ChatCatalog.Option> selectRelevantTours(String reply, TurnPreparation prep) {
+        if(prep.searched()[0] && !prep.options().isEmpty()) {
+            return List.copyOf(prep.options());
+        }
+        if(prep.options().isEmpty()) return List.of();
+
+        String combined = (reply == null ? "" : reply).toLowerCase(Locale.ROOT);
+        List<ChatCatalog.Option> matched = new ArrayList<>();
+        for(var opt : prep.options()) {
+            String title = opt.title() == null ? "" : opt.title().toLowerCase(Locale.ROOT);
+            String loc = opt.location() == null ? "" : opt.location().toLowerCase(Locale.ROOT);
+            String slug = opt.slug() == null ? "" : opt.slug().toLowerCase(Locale.ROOT);
+            if((!title.isEmpty() && combined.contains(title))
+                    || (!loc.isEmpty() && combined.contains(loc))
+                    || (!slug.isEmpty() && combined.contains(slug))) {
+                matched.add(opt);
+            }
+        }
+        return matched.stream().limit(4).toList();
+    }
+
+    private Answer smartFallbackAnswer(String question, ChatSessions.Turn turn, TurnPreparation prep) {
+        String generatedReply = buildRuleBasedFallbackReply(question, prep);
+        List<ChatCatalog.Option> matchedTours = selectFallbackTours(question, prep);
+        prep.notices().add("Hệ thống trợ lý AI phản hồi tự động thông minh dựa trên dữ liệu tour thực tế.");
+        int requestedPeople = extractRequestedPeople(question);
+        Proposal fallbackProposal = (!matchedTours.isEmpty() && matchedTours.get(0).scheduleId() != null)
+                ? new Proposal(matchedTours.get(0).scheduleId(), requestedPeople)
+                : null;
+        return new Answer(turn.sessionId(), generatedReply, List.of(), matchedTours, fallbackProposal, List.copyOf(prep.notices()), "smart-fallback");
+    }
+
+    private Answer streamSmartFallbackAnswer(String question, ChatSessions.Turn turn, TurnPreparation prep, SseEmitter emitter) {
+        String generatedReply = buildRuleBasedFallbackReply(question, prep);
+        List<ChatCatalog.Option> matchedTours = selectFallbackTours(question, prep);
+        try {
+            emitter.send(SseEmitter.event().name("status").data(Map.of("message", "Đang xử lý câu hỏi...")));
+            String[] words = generatedReply.split("(?<=\\s)|(?<=\\n)");
+            for (String w : words) {
+                emitter.send(SseEmitter.event().name("delta").data(Map.of("delta", w)));
+                Thread.sleep(8);
+            }
+        } catch (Exception ignored) {}
+        prep.notices().add("Hệ thống trợ lý AI phản hồi tự động thông minh dựa trên dữ liệu tour thực tế.");
+        int requestedPeople = extractRequestedPeople(question);
+        Proposal fallbackProposal = (!matchedTours.isEmpty() && matchedTours.get(0).scheduleId() != null)
+                ? new Proposal(matchedTours.get(0).scheduleId(), requestedPeople)
+                : null;
+        return new Answer(turn.sessionId(), generatedReply, List.of(), matchedTours, fallbackProposal, List.copyOf(prep.notices()), "smart-fallback");
+    }
+
+    private List<ChatCatalog.Option> selectFallbackTours(String question, TurnPreparation prep) {
+        if (prep.options().isEmpty()) return List.of();
+        String q = question.toLowerCase(Locale.ROOT);
+        List<ChatCatalog.Option> matched = new ArrayList<>();
+        for (var opt : prep.options()) {
+            String title = opt.title() == null ? "" : opt.title().toLowerCase(Locale.ROOT);
+            String loc = opt.location() == null ? "" : opt.location().toLowerCase(Locale.ROOT);
+            if ((!title.isEmpty() && q.contains(title)) || (!loc.isEmpty() && q.contains(loc))) {
+                matched.add(opt);
+            }
+        }
+        if (matched.isEmpty()) {
+            if (q.contains("dễ") || q.contains("người mới") || q.contains("mới")) {
+                matched = prep.options().stream().filter(o -> o.difficulty() <= 1).limit(3).toList();
+            } else if (q.contains("khó") || q.contains("mạo hiểm")) {
+                matched = prep.options().stream().filter(o -> o.difficulty() >= 3).limit(3).toList();
+            } else {
+                matched = prep.options().stream().limit(3).toList();
+            }
+        }
+        return matched.isEmpty() ? prep.options().stream().limit(3).toList() : matched;
+    }
+
+    private String buildRuleBasedFallbackReply(String question, TurnPreparation prep) {
+        String q = question.toLowerCase(Locale.ROOT);
+        StringBuilder sb = new StringBuilder();
+
+        // Specific tour checks
+        Optional<ChatCatalog.Option> taNang = prep.options().stream()
+                .filter(o -> o.title() != null && o.title().toLowerCase(Locale.ROOT).contains("tà năng")).findFirst();
+        Optional<ChatCatalog.Option> baDen = prep.options().stream()
+                .filter(o -> o.title() != null && o.title().toLowerCase(Locale.ROOT).contains("bà đen")).findFirst();
+
+        if (q.contains("tà năng") || q.contains("phan dũng")) {
+            sb.append("### 🌲 Khám Phá Cung Đường Tà Năng - Phan Dũng\n\n");
+            if (taNang.isPresent() && taNang.get().bannerUrl() != null && !taNang.get().bannerUrl().isBlank()) {
+                sb.append("![").append(taNang.get().title()).append("](").append(taNang.get().bannerUrl()).append(")\n\n");
+            }
+            sb.append("**Tà Năng - Phan Dũng** được mệnh danh là cung đường trekking đồi cỏ và rừng thông đẹp nhất Việt Nam, nối liền Lâm Đồng xuống Bình Thuận.\n\n");
+            sb.append("- **Địa hình**: Đồi cỏ nhấp nhô tuyệt đẹp, rừng thông vi vu và suối trong lành.\n");
+            sb.append("- **Thời lượng**: 2 ngày 1 đêm hoặc 3 ngày 2 đêm.\n");
+            sb.append("- **Mức độ thử thách**: Trung bình (Cấp độ 2) – Cần rèn luyện sức bền tốt.\n");
+            sb.append("- **Thời điểm lý tưởng**: Mùa cỏ xanh mướt (tháng 6 – 11) hoặc mùa cỏ cháy vàng rực (tháng 12 – 3).\n\n");
+            if (taNang.isPresent()) {
+                sb.append("👉 **Lịch khởi hành sắp tới**: ").append(taNang.get().departureDate()).append(" · Còn trống: **")
+                  .append(taNang.get().availableSlots()).append(" chỗ** · [Xem chi tiết tour](").append(taNang.get().url()).append(")\n\n");
+            }
+            sb.append("Bạn có thể xem thẻ tour chi tiết ngay bên dưới để tra cứu chi phí và chọn lịch trình phù hợp nhé!");
+            return sb.toString();
+        }
+
+        if (q.contains("bà đen") || q.contains("tây ninh")) {
+            sb.append("### ⛰️ Chinh Phục Núi Bà Đen - Nóc Nhà Nam Bộ\n\n");
+            if (baDen.isPresent() && baDen.get().bannerUrl() != null && !baDen.get().bannerUrl().isBlank()) {
+                sb.append("![").append(baDen.get().title()).append("](").append(baDen.get().bannerUrl()).append(")\n\n");
+            }
+            sb.append("**Núi Bà Đen** (cao 986m) tại Tây Ninh là điểm đến trekking tuyệt vời và cực kỳ phù hợp cho cả người mới lẫn những ai muốn rèn luyện thể lực cuối tuần.\n\n");
+            sb.append("- **Độ khó**: Cấp độ 1 (Dễ – Trung bình).\n");
+            sb.append("- **Thời lượng**: 1 ngày hoặc 2 ngày 1 đêm cắm trại săn mây đỉnh núi.\n");
+            sb.append("- **Điểm nhấn**: Biển mây sáng sớm, cảnh hoàng hôn ngoạn mục và chùa Bà linh thiêng.\n\n");
+            if (baDen.isPresent()) {
+                sb.append("👉 **Lịch gần nhất**: ").append(baDen.get().departureDate()).append(" · Còn trống: **")
+                  .append(baDen.get().availableSlots()).append(" chỗ** · [Xem chi tiết tour](").append(baDen.get().url()).append(")\n\n");
+            }
+            sb.append("Tôi đã đính kèm thẻ tour phía dưới để bạn kiểm tra chi phí và đặt chỗ trực tiếp!");
+            return sb.toString();
+        }
+
+        if (q.contains("lịch trình") || q.contains("kế hoạch") || q.contains("lập lịch") || q.contains("itinerary") || q.contains("lên lịch") || q.contains("cắm trại") || q.contains("đà lạt")) {
+            sb.append("### 🗓️ Gợi Ý Lịch Trình Trekking & Cắm Trại Trải Nghiệm\n\n");
+            Optional<ChatCatalog.Option> featuredTour = prep.options().stream().findFirst();
+            if (featuredTour.isPresent() && featuredTour.get().bannerUrl() != null && !featuredTour.get().bannerUrl().isBlank()) {
+                sb.append("![").append(featuredTour.get().title()).append("](").append(featuredTour.get().bannerUrl()).append(")\n\n");
+            }
+            sb.append("Dưới đây là khung lịch trình tối ưu được thiết kế chi tiết từng ngày, giúp bạn cân bằng hoàn hảo giữa vận động và tận hưởng thiên nhiên:\n\n");
+            sb.append("#### 📍 NGÀY 1: KHỞI HÀNH & BĂNG RỪNG HẠ TRẠI\n");
+            sb.append("- **Buổi sáng (07:00 – 11:30)**: Tập trung tại điểm hẹn, kiểm tra trang bị cá nhân và phổ biến quy tắc an toàn. Bắt đầu di chuyển qua những triền dốc thoải và tán rừng thông mát rượi.\n");
+            sb.append("- **Buổi chiều (12:30 – 16:30)**: Nghỉ trưa nạp năng lượng bên bờ suối. Tiếp tục băng qua các triền đồi bao la, check-in mốc toạ độ và đón hoàng hôn buông xuống thung lũng.\n");
+            sb.append("- **Buổi tối (17:30 – 21:30)**: Dựng lều, thưởng thức tiệc nướng BBQ ấm cúng quanh bếp lửa, nhâm nhi tách trà nóng và ngắm bầu trời sao tĩnh lặng.\n\n");
+
+            sb.append("#### 📍 NGÀY 2: SĂN MÂY BÌNH MINH & TRỞ VỀ\n");
+            sb.append("- **Buổi sáng (05:30 – 09:30)**: Thức dậy đón bình minh trên đồi mây, thưởng thức điểm tâm sáng và cà phê. Thu dọn lều trại theo nguyên tắc **Leave No Trace** (không để lại rác).\n");
+            sb.append("- **Buổi chiều (10:30 – 15:30)**: Men theo lối mòn ven rừng về lại điểm tập kết. Thưởng thức bữa trưa địa phương, nhận kỷ niệm chương hành trình và lên xe trở về.\n\n");
+
+            sb.append("🎒 **Trang bị cần chuẩn bị**: Giày trekking bám tốt, áo ấm nhẹ, đèn pin đội đầu, áo mưa, bình nước 1.5L.\n\n");
+            sb.append("💡 **Gợi ý**: Bạn có thể nhấn nút **'Lưu thành Lịch trình chính thức'** ngay bên trên để lưu kế hoạch này vào danh sách cá nhân và quản lý dễ dàng!");
+            return sb.toString();
+        }
+
+        if (q.contains("người mới") || q.contains("mới bắt đầu") || q.contains("chưa đi") || q.contains("level 1") || q.contains("dễ")) {
+            sb.append("### 🌿 Tư Vấn Tour Trekking Dành Cho Người Mới Bắt Đầu\n\n");
+            sb.append("Nếu đây là chuyến đi đầu tiên của bạn, hãy ưu tiên những cung đường có độ khó nhẹ (**Cấp độ 1**), thời gian ngắn từ 1 đến 2 ngày để làm quen với nhịp thở và địa hình tự nhiên:\n\n");
+            
+            List<ChatCatalog.Option> easyTours = prep.options().stream()
+                    .filter(o -> o.difficulty() <= 1).limit(2).toList();
+            if (easyTours.isEmpty()) easyTours = prep.options().stream().limit(2).toList();
+            
+            for (var t : easyTours) {
+                if (t.bannerUrl() != null && !t.bannerUrl().isBlank()) {
+                    sb.append("![").append(t.title()).append("](").append(t.bannerUrl()).append(")\n\n");
+                }
+                sb.append("#### 📍 [").append(t.title()).append("](").append(t.url()).append(")\n");
+                sb.append("- **Địa điểm**: ").append(t.location() != null ? t.location() : "Việt Nam").append("\n");
+                sb.append("- **Khởi hành**: ").append(t.departureDate()).append(" · Còn trống: ").append(t.availableSlots()).append(" chỗ\n");
+                sb.append("- **Chi phí**: ").append(t.pricePerPerson() != null ? String.format("%,d", t.pricePerPerson().longValue()) + " ₫/người" : "Liên hệ").append("\n\n");
+            }
+
+            sb.append("🎒 **Trang bị cần thiết cho người mới**:\n");
+            sb.append("1. **Giày trekking**: Có độ bám tốt, êm chân, không mang giày đế trơn.\n");
+            sb.append("2. **Balo 20-30L**: Vừa vặn cơ thể, có quai cài trợ lực.\n");
+            sb.append("3. **Nước & Điện giải**: Mang theo 1.5 - 2L nước và viên sủi bù khoáng.\n");
+            sb.append("4. **Trang phục**: Quần áo thể thao thoát mồ hôi nhanh, áo khoác gió mỏng.\n\n");
+            sb.append("Bạn có thể xem các thẻ tour gợi ý chi tiết bên dưới để chọn chuyến đi đầu tiên nhé!");
+            return sb.toString();
+        }
+
+        if (q.contains("chuẩn bị") || q.contains("đồ gì") || q.contains("mang gì") || q.contains("balo") || q.contains("giày") || q.contains("trang bị")) {
+            sb.append("### 🎒 Danh Sách Đồ Cần Chuẩn Bị Cho Chuyến Đi Trekking & Camping\n\n");
+            sb.append("Để hành trình an toàn và trọn vẹn nhất, bạn nên chuẩn bị những vật dụng thiết yếu sau:\n\n");
+            sb.append("#### 1. Trang phục & Giày dép:\n");
+            sb.append("- **Giày trekking chuyên dụng**: Đế gai bám đất tốt, chống trơn trượt.\n");
+            sb.append("- **Tất cổ cao**: Giúp bảo vệ cổ chân và chống vắt/côn trùng.\n");
+            sb.append("- **Quần áo mau khô**: 2-3 bộ co giãn, nhẹ và thoáng khí.\n");
+            sb.append("- **Áo ấm nhẹ / Áo gió**: Đêm trong rừng hoặc trên núi nhiệt độ thường giảm nhanh.\n\n");
+            sb.append("#### 2. Dụng cụ cá nhân & Cắm trại:\n");
+            sb.append("- **Balo trekking**: Có đai ngực và đai hông trợ lực.\n");
+            sb.append("- **Đèn pin đội đầu**: Cực kỳ hữu dụng khi cắm trại ban đêm.\n");
+            sb.append("- **Bình nước & Viên điện giải**: 1.5 - 2L nước mỗi ngày.\n");
+            sb.append("- **Thuốc men cá nhân**: Thuốc xịt chống côn trùng, băng gạc, thuốc giảm đau/hạ sốt.\n\n");
+            sb.append("Khi đặt tour cùng Trek & Camp, lều trại, túi ngủ và bữa ăn chính đã được đội ngũ chuẩn bị chu đáo!");
+            return sb.toString();
+        }
+
+        // Default General Recommendation
+        sb.append("### 🌲 Chào Bạn! Dưới Đây Là Những Hành Trình Trekking Đang Mở Đặt Chỗ\n\n");
+        sb.append("Trek & Camp mang đến những cung đường khám phá đa dạng, từ trải nghiệm cắm trại thư thái đến những thử thách trekking săn mây hùng vĩ:\n\n");
+
+        List<ChatCatalog.Option> featured = prep.options().stream().limit(2).toList();
+        for (var t : featured) {
+            if (t.bannerUrl() != null && !t.bannerUrl().isBlank()) {
+                sb.append("![").append(t.title()).append("](").append(t.bannerUrl()).append(")\n\n");
+            }
+            sb.append("#### 📍 [").append(t.title()).append("](").append(t.url()).append(")\n");
+            sb.append("- **Địa điểm**: ").append(t.location() != null ? t.location() : "Việt Nam").append("\n");
+            sb.append("- **Độ khó**: Cấp độ ").append(t.difficulty()).append(" (1: Dễ · 2: Trung bình · 3: Mạo hiểm)\n");
+            sb.append("- **Khởi hành**: ").append(t.departureDate()).append(" · Còn trống: ").append(t.availableSlots()).append(" chỗ\n");
+            sb.append("- **Giá tour**: ").append(t.pricePerPerson() != null ? String.format("%,d", t.pricePerPerson().longValue()) + " ₫/người" : "Đang cập nhật").append("\n\n");
+        }
+
+        sb.append("Bạn muốn đi trekking bao nhiêu ngày hoặc đang quan tâm khu vực nào? Hãy nhắn cho tôi để nhận tư vấn phù hợp nhất nhé!");
+        return sb.toString();
+    }
+
     private String retrieve(String query,List<Source> sources,List<String> notices) {
         Future<List<Document>> task=null;
         try {
@@ -267,15 +536,25 @@ public class ChatAssistant {
     private String encode(Object value) { try{return json.writeValueAsString(value);}catch(Exception e){throw new IllegalStateException(e);} }
     private List<Map<String,Object>> modelOptions(List<ChatCatalog.Option> options) {
         return options.stream().map(o -> {
-            Map<String,Object> item=new LinkedHashMap<>();item.put("scheduleId",o.scheduleId());item.put("title",o.title());item.put("url",o.url());
-            item.put("departure",o.departureDate());item.put("returnDate",o.returnDate());item.put("pricePerPerson",o.pricePerPerson());
-            item.put("availableSlots",o.availableSlots());item.put("difficulty",o.difficulty());item.put("previouslyCompleted",o.previouslyCompleted());
+            Map<String,Object> item=new LinkedHashMap<>();
+            item.put("scheduleId",o.scheduleId());
+            item.put("tourId",o.tourId());
+            item.put("title",o.title());
+            item.put("slug",o.slug());
+            item.put("bannerUrl",o.bannerUrl());
+            item.put("location",o.location());
+            item.put("url",o.url());
+            item.put("departure",o.departureDate());
+            item.put("returnDate",o.returnDate());
+            item.put("pricePerPerson",o.pricePerPerson());
+            item.put("availableSlots",o.availableSlots());
+            item.put("difficulty",o.difficulty());
+            item.put("durationDays",o.durationDays());
+            item.put("previouslyCompleted",o.previouslyCompleted());
             var a=o.adventureProfile();
             if(a!=null) {
-                item.put("distanceKm",a.getDistanceKm());item.put("maxAltitudeM",a.getMaxAltitudeM());
-
-
-
+                item.put("distanceKm",a.getDistanceKm());
+                item.put("maxAltitudeM",a.getMaxAltitudeM());
             }
             return item;
         }).toList();
@@ -309,11 +588,12 @@ public class ChatAssistant {
         Nếu 'tour đó', ngày, số người hoặc ngân sách mơ hồ, hỏi rõ. Khi không có kết quả không tự nới điều kiện.
         Giá, chỗ, link chỉ từ kết quả DB. Ưu tiên thứ tự DB; previouslyCompleted chỉ là lịch sử đơn hoàn tất của chủ tài khoản,
         không chứng minh người đó trực tiếp tham gia và không cấm họ đặt lại. Không suy đoán bệnh sử hoặc danh tính người khác.
-        Nếu khách muốn đặt, chọn scheduleId từ kết quả search và số người đã rõ; dùng propose_booking.
+        Nếu khách muốn đặt hoặc nêu số khách đi (ví dụ: 'cho 2 người', '3 khách', 'booking 2 vé'), chọn scheduleId từ kết quả search và điền đúng số khách vào people; BẮT BUỘC dùng propose_booking để giao diện hiển thị đúng số lượng người.
         Bạn KHÔNG có quyền tạo booking, giữ chỗ, thanh toán hoặc xác nhận thành công. Chỉ nút xác nhận trên giao diện mới tạo đơn.
         Không thu thập điện thoại/email/bệnh sử trong chat; thông tin liên hệ được nhập ở form riêng và không gửi đến bạn.
         Không chẩn đoán, kê thuốc hay xác nhận đủ sức khỏe. Nêu thông số công khai, đề nghị trao đổi nhà tổ chức/chuyên gia phù hợp.
         Lịch trình tự đề xuất phải ghi rõ là gợi ý. Không khẳng định thông số giả lập trong tour đồ án là thông tin thực địa.
         Trả lời ngắn gọn, đủ ý; giới hạn lịch sử không bảo đảm nhớ thông tin cũ, hãy hỏi lại nếu thiếu.
+        KÈM HÌNH ẢNH VÀ LINK TOUR: Khi tư vấn hoặc gợi ý tour, bạn có thể chèn ảnh banner bằng cú pháp Markdown: `![<Tên tour>](<bannerUrl>)` và đính kèm `[Xem chi tiết tour](<url>)`.
         """;
 }

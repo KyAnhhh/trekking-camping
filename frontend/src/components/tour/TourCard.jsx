@@ -1,15 +1,21 @@
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import FavoriteButton from './FavoriteButton';
 import CompareButton from './CompareButton';
-import { useState } from 'react';
 import { ArrowUpRight, Clock3, MapPin, Mountain } from 'lucide-react';
 import { duration, formatDifficulty, money, tourImage, landscape } from '../../utils/tour';
+import use3DTilt from '../../hooks/use3DTilt';
+
 export default function TourCard({ tour }) {
+  const cardRef = useRef(null);
+  use3DTilt(cardRef, { maxTilt: 6, scale: 1.02 });
+
   const [failedImage, setFailedImage] = useState(null);
   const source = tourImage(tour);
   const fallback = !tour.bannerUrl || failedImage === source;
+
   return (
-    <article className="tour-card">
+    <article className="tour-card" ref={cardRef}>
       <Link className="tour-image" to={'/tours/' + tour.slug} tabIndex={-1} aria-hidden="true">
         <img
           loading="lazy"
@@ -23,6 +29,7 @@ export default function TourCard({ tour }) {
           {formatDifficulty(tour.difficultyLevel)}
         </span>
         {fallback && <span className="image-credit">Ảnh minh họa</span>}
+        <div className="card-glare" aria-hidden="true" />
       </Link>
       <div className="tour-card-body">
         <FavoriteButton tour={tour} />

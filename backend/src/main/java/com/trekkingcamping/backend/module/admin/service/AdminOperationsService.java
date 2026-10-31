@@ -32,13 +32,15 @@ public class AdminOperationsService {
             boolean approved,LocalDateTime createdAt) {}
     public record Moderation(Boolean expectedApproved,Boolean approved) {}
     public record Reconciliation(Long id,Long bookingId,String status) {}
+    public record ResolveInput(String status) {}
     private final BookingRepository bookings;private final PaymentTransactionRepository payments;
     private final TourReviewRepository reviews;private final UserRepository users;
     private final VnpayPaymentService vnpay;private final MomoPaymentService momo;private final VnpayGateway gateway;
+    private final MomoPaymentStore store;
     public AdminOperationsService(BookingRepository bookings,PaymentTransactionRepository payments,TourReviewRepository reviews,
-            UserRepository users,VnpayPaymentService vnpay,MomoPaymentService momo,VnpayGateway gateway) {
+            UserRepository users,VnpayPaymentService vnpay,MomoPaymentService momo,VnpayGateway gateway,MomoPaymentStore store) {
         this.bookings=bookings;this.payments=payments;this.reviews=reviews;this.users=users;
-        this.vnpay=vnpay;this.momo=momo;this.gateway=gateway;
+        this.vnpay=vnpay;this.momo=momo;this.gateway=gateway;this.store=store;
     }
     @Transactional(readOnly=true)
     public Overview overview(String email) {
@@ -76,6 +78,18 @@ public class AdminOperationsService {
         if("VNPAY_SANDBOX".equals(p.getPaymentMethod())) { var r=vnpay.refresh(email,p.getTransactionCode(),ip);return new Reconciliation(id,r.bookingId(),r.status()); }
         if("MOMO_SANDBOX".equals(p.getPaymentMethod())) { var r=momo.refresh(email,p.getTransactionCode());return new Reconciliation(id,r.bookingId(),r.status()); }
         throw conflict("Phương thức này chưa hỗ trợ đối soát tự động.");
+    }
+    @Transactional
+    public Reconciliation resolve(String email,Long id,ResolveInput input) {
+        admin(email);
+        if(input==null || input.status()==null || input.status().isBlank())throw new IllegalArgumentException("Thiếu trạng thái đối soát.");
+        String target=input.status().trim().toUpperCase();
+        allowed(target,Set.of("SUCCESS","FAILED","EXPIRED"));
+        var p=payments.findById(id).orElseThrow(AdminOperationsService::missing);
+        if(!"PENDING".equals(p.getStatus()))throw conflict("Giao dịch không còn ở trạng thái chờ đối soát.");
+        if(store==null)throw conflict("Payment store chưa được cấu hình.");
+        var attempt=store.applyManualResolution(p.getTransactionCode(),target);
+        return new Reconciliation(id,attempt.bookingId(),attempt.status());
     }
     @Transactional(readOnly=true)
     public PageResult<ReviewRow> reviews(String email,String visibility,int page) {

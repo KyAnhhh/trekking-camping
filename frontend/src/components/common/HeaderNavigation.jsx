@@ -10,7 +10,6 @@ export default function HeaderNavigation({ open, onNavigate }) {
       <NavLink to="/tours">Khám phá tour</NavLink>
       <NavLink to="/departures">Lịch khởi hành</NavLink>
       <NavLink to="/destinations">Điểm đến</NavLink>
-      <NavLink to="/planner">Lập lịch trình</NavLink>
       <NavLink to="/handbook">Cẩm nang</NavLink>
       <NavLink to="/about">Về chúng tôi</NavLink>
       <NavLink to="/chat" className="header-ai-link">

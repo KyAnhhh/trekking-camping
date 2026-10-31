@@ -1,10 +1,12 @@
 import ReactMarkdown from 'react-markdown';
 import { useId, useState } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Compass } from 'lucide-react';
+import { Compass, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ChatBookingCard from './ChatBookingCard';
+import { mediaUrl, landscape, parsePeopleCount } from '../../utils/tour';
 import './chat-booking.css';
+
 function ChatLink({ href = '', children }) {
   if (href.startsWith('/') && !href.startsWith('//')) return <Link to={href}>{children}</Link>;
   return (
@@ -13,10 +15,29 @@ function ChatLink({ href = '', children }) {
     </a>
   );
 }
-export default function ChatMessage({ message }) {
+
+function ChatImage({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  const finalSrc = failed ? landscape : mediaUrl(src);
+  return (
+    <figure className="chat-inline-figure">
+      <img
+        src={finalSrc}
+        alt={alt || "Ảnh minh họa tour"}
+        loading="lazy"
+        className="chat-inline-img"
+        onError={() => setFailed(true)}
+      />
+      {alt && <figcaption className="chat-inline-caption">{alt}</figcaption>}
+    </figure>
+  );
+}
+
+export default function ChatMessage({ message, previousMessage }) {
   const panelId = useId();
   const [selected, setSelected] = useState(null);
   const sources = message.sources || [];
+
   // Only transform plain text: preserve code, existing links and markdown structure.
   function citations() {
     return tree => {
@@ -37,11 +58,25 @@ export default function ChatMessage({ message }) {
       walk(tree);
     };
   }
+
   function sourceLink(props) {
     const id = props.href?.match(/^#source-(S\d+)$/)?.[1];
-    if (id && sources.some(s => s.id === id)) return <button type="button" className="chat-citation" aria-controls={panelId} aria-expanded={selected === id} onClick={() => setSelected(selected === id ? null : id)}>{props.children}</button>;
+    if (id && sources.some(s => s.id === id)) {
+      return (
+        <button
+          type="button"
+          className="chat-citation"
+          aria-controls={panelId}
+          aria-expanded={selected === id}
+          onClick={() => setSelected(selected === id ? null : id)}
+        >
+          {props.children}
+        </button>
+      );
+    }
     return <ChatLink {...props} />;
   }
+
   return (
     <div className={'chat-message ' + (message.sender === 'user' ? 'from-user' : 'from-ai')}>
       {message.sender !== 'user' && (
@@ -50,24 +85,39 @@ export default function ChatMessage({ message }) {
         </span>
       )}
       <div className="chat-bubble">
-        {message.modelId && <small className="muted">{message.modelId}</small>}
-        {message.status && (
-          <div className="chat-status-pill">
-            <Compass size={14} className="spin-icon" />
-            <span>{message.status}</span>
-          </div>
-        )}
         {message.sender === 'user' ? (
-          <p>{message.text}</p>
+          <p className="chat-user-message-text">{message.text}</p>
         ) : (
           <>
-            {message.text && (
-              <ReactMarkdown remarkPlugins={[remarkGfm, citations]} components={{ a: sourceLink }}>
-                {message.text}
-              </ReactMarkdown>
-            )}
-            {message.streaming && (
-              <span className="streaming-cursor" aria-label="Đang trả lời">▍</span>
+            {/* When AI is connecting / thinking and text hasn't arrived yet */}
+            {message.streaming && !message.text ? (
+              <div className="chat-ai-loading-indicator">
+                <span className="chat-ai-spinner">
+                  <Compass size={15} className="spin-icon" />
+                </span>
+                <span className="chat-ai-loading-text">
+                  {message.status || 'Trợ lý AI đang soạn câu trả lời...'}
+                </span>
+                <span className="chat-ai-typing-dots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              </div>
+            ) : (
+              <>
+                {message.text && (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, citations]}
+                    components={{ a: sourceLink, img: ChatImage }}
+                  >
+                    {message.text}
+                  </ReactMarkdown>
+                )}
+                {message.streaming && (
+                  <span className="streaming-cursor" aria-label="Đang gõ">▍</span>
+                )}
+              </>
             )}
           </>
         )}
@@ -86,9 +136,30 @@ export default function ChatMessage({ message }) {
             </div>)}
           </div>)}
         </section>}
-        {!!message.tours?.length && <p className="muted">Thẻ tour từ dữ liệu hệ thống. Giá/chỗ cần kiểm tra lại khi đặt.</p>}
-        {message.tours?.map((tour) => <ChatBookingCard key={tour.scheduleId} tour={tour}
-          suggestedPeople={message.proposal?.scheduleId === tour.scheduleId ? message.proposal.people : 1} />)}
+        {!!message.tours?.length && (
+          <div className="chat-tours-container">
+            <p className="chat-tours-header">
+              <span>Hành trình phù hợp dành cho bạn</span>
+            </p>
+            <div className="chat-tours-grid">
+              {message.tours.map((tour) => {
+                const detectedPeople =
+                  message.proposal?.people ||
+                  parsePeopleCount(message.userPrompt) ||
+                  parsePeopleCount(previousMessage?.text) ||
+                  parsePeopleCount(message.text) ||
+                  1;
+                return (
+                  <ChatBookingCard
+                    key={tour.scheduleId || tour.tourId}
+                    tour={tour}
+                    suggestedPeople={detectedPeople}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

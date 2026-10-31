@@ -63,3 +63,248 @@
   .about-journey { padding-top: 32px; }
   .about-journey li { display: flex; align-items: start; gap: 20px; }
 }
+
+/* ==========================================================================
+   Handbook 3D Gear Showcase & Packing Checklist
+   ========================================================================== */
+
+.handbook-gears-section {
+  margin-bottom: 56px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.handbook-gears-section .section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.handbook-gears-section .section-heading h2 {
+  font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+  line-height: 1.25;
+  margin-top: 6px;
+  color: var(--forest);
+}
+
+.handbook-gears-section .heading-note {
+  max-width: 420px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.handbook-gears-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.handbook-gear-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(22, 61, 44, 0.05);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+}
+
+.handbook-gear-card:hover {
+  box-shadow: 0 16px 36px rgba(22, 61, 44, 0.12);
+  border-color: rgba(120, 146, 111, 0.4);
+}
+
+.gear-card-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: var(--mist);
+  overflow: hidden;
+}
+
+.gear-card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.handbook-gear-card:hover .gear-card-img-wrap img {
+  transform: scale(1.05);
+}
+
+.gear-card-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(22, 61, 44, 0.85);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.gear-card-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.gear-card-content h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--forest);
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.gear-desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.gear-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--mist);
+  border-left: 3px solid var(--sage);
+}
+
+.gear-note small {
+  font-size: 0.8rem;
+  color: var(--ink);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* Checklist Section */
+.handbook-checklist-section {
+  margin-bottom: 64px;
+}
+
+.checklist-card {
+  background: linear-gradient(135deg, #f8faf6 0%, #ffffff 100%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 8px 30px rgba(22, 61, 44, 0.04);
+}
+
+.checklist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.checklist-header h2 {
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  color: var(--forest);
+  margin-top: 6px;
+}
+
+.checklist-progress-wrap {
+  min-width: 240px;
+}
+
+.checklist-progress-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--forest);
+  margin-bottom: 8px;
+}
+
+.checklist-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.checklist-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sage), #1b6b3b);
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.checklist-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.checklist-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.checklist-item-btn:hover {
+  border-color: var(--sage);
+  background: #fdfefe;
+  transform: translateY(-1px);
+}
+
+.checklist-item-btn.checked {
+  background: #f1f8f3;
+  border-color: #badcc6;
+}
+
+.checklist-item-text {
+  font-size: 0.9rem;
+  color: var(--ink);
+  line-height: 1.5;
+  transition: color 0.2s;
+}
+
+.checklist-item-btn.checked .checklist-item-text {
+  color: #245733;
+  font-weight: 500;
+}
+
+.checklist-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.checklist-tip {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+

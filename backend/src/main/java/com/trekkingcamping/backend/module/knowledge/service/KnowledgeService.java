@@ -55,6 +55,23 @@ public class KnowledgeService {
         if (chunks.isEmpty()) throw new IllegalArgumentException("Không tìm thấy nội dung để nạp.");
         lockFile(filename);
         jdbcTemplate.update("DELETE FROM " + TABLE + " WHERE metadata->>'source_file' = ?", filename);
+        if (vectorStore instanceof org.springframework.ai.vectorstore.SimpleVectorStore) {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            for (Document chunk : chunks) {
+                java.util.UUID chunkId;
+                try {
+                    chunkId = java.util.UUID.fromString(chunk.getId());
+                } catch (Exception e) {
+                    chunkId = java.util.UUID.randomUUID();
+                }
+                String metaJson = "{}";
+                try {
+                    metaJson = mapper.writeValueAsString(chunk.getMetadata());
+                } catch (Exception ignored) {}
+                jdbcTemplate.update("INSERT INTO " + TABLE + " (id, content, metadata) VALUES (?, ?, ?::jsonb) ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, metadata = EXCLUDED.metadata",
+                        chunkId, chunk.getContent(), metaJson);
+            }
+        }
         vectorStore.add(chunks);
         return chunks.size();
     }

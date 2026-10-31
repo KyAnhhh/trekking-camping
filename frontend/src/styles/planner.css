@@ -109,6 +109,123 @@
   flex: 1;
   min-width: 140px;
 }
+
+/* Mode Switcher Tabs */
+.planner-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0 28px;
+  background: #f1f5ee;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid #d8e3d3;
+  width: fit-content;
+}
+.planner-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #3b5745;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.planner-mode-tab:hover {
+  color: var(--forest, #1b382b);
+}
+.planner-mode-tab.active {
+  background: #ffffff;
+  color: var(--forest, #1b382b);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.planner-tab-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #e3f6ea;
+  color: #1b6b3b;
+}
+
+/* Chat container inside planner layout */
+.planner-chat-panel-container {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  min-height: 620px;
+  height: 660px;
+  border-radius: 16px;
+  border: 1px solid #d5e0d1;
+  background: #ffffff;
+}
+.planner-tab-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #dfe6dc;
+  background: #fcfdfa;
+}
+.planner-tab-header h2 {
+  font-size: 1.05rem;
+  margin: 0 0 4px;
+  color: var(--forest, #1b382b);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.planner-tab-header p {
+  margin: 0;
+}
+.planner-chat-panel-container .chat-panel {
+  flex: 1;
+  min-height: 0;
+}
+.planner-chat-panel-container .chat-messages {
+  max-height: none;
+}
+.planner-switch-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+.planner-quick-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+.planner-helper-box {
+  background: #f4f8f2;
+  border: 1px solid #cce0c7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.planner-helper-box h3 {
+  font-size: 0.92rem;
+  color: var(--forest, #1b382b);
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.planner-helper-box p {
+  font-size: 0.78rem;
+  color: #4a6854;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.planner-preview-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 900px) {
   .planner-layout {
     grid-template-columns: 1fr;

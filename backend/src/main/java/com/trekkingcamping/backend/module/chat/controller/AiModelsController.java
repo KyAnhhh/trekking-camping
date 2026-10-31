@@ -16,5 +16,12 @@ public class AiModelsController {
     @GetMapping("/api/admin/ai-models/history") public ApiResponse<?> history(){return ok(models.history());}
     public record Restore(long expectedRevision){}
     @PostMapping("/api/admin/ai-models/history/{revision}/restore") public ApiResponse<?> restore(@PathVariable long revision,@RequestBody Restore input,@AuthenticationPrincipal String email){return ok(models.restore(revision,input.expectedRevision(),email));}
-    @GetMapping("/api/admin/ai-models/metrics") public ApiResponse<?> metrics(){return ok(Map.of("scope","Từ lần khởi động instance backend này; đếm lượt xử lý, không phải hóa đơn provider", "models",models.metrics(),"embedding","TransformersEmbeddingModel (local), PgVectorStore — không thay đổi qua màn hình này"));}
+    @GetMapping("/api/admin/ai-models/metrics") public ApiResponse<?> metrics(){
+        return ok(Map.of(
+            "scope","Từ cơ sở dữ liệu hệ thống (lưu trữ thời gian thực); đếm lượt xử lý và nhật ký hoạt động",
+            "models",models.metrics(),
+            "activities",models.recentActivities(),
+            "embedding","TransformersEmbeddingModel (local), PgVectorStore — không thay đổi qua màn hình này"
+        ));
+    }
 }

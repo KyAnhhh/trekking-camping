@@ -5,5 +5,7 @@ export const participationService = {
   submit: (id, body) => client.put(`/api/bookings/${id}/participation`, body),
   review: (id, body) =>
     client.post(`/api/admin/bookings/${id}/participation/review`, body),
+  quickApprove: (id) =>
+    client.post(`/api/admin/bookings/${id}/participation/quick-approve`),
   remove: (id) => client.delete(`/api/bookings/${id}/participation`),
 };

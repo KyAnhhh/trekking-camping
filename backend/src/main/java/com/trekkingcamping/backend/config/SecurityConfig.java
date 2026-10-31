@@ -45,13 +45,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/guide-workspace/**").hasRole("GUIDE")
 
-                // 2. Public API Chatbot & Auth
+                // 2. Public API Chatbot & Auth (cho phép khách chưa đăng nhập hỏi tư vấn thoải mái)
                 .requestMatchers("/error").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/chat", "/api/chat/stream").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/chat/sessions", "/api/chat/history").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/chat/models").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/chat/sessions/*/state").permitAll()
-                .requestMatchers(HttpMethod.PATCH, "/api/chat/sessions/*/settings").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat", "/api/chat/stream", "/api/chat/history").permitAll()
+                .requestMatchers("/api/chat/sessions", "/api/chat/sessions/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/guide-invitations/preview", "/api/guide-invitations/accept").permitAll()
                 // The gateway authenticates this callback with HMAC, not a user's JWT.

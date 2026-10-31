@@ -42,3 +42,38 @@ export const tourImage = (tour) => mediaUrl(tour.bannerUrl) || landscape;
 export const errorMessage = (error) =>
   error.response?.data?.message ||
   "Không thể thực hiện thao tác. Vui lòng thử lại.";
+
+export function parsePeopleCount(text) {
+  if (!text || typeof text !== "string") return null;
+  const lower = text.toLowerCase();
+
+  const wordMap = {
+    một: 1, hai: 2, ba: 3, bốn: 4, năm: 5,
+    sáu: 6, bảy: 7, tám: 8, chín: 9, mười: 10,
+  };
+  for (const [word, val] of Object.entries(wordMap)) {
+    const regWord = new RegExp(
+      `(?:cho|đặt|booking|đi|nhóm|tầm)?\\s*\\b${word}\\s*(?:người|khách|vé|bạn|pax|slot|chỗ)\\b`,
+      "i"
+    );
+    if (regWord.test(lower)) return val;
+  }
+
+  const digitMatch = lower.match(
+    /(?:cho|đặt|booking|đi|nhóm|tầm)?\\s*(\d{1,2})\s*(?:người|khách|vé|bạn|ng|pax|slot|chỗ)/i
+  );
+  if (digitMatch && digitMatch[1]) {
+    const num = parseInt(digitMatch[1], 10);
+    if (num >= 1 && num <= 50) return num;
+  }
+
+  const directMatch = lower.match(
+    /(?:booking|đặt tour|đặt vé|đặt chỗ|cho)\\s*(\\d{1,2})\\b/i
+  );
+  if (directMatch && directMatch[1]) {
+    const num = parseInt(directMatch[1], 10);
+    if (num >= 1 && num <= 50) return num;
+  }
+
+  return null;
+}
