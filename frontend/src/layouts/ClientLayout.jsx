@@ -18,7 +18,7 @@ export default function ClientLayout() {
       <main id="main-content">
         <Outlet />
       </main>
-      <Footer />
+      {pathname !== '/chat' && <Footer />}
       <CompareTray />
       {pathname !== '/chat' && <ChatWidget />}
     </div>

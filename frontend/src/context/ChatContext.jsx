@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { chatService } from '../api/chatService';
 
-const ChatContext = createContext(null);
+export const ChatContext = createContext(null);
 
 export const DEFAULT_MODELS = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Mặc định · Siêu nhanh)', enabled: true, visible: true, verified: true },
@@ -278,6 +278,11 @@ export function ChatProvider({ children }) {
                 proposal: data.proposal,
                 notices: data.notices,
                 modelId: data.modelId,
+                packingList: data.packingList,
+                comparison: data.comparison,
+                timeline: data.timeline,
+                weatherSafety: data.weatherSafety,
+                quickPills: data.quickPills,
                 streaming: false,
                 status: null,
               };

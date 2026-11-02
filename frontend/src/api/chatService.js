@@ -44,33 +44,62 @@ export const chatService = {
     const reader = res.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    let currentEvent = 'message';
+    let currentData = '';
+
+    const dispatchEvent = () => {
+      if (!currentData) return;
+      const eventToDispatch = currentEvent;
+      const dataToDispatch = currentData;
+      currentData = '';
+      currentEvent = 'message';
+      try {
+        const data = JSON.parse(dataToDispatch);
+        if (eventToDispatch === 'delta' && onDelta) onDelta(data.delta);
+        else if (eventToDispatch === 'status' && onStatus) onStatus(data.message);
+        else if (eventToDispatch === 'done' && onDone) onDone(data);
+        else if (eventToDispatch === 'error') {
+          const err = new Error(data.message || 'Lỗi xử lý');
+          err.response = { status: 500, data };
+          throw err;
+        }
+      } catch (jsonErr) {
+        if (eventToDispatch === 'error') throw jsonErr;
+      }
+    };
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        if (buffer.trim()) {
+          const trimmed = buffer.trim();
+          if (trimmed.startsWith('data:')) {
+            currentData = (currentData ? currentData + '\n' : '') + trimmed.slice(5).trim();
+          }
+        }
+        dispatchEvent();
+        break;
+      }
+
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
+      const lines = buffer.split(/\r?\n/);
       buffer = lines.pop();
 
-      let currentEvent = 'message';
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('event:')) {
+        if (!trimmed) {
+          dispatchEvent();
+        } else if (trimmed.startsWith('event:')) {
+          if (currentData) dispatchEvent();
           currentEvent = trimmed.slice(6).trim();
         } else if (trimmed.startsWith('data:')) {
-          const rawData = trimmed.slice(5).trim();
+          const raw = trimmed.slice(5).trim();
+          currentData = (currentData ? currentData + '\n' : '') + raw;
           try {
-            const data = JSON.parse(rawData);
-            if (currentEvent === 'delta' && onDelta) onDelta(data.delta);
-            else if (currentEvent === 'status' && onStatus) onStatus(data.message);
-            else if (currentEvent === 'done' && onDone) onDone(data);
-            else if (currentEvent === 'error') {
-              const err = new Error(data.message || 'Lỗi xử lý');
-              err.response = { status: 500, data };
-              throw err;
-            }
-          } catch (jsonErr) {
-            if (currentEvent === 'error') throw jsonErr;
+            JSON.parse(currentData);
+            dispatchEvent();
+          } catch (_) {
+            // Wait for remaining chunk or empty delimiter line
           }
         }
       }

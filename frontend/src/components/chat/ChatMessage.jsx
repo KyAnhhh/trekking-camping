@@ -4,6 +4,10 @@ import remarkGfm from 'remark-gfm';
 import { Compass, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ChatBookingCard from './ChatBookingCard';
+import ChatPackingCard from './ChatPackingCard';
+import ChatComparisonCard from './ChatComparisonCard';
+import ChatTimelineCard from './ChatTimelineCard';
+import ChatWeatherSafetyCard from './ChatWeatherSafetyCard';
 import { mediaUrl, landscape, parsePeopleCount } from '../../utils/tour';
 import './chat-booking.css';
 
@@ -120,6 +124,18 @@ export default function ChatMessage({ message, previousMessage }) {
               </>
             )}
           </>
+        )}
+        {message.packingList && (
+          <ChatPackingCard data={message.packingList} />
+        )}
+        {message.comparison && (
+          <ChatComparisonCard data={message.comparison} />
+        )}
+        {message.timeline && (
+          <ChatTimelineCard data={message.timeline} />
+        )}
+        {message.weatherSafety && (
+          <ChatWeatherSafetyCard data={message.weatherSafety} />
         )}
         {message.notices?.map((notice, i) => <p className="notice" key={i}>{notice}</p>)}
         {!!sources.length && <section className="chat-sources" id={panelId} aria-label="Nguồn tham khảo">

@@ -1,0 +1,363 @@
+/* Chat Weather & Safety Card Styling */
+.chat-weather-card {
+  margin-top: 0.85rem;
+  background: var(--bg-card, rgba(255, 255, 255, 0.98));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+  font-family: inherit;
+  transition: all 0.25s ease;
+}
+
+:root[data-theme='dark'] .chat-weather-card {
+  background: rgba(22, 27, 34, 0.94);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.4);
+}
+
+.chat-weather-header {
+  padding: 1rem 1.25rem 0.85rem;
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(16, 185, 129, 0.06) 100%);
+}
+
+.chat-weather-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.chat-weather-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.chat-weather-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: rgba(14, 165, 233, 0.15);
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+:root[data-theme='dark'] .chat-weather-icon-badge {
+  background: rgba(14, 165, 233, 0.22);
+  color: #38bdf8;
+}
+
+.chat-weather-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text, #111827);
+  margin: 0;
+  line-height: 1.35;
+}
+
+:root[data-theme='dark'] .chat-weather-title {
+  color: #f3f4f6;
+}
+
+/* Safety Status Badge */
+.chat-weather-safety-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.badge-FAVORABLE {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+:root[data-theme='dark'] .badge-FAVORABLE {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.badge-CAUTION {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+:root[data-theme='dark'] .badge-CAUTION {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.badge-WARNING {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+:root[data-theme='dark'] .badge-WARNING {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+/* Meta Pills Bar */
+.chat-weather-meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.chat-weather-meta-tag {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--bg-surface, rgba(0, 0, 0, 0.04));
+  color: var(--text-muted, #4b5563);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.06));
+}
+
+:root[data-theme='dark'] .chat-weather-meta-tag {
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ca3af;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Weather Condition Summary Box */
+.chat-weather-summary-box {
+  margin: 0.85rem 1.25rem 0.25rem;
+  padding: 0.75rem 1rem;
+  background: rgba(14, 165, 233, 0.06);
+  border-left: 3px solid #0284c7;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+:root[data-theme='dark'] .chat-weather-summary-box {
+  background: rgba(14, 165, 233, 0.1);
+}
+
+.chat-weather-summary-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text, #111827);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+:root[data-theme='dark'] .chat-weather-summary-title {
+  color: #f3f4f6;
+}
+
+.chat-weather-summary-desc {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted, #4b5563);
+  margin: 0;
+}
+
+:root[data-theme='dark'] .chat-weather-summary-desc {
+  color: #d1d5db;
+}
+
+/* 6-Cell Weather Metrics Grid */
+.chat-weather-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .chat-weather-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chat-weather-cell {
+  background: var(--bg-surface, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.07));
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.chat-weather-cell:hover {
+  border-color: rgba(14, 165, 233, 0.35);
+  transform: translateY(-1px);
+}
+
+:root[data-theme='dark'] .chat-weather-cell {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.chat-weather-cell-label {
+  font-size: 0.68rem;
+  color: var(--text-muted, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.chat-weather-cell-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text, #111827);
+  letter-spacing: -0.01em;
+}
+
+:root[data-theme='dark'] .chat-weather-cell-value {
+  color: #f9fafb;
+}
+
+.chat-weather-cell-subtext {
+  font-size: 0.67rem;
+  color: var(--text-muted, #6b7280);
+}
+
+/* Cold / High-elevation highlight */
+.cell-highlight-summit {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.cell-highlight-cloud {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(20, 184, 166, 0.08) 100%);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* AI Safety Guardian Alerts Section */
+.chat-weather-alerts {
+  padding: 0.65rem 1.25rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-weather-alert-card {
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.6rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.77rem;
+  line-height: 1.4;
+}
+
+.alert-CAUTION, .alert-DANGER {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #92400e;
+}
+
+:root[data-theme='dark'] .alert-CAUTION, :root[data-theme='dark'] .alert-DANGER {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fde68a;
+}
+
+.alert-INFO {
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+}
+
+:root[data-theme='dark'] .alert-INFO {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #bfdbfe;
+}
+
+.chat-weather-alert-title {
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+.chat-weather-alert-msg {
+  font-size: 0.74rem;
+  opacity: 0.9;
+}
+
+/* Footer & Cross-Card CTA Action Bar */
+.chat-weather-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  background: var(--bg-surface, rgba(0, 0, 0, 0.02));
+}
+
+:root[data-theme='dark'] .chat-weather-footer {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chat-weather-cross-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-weather-cross-btn:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+
+:root[data-theme='dark'] .chat-weather-cross-btn {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+:root[data-theme='dark'] .chat-weather-cross-btn:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.chat-weather-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 0.55rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.chat-weather-tour-btn:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  color: #ffffff;
+  transform: translateY(-1px);
+}

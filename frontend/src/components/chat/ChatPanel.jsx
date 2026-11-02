@@ -80,6 +80,11 @@ export default function ChatPanel({
         m.text?.toLowerCase().includes('kế hoạch'))
   );
 
+  const latestAiMessageWithPills = [...messages]
+    .reverse()
+    .find((m) => m.sender === 'ai' && m.quickPills && m.quickPills.length > 0);
+  const contextualPills = latestAiMessageWithPills?.quickPills || null;
+
   return (
     <div className={'chat-panel' + (compact ? ' compact' : '') + (plannerMode ? ' planner-chat-mode' : '')}>
       <div className="chat-panel-top-bar">
@@ -174,8 +179,32 @@ export default function ChatPanel({
         </div>
       )}
 
-      {/* Quick Prompt Suggestions Pills (inspired by UngDungQuanLyQuanCaFe) */}
-      {messages.length <= 2 && (
+      {/* Contextual Quick Pills from latest AI response */}
+      {contextualPills && contextualPills.length > 0 && !loading && (
+        <div className="chat-quick-prompts contextual-quick-prompts">
+          <div className="chat-quick-prompts-label">
+            <Sparkles size={13} style={{ color: '#10b981' }} />
+            <span>Gợi ý câu hỏi tiếp theo:</span>
+          </div>
+          <div className="chat-quick-prompts-list">
+            {contextualPills.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="chat-prompt-pill"
+                style={{ borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.08)' }}
+                disabled={loading}
+                onClick={() => handleQuickPrompt(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Initial Quick Prompt Suggestions Pills */}
+      {!contextualPills && messages.length <= 2 && (
         <div className="chat-quick-prompts">
           <div className="chat-quick-prompts-label">
             <Sparkles size={13} />
