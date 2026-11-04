@@ -57,11 +57,14 @@ public class BookingWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-        // Echo or handle client ping/heartbeat
         String payload = message.getPayload();
-        if ("ping".equalsIgnoreCase(payload.trim())) {
+        if (payload != null && (payload.trim().equalsIgnoreCase("ping") || payload.contains("PING"))) {
             try {
-                session.sendMessage(new TextMessage("pong"));
+                String pong = objectMapper.writeValueAsString(Map.of(
+                        "type", "PONG",
+                        "timestamp", System.currentTimeMillis()
+                ));
+                session.sendMessage(new TextMessage(pong));
             } catch (IOException ignored) {}
         }
     }
@@ -79,9 +82,11 @@ public class BookingWebSocketHandler extends TextWebSocketHandler {
         }
 
         try {
+            Object content = payload != null ? payload : Map.of();
             Map<String, Object> messageMap = Map.of(
                     "type", type,
-                    "data", payload != null ? payload : Map.of(),
+                    "payload", content,
+                    "data", content,
                     "timestamp", System.currentTimeMillis()
             );
             String json = objectMapper.writeValueAsString(messageMap);
