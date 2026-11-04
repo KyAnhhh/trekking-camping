@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
   CreditCard,
   RefreshCw,
+  Ticket,
   Users,
 } from "lucide-react";
 import { bookingService } from "../../api/bookingService";
@@ -20,6 +21,7 @@ import ParticipationPanel from "../../components/tour/ParticipationPanel";
 import PassengerPanel from "../../components/tour/PassengerPanel";
 import BookingChanges from "../../components/tour/BookingChanges";
 import TripPreparation from "../../components/tour/TripPreparation";
+import ETicketModal from "../../components/tour/ETicketModal";
 import {
   money,
   dateLabel,
@@ -43,6 +45,7 @@ export const paymentStatuses = {
 
 export default function BookingDetail({ admin = false }) {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const loader = useCallback(
     async () => (await bookingService.getDetail(id, admin)).data.data,
     [id, admin],
@@ -52,6 +55,7 @@ export default function BookingDetail({ admin = false }) {
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [ticketOpen, setTicketOpen] = useState(searchParams.get("ticket") === "open");
 
   const action = async (operation) => {
     if (busy) return;
@@ -318,6 +322,28 @@ export default function BookingDetail({ admin = false }) {
                   Chuyến đi đã được xác nhận. Hãy chuẩn bị cho ngày lên đường!
                 </p>
               )}
+              {(data.booking.status === "CONFIRMED" ||
+                data.booking.status === "COMPLETED" ||
+                data.payments?.some((p) => p.status === "SUCCESS")) && (
+                <button
+                  type="button"
+                  className="btn btn-full"
+                  style={{
+                    backgroundColor: "#059669",
+                    borderColor: "#059669",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    margin: "10px 0",
+                    fontWeight: 600,
+                  }}
+                  onClick={() => setTicketOpen(true)}
+                >
+                  <Ticket size={18} /> Xem & In vé điện tử (PDF QR)
+                </button>
+              )}
               {admin && data.canConfirm && (
                 <button
                   className="btn btn-full"
@@ -386,6 +412,17 @@ export default function BookingDetail({ admin = false }) {
             </button>
           </div>
         </Modal>
+      )}
+      {ticketOpen && data && (
+        <ETicketModal
+          booking={data.booking}
+          contactName={data.contactName}
+          contactPhone={data.contactPhone}
+          contactEmail={data.contactEmail}
+          payments={data.payments}
+          leadGuide={data.leadGuide}
+          onClose={() => setTicketOpen(false)}
+        />
       )}
     </div>
   );

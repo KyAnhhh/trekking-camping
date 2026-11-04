@@ -65,9 +65,24 @@ export default function VnpayReturn() {
               lòng liên hệ quản trị viên để xử lý hoàn tiền.
             </p>
           )}
-          <Link className="btn" to={"/my-bookings/" + data.bookingId}>
-            Xem đơn đặt tour
-          </Link>
+          {data.status === "SUCCESS" ? (
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
+              <Link
+                className="btn"
+                to={"/my-bookings/" + data.bookingId + "?ticket=open"}
+                style={{ backgroundColor: "#059669", borderColor: "#059669" }}
+              >
+                Xem & In vé điện tử (PDF QR)
+              </Link>
+              <Link className="btn btn-outline" to={"/my-bookings/" + data.bookingId}>
+                Xem chi tiết đơn
+              </Link>
+            </div>
+          ) : (
+            <Link className="btn" to={"/my-bookings/" + data.bookingId}>
+              Xem đơn đặt tour
+            </Link>
+          )}
         </section>
       )}
       <Link className="back-link" to="/my-bookings">
