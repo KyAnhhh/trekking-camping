@@ -3,6 +3,7 @@ package com.trekkingcamping.backend.module.booking.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trekkingcamping.backend.module.booking.entity.*;
 import com.trekkingcamping.backend.module.booking.repository.*;
+import com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler;
 import com.trekkingcamping.backend.module.user.entity.User;
 import com.trekkingcamping.backend.module.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -16,6 +17,7 @@ import java.util.*;
 @Service
 public class ParticipationService {
     private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
+    private final BookingWebSocketHandler webSocketHandler;
     public record Person(String name,String support,String notes,String emergencyName,String emergencyPhone,Boolean acknowledged) {}
     public record Submission(Long revision,List<Person> people) {}
     public record Review(Long revision,String decision,String note) {
@@ -31,11 +33,20 @@ public class ParticipationService {
     private final EntityManager em;
     private final ObjectMapper json;
     private final HealthCipher cipher;
+    @org.springframework.beans.factory.annotation.Autowired
     public ParticipationService(BookingRepository bookings,PaymentTransactionRepository payments,ParticipationRepository declarations,
-            ParticipationAuditRepository audits,UserRepository users,EntityManager em,ObjectMapper json,HealthCipher cipher, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+            ParticipationAuditRepository audits,UserRepository users,EntityManager em,ObjectMapper json,HealthCipher cipher,
+            com.trekkingcamping.backend.module.notification.service.NotificationService notifications,
+            BookingWebSocketHandler webSocketHandler) {
         this.notifications=notifications;
+        this.webSocketHandler=webSocketHandler;
         this.bookings=bookings; this.payments=payments; this.declarations=declarations; this.audits=audits;
         this.users=users; this.em=em; this.json=json; this.cipher=cipher;
+    }
+    public ParticipationService(BookingRepository bookings,PaymentTransactionRepository payments,ParticipationRepository declarations,
+            ParticipationAuditRepository audits,UserRepository users,EntityManager em,ObjectMapper json,HealthCipher cipher,
+            com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this(bookings, payments, declarations, audits, users, em, json, cipher, notifications, null);
     }
     @Transactional public View get(String email,Long id,boolean admin) {
         User user=user(email,admin); Booking b=locked(id); authorize(b,user,admin);
@@ -76,7 +87,19 @@ public class ParticipationService {
             "READY".equals(input.decision())?"Khai báo tham gia đã được duyệt":"Cần xem lại thông tin tham gia",
             "Vui lòng đăng nhập xem kết quả và hướng dẫn tiếp theo trong chi tiết đơn.");
         if("READY".equals(input.decision())) b.setParticipationDeadline(ParticipationGate.deadline(b.getSchedule().getDepartureDate(),24));
-        bookings.save(b); audit(b,user,"REVIEW_"+input.decision()); return view(b,p);
+        bookings.save(b); audit(b,user,"REVIEW_"+input.decision());
+        if ("READY".equals(input.decision()) && webSocketHandler != null) {
+            try {
+                webSocketHandler.broadcast("BOOKING_APPROVED", Map.of(
+                    "bookingId", b.getId(),
+                    "bookingCode", b.getBookingCode(),
+                    "status", b.getStatus(),
+                    "participationStatus", "READY",
+                    "message", "Đơn " + b.getBookingCode() + " đã được duyệt điều kiện tham gia! Cổng thanh toán VNPAY đã sẵn sàng."
+                ));
+            } catch (Exception ignored) {}
+        }
+        return view(b,p);
     }
     @Transactional public View quickApprove(String email, Long id) {
         User user = user(email, true);
@@ -118,6 +141,17 @@ public class ParticipationService {
             "Đơn của bạn đã sẵn sàng thanh toán. Bạn hãy mở chi tiết đơn để thanh toán qua cổng VNPAY.");
         bookings.save(b);
         audit(b, user, "QUICK_APPROVE_READY");
+        try {
+            if (webSocketHandler != null) {
+                webSocketHandler.broadcast("BOOKING_APPROVED", Map.of(
+                    "bookingId", b.getId(),
+                    "bookingCode", b.getBookingCode(),
+                    "status", b.getStatus(),
+                    "participationStatus", "READY",
+                    "message", "Đơn " + b.getBookingCode() + " đã được duyệt điều kiện tham gia! Cổng thanh toán VNPAY đã sẵn sàng."
+                ));
+            }
+        } catch (Exception ignored) {}
         return view(b, p);
     }
     @Transactional public void delete(String email,Long id) {

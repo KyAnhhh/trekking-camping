@@ -47,6 +47,7 @@ public class SecurityConfig {
 
                 // 2. Public API Chatbot & Auth (cho phép khách chưa đăng nhập hỏi tư vấn thoải mái)
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/chat/models").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/chat", "/api/chat/stream", "/api/chat/history").permitAll()
                 .requestMatchers("/api/chat/sessions", "/api/chat/sessions/**").permitAll()

@@ -2,6 +2,7 @@ package com.trekkingcamping.backend.module.booking.service;
 
 import com.trekkingcamping.backend.module.booking.entity.*;
 import com.trekkingcamping.backend.module.booking.repository.*;
+import com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler;
 import com.trekkingcamping.backend.module.tour.repository.TourScheduleRepository;
 import com.trekkingcamping.backend.module.user.entity.User;
 import com.trekkingcamping.backend.module.user.repository.UserRepository;
@@ -17,6 +18,7 @@ import java.util.*;
 @Service
 public class MomoPaymentStore {
     private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
+    private final BookingWebSocketHandler webSocketHandler;
     private static final Set<Integer> FINAL_FAILURES = Set.of(98, 99, 1001, 1002, 1003, 1004,
             1005, 1006, 1007, 1017, 1026, 2019, 4001, 4002, 4100);
     private final BookingRepository bookings;
@@ -27,11 +29,23 @@ public class MomoPaymentStore {
 
     public record Attempt(Long bookingId, String orderId, long amount, String orderInfo, String status) {}
 
+    @org.springframework.beans.factory.annotation.Autowired
     public MomoPaymentStore(BookingRepository bookings, PaymentTransactionRepository payments,
-                            UserRepository users, TourScheduleRepository schedules, jakarta.persistence.EntityManager entityManager, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
-        this.notifications=notifications;
+                            UserRepository users, TourScheduleRepository schedules,
+                            jakarta.persistence.EntityManager entityManager,
+                            com.trekkingcamping.backend.module.notification.service.NotificationService notifications,
+                            BookingWebSocketHandler webSocketHandler) {
+        this.notifications = notifications;
+        this.webSocketHandler = webSocketHandler;
         this.bookings = bookings; this.payments = payments; this.users = users; this.schedules = schedules;
         this.entityManager = entityManager;
+    }
+
+    public MomoPaymentStore(BookingRepository bookings, PaymentTransactionRepository payments,
+                            UserRepository users, TourScheduleRepository schedules,
+                            jakarta.persistence.EntityManager entityManager,
+                            com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this(bookings, payments, users, schedules, entityManager, notifications, null);
     }
 
     @Transactional
@@ -162,6 +176,21 @@ public class MomoPaymentStore {
                 notifications.booking(booking,"CONFIRMED","Thanh toán thành công, đơn đã xác nhận","Cổng thanh toán đã được đối soát. Kiểm tra lịch và chuẩn bị cho chuyến đi.");
                 booking.setUpdatedAt(LocalDateTime.now());
                 bookings.save(booking);
+
+                try {
+                    if (webSocketHandler != null) {
+                        webSocketHandler.broadcast("PAYMENT_SUCCESS", Map.of(
+                            "bookingId", booking.getId(),
+                            "bookingCode", booking.getBookingCode(),
+                            "amount", payment.getAmount(),
+                            "method", method,
+                            "status", "SUCCESS",
+                            "customerName", booking.getContactName(),
+                            "tourTitle", booking.getSchedule().getTour().getTitle(),
+                            "message", "Đơn hàng " + booking.getBookingCode() + " đã thanh toán thành công " + payment.getAmount() + " đ qua " + method
+                        ));
+                    }
+                } catch (Exception ignored) {}
             }
         } else if (resultCode == -2 && Set.of("VNPAY_SANDBOX", "MOMO_SANDBOX").contains(method) && "PENDING".equals(payment.getStatus())) {
             payment.setStatus("EXPIRED");

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import { bookingService } from "../../api/bookingService";
 import { paymentService } from "../../api/paymentService";
 import { participationService } from "../../api/participationService";
 import useResource from "../../hooks/useResource";
+import { useBookingSocket } from "../../hooks/useBookingSocket";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import EmptyState from "../../components/common/EmptyState";
 import Modal from "../../components/common/Modal";
@@ -56,6 +57,26 @@ export default function BookingDetail({ admin = false }) {
   const [notice, setNotice] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(searchParams.get("ticket") === "open");
+  const { subscribe } = useBookingSocket();
+
+  useEffect(() => {
+    const unsubscribe = subscribe((event) => {
+      if (!event || !event.payload) return;
+      const targetId = Number(event.payload.bookingId);
+      if (targetId && targetId === Number(id)) {
+        if (event.type === "BOOKING_APPROVED") {
+          setNotice("⚡ Đơn vừa được duyệt điều kiện tham gia! Cổng thanh toán VNPAY đã sẵn sàng.");
+          reload();
+        } else if (event.type === "PAYMENT_SUCCESS") {
+          setNotice("🎉 Thanh toán thành công! Vé điện tử E-Ticket đã được phát hành.");
+          reload();
+        } else if (event.type === "BOOKING_CANCELLED" || event.type === "BOOKING_CONFIRMED") {
+          reload();
+        }
+      }
+    });
+    return unsubscribe;
+  }, [id, reload, subscribe]);
 
   const action = async (operation) => {
     if (busy) return;

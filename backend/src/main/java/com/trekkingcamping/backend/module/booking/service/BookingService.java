@@ -4,6 +4,7 @@ import com.trekkingcamping.backend.module.booking.dto.BookingRequestDto;
 import com.trekkingcamping.backend.module.booking.dto.BookingResponseDto;
 import com.trekkingcamping.backend.module.booking.entity.Booking;
 import com.trekkingcamping.backend.module.booking.repository.BookingRepository;
+import com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler;
 import com.trekkingcamping.backend.module.tour.entity.TourSchedule;
 import com.trekkingcamping.backend.module.tour.repository.TourScheduleRepository;
 import com.trekkingcamping.backend.module.user.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,16 +25,30 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class BookingService {
     private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
+    private final BookingWebSocketHandler webSocketHandler;
 
     private final BookingRepository bookingRepository;
     private final TourScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
 
-    public BookingService(BookingRepository bookingRepository, TourScheduleRepository scheduleRepository, UserRepository userRepository, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
-        this.notifications=notifications;
+    @org.springframework.beans.factory.annotation.Autowired
+    public BookingService(BookingRepository bookingRepository,
+                          TourScheduleRepository scheduleRepository,
+                          UserRepository userRepository,
+                          com.trekkingcamping.backend.module.notification.service.NotificationService notifications,
+                          BookingWebSocketHandler webSocketHandler) {
+        this.notifications = notifications;
+        this.webSocketHandler = webSocketHandler;
         this.bookingRepository = bookingRepository;
         this.scheduleRepository = scheduleRepository;
         this.userRepository = userRepository;
+    }
+
+    public BookingService(BookingRepository bookingRepository,
+                          TourScheduleRepository scheduleRepository,
+                          UserRepository userRepository,
+                          com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this(bookingRepository, scheduleRepository, userRepository, notifications, null);
     }
 
     @Transactional
@@ -102,6 +118,29 @@ public class BookingService {
         booking=bookingRepository.save(booking);
         notifications.booking(booking,"CREATED","Đã tiếp nhận đơn đặt tour","Vui lòng hoàn tất khai báo tham gia trong thời hạn của đơn. Đơn chưa được xác nhận thanh toán.");
         notifications.administrators(booking,"CREATED","Có đơn đặt tour mới");
+
+        // Broadcast Realtime WebSocket event
+        try {
+            if (webSocketHandler != null) {
+                webSocketHandler.broadcast("NEW_BOOKING", Map.of(
+                        "bookingId", booking.getId(),
+                        "bookingCode", booking.getBookingCode(),
+                        "tourTitle", schedule.getTour().getTitle(),
+                        "numberOfPax", booking.getNumberOfPax(),
+                        "totalAmount", booking.getTotalAmount(),
+                        "customerName", booking.getContactName(),
+                        "scheduleId", schedule.getId(),
+                        "availableSlots", schedule.getAvailableSlots(),
+                        "message", "Có đơn đặt mới: " + booking.getBookingCode() + " (" + booking.getNumberOfPax() + " khách)"
+                ));
+                webSocketHandler.broadcast("SLOTS_UPDATED", Map.of(
+                        "scheduleId", schedule.getId(),
+                        "availableSlots", schedule.getAvailableSlots(),
+                        "tourId", schedule.getTour().getId()
+                ));
+            }
+        } catch (Exception ignored) {}
+
         return BookingResponseDto.from(booking);
     }
 

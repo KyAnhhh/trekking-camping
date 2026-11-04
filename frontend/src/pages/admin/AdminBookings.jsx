@@ -1,7 +1,8 @@
-﻿import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { operationsService } from '../../api/operationsService';
 import useResource from '../../hooks/useResource';
+import { useBookingSocket } from '../../hooks/useBookingSocket';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import AdminPager from '../../components/common/AdminPager';
@@ -13,6 +14,22 @@ export default function AdminBookings() {
   const queue = params.get('queue') || 'ALL', page = Math.max(0, Number(params.get('page')) || 0);
   const load = useCallback(async () => (await operationsService.bookings(queue, page)).data.data, [queue, page]);
   const { data, loading, error, reload } = useResource(load);
+  const { subscribe } = useBookingSocket();
+
+  useEffect(() => {
+    const unsubscribe = subscribe((event) => {
+      if (
+        event?.type === 'NEW_BOOKING' ||
+        event?.type === 'BOOKING_APPROVED' ||
+        event?.type === 'PAYMENT_SUCCESS' ||
+        event?.type === 'BOOKING_CANCELLED' ||
+        event?.type === 'BOOKING_CONFIRMED'
+      ) {
+        reload();
+      }
+    });
+    return unsubscribe;
+  }, [reload, subscribe]);
   return <>
     <BookingChangeQueue />
     <header className="page-heading"><p className="eyebrow">QUẢN LÝ CHUYẾN ĐI</p><h1>Đơn đặt tour.</h1><p>Duyệt điều kiện tham gia và kiểm tra thanh toán trong chi tiết đơn.</p></header>

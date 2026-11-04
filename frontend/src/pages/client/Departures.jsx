@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axiosClient';
 import CompareButton from '../../components/tour/CompareButton';
+import { useBookingSocket } from '../../hooks/useBookingSocket';
 import { todayInVietnam, dateLabel, money, formatDifficulty, isBookable, errorMessage } from '../../utils/tour';
 import '../../styles/departures.css';
 
@@ -22,6 +23,16 @@ export default function Departures() {
   const [draft,setDraft]=useState(initial),[filters,setFilters]=useState(initial);
   const [view,setView]=useState('list'),[month,setMonth]=useState(()=>todayInVietnam().slice(0,7));
   const [result,setResult]=useState(null),[error,setError]=useState(''),[formError,setFormError]=useState(''),[retry,setRetry]=useState(0);
+  const { subscribe } = useBookingSocket();
+
+  useEffect(() => {
+    const unsubscribe = subscribe((event) => {
+      if (event?.type === 'SLOTS_UPDATED' || event?.type === 'NEW_BOOKING' || event?.type === 'BOOKING_CANCELLED') {
+        setRetry((r) => r + 1);
+      }
+    });
+    return unsubscribe;
+  }, [subscribe]);
   useEffect(()=>{
     const controller=new AbortController();setResult(null);setError('');
     api.get('/api/tours/departures',{params:{...filters,difficulty:filters.difficulty||undefined},signal:controller.signal,timeout:15000})

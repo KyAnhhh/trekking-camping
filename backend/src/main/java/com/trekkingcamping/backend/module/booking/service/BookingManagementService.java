@@ -20,18 +20,29 @@ import java.util.Objects;
 @Service
 public class BookingManagementService {
     private final com.trekkingcamping.backend.module.notification.service.NotificationService notifications;
+    private final com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler webSocketHandler;
     private final BookingRepository bookings;
     private final PaymentTransactionRepository payments;
     private final TourScheduleRepository schedules;
     private final UserRepository users;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public BookingManagementService(BookingRepository bookings, PaymentTransactionRepository payments,
-                                    TourScheduleRepository schedules, UserRepository users, com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
-        this.notifications=notifications;
+                                    TourScheduleRepository schedules, UserRepository users,
+                                    com.trekkingcamping.backend.module.notification.service.NotificationService notifications,
+                                    com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler webSocketHandler) {
+        this.notifications = notifications;
+        this.webSocketHandler = webSocketHandler;
         this.bookings = bookings;
         this.payments = payments;
         this.schedules = schedules;
         this.users = users;
+    }
+
+    public BookingManagementService(BookingRepository bookings, PaymentTransactionRepository payments,
+                                    TourScheduleRepository schedules, UserRepository users,
+                                    com.trekkingcamping.backend.module.notification.service.NotificationService notifications) {
+        this(bookings, payments, schedules, users, notifications, null);
     }
 
     @Transactional(readOnly = true)
@@ -77,6 +88,24 @@ public class BookingManagementService {
         notifications.booking(booking,"CANCELLED","Đơn đặt tour đã hủy","Xem chi tiết trạng thái đơn trong tài khoản.");
         booking.setUpdatedAt(LocalDateTime.now());
         bookings.save(booking);
+
+        try {
+            if (webSocketHandler != null) {
+                webSocketHandler.broadcast("BOOKING_CANCELLED", java.util.Map.of(
+                    "bookingId", booking.getId(),
+                    "bookingCode", booking.getBookingCode(),
+                    "scheduleId", schedule.getId(),
+                    "availableSlots", schedule.getAvailableSlots(),
+                    "message", "Đơn " + booking.getBookingCode() + " đã được hủy. Hoàn lại " + booking.getNumberOfPax() + " chỗ."
+                ));
+                webSocketHandler.broadcast("SLOTS_UPDATED", java.util.Map.of(
+                    "scheduleId", schedule.getId(),
+                    "availableSlots", schedule.getAvailableSlots(),
+                    "tourId", schedule.getTour().getId()
+                ));
+            }
+        } catch (Exception ignored) {}
+
         return detail(booking);
     }
 
@@ -101,6 +130,18 @@ public class BookingManagementService {
         notifications.booking(booking,"CONFIRMED","Đơn đặt tour đã xác nhận","Vui lòng kiểm tra lịch khởi hành và chuẩn bị trang bị.");
         booking.setUpdatedAt(LocalDateTime.now());
         bookings.save(booking);
+
+        try {
+            if (webSocketHandler != null) {
+                webSocketHandler.broadcast("BOOKING_CONFIRMED", java.util.Map.of(
+                    "bookingId", booking.getId(),
+                    "bookingCode", booking.getBookingCode(),
+                    "status", "CONFIRMED",
+                    "message", "Đơn " + booking.getBookingCode() + " đã được xác nhận thành công!"
+                ));
+            }
+        } catch (Exception ignored) {}
+
         return detail(booking);
     }
 
