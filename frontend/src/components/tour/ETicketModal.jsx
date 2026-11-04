@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import {
   Calendar,
@@ -58,7 +59,7 @@ export default function ETicketModal({
 
   const successPayment = payments.find((p) => p.status === "SUCCESS") || payments[0];
 
-  return (
+  return createPortal(
     <div className="eticket-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="eticket-container" onClick={(e) => e.stopPropagation()}>
         {/* Top Control Bar (Hidden when printing) */}
@@ -216,6 +217,7 @@ export default function ETicketModal({
           </footer>
         </article>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

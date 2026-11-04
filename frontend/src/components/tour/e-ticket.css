@@ -289,35 +289,93 @@
   line-height: 1;
 }
 
-/* Print Specific Rule: Only print the ticket card */
+/* Print Specific Rule: Only print the ticket card on EXACTLY 1 page */
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    size: A4 portrait;
+    margin: 8mm 12mm;
   }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* Completely eliminate the main app tree and everything else from print flow */
+  body > *:not(.eticket-overlay) {
+    display: none !important;
+  }
+
+  /* Reset overlay for clean, single-page print rendering */
   .eticket-overlay {
-    position: absolute;
-    inset: 0;
+    position: static !important;
+    inset: auto !important;
     background: transparent !important;
     backdrop-filter: none !important;
     padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    overflow: visible !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
+
   .eticket-container {
     box-shadow: none !important;
-    max-width: 100% !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-radius: 12px !important;
     width: 100% !important;
-    border-radius: 0 !important;
-    visibility: visible !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    animation: none !important;
   }
+
   .eticket-actions-top {
     display: none !important;
   }
-  .eticket-card,
-  .eticket-card * {
-    visibility: visible !important;
+
+  .eticket-card {
+    padding: 20px 24px !important;
+    background: #ffffff !important;
   }
+
+  .eticket-header {
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .eticket-body {
+    margin-bottom: 12px !important;
+    gap: 1.25rem !important;
+  }
+
+  .eticket-perforation {
+    margin: 14px 0 !important;
+  }
+
   .eticket-perforation::before,
   .eticket-perforation::after {
     display: none !important;
+  }
+
+  .eticket-footer {
+    gap: 1rem !important;
+  }
+
+  .eticket-stamp {
+    width: 85px !important;
+    height: 85px !important;
   }
 }
