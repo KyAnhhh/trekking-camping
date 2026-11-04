@@ -70,6 +70,12 @@ export default function BookingDetail({ admin = false }) {
         } else if (event.type === "PAYMENT_SUCCESS") {
           setNotice("🎉 Thanh toán thành công! Vé điện tử E-Ticket đã được phát hành.");
           reload();
+        } else if (event.type === "PAYMENT_FAILED") {
+          setActionError(event.payload?.message || "Giao dịch thanh toán chưa thành công. Bạn có thể bấm thanh toán lại.");
+          reload();
+        } else if (event.type === "PAYMENT_REFUND_REQUIRED") {
+          setActionError("Giao dịch cần xử lý hoàn tiền. Vui lòng liên hệ ban quản trị để được hỗ trợ.");
+          reload();
         } else if (event.type === "BOOKING_CANCELLED" || event.type === "BOOKING_CONFIRMED") {
           reload();
         }

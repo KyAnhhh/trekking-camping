@@ -202,9 +202,38 @@ public class MomoPaymentStore {
         if("REFUND_REQUIRED".equals(payment.getStatus())) {
             notifications.booking(booking,"PAYMENT:"+orderId+":REFUND_REQUIRED","Giao dịch cần xử lý hoàn tiền","Đã ghi nhận tiền nhưng chưa thể xác nhận đơn. Vui lòng liên hệ nhà tổ chức; đây chưa phải xác nhận đã hoàn tiền.");
             notifications.administrators(booking,"PAYMENT:"+orderId+":REFUND_REQUIRED","Giao dịch cần xử lý hoàn tiền");
+            try {
+                if (webSocketHandler != null) {
+                    webSocketHandler.broadcast("PAYMENT_REFUND_REQUIRED", Map.of(
+                        "bookingId", booking.getId(),
+                        "bookingCode", booking.getBookingCode(),
+                        "orderId", orderId,
+                        "amount", payment.getAmount(),
+                        "method", method,
+                        "status", "REFUND_REQUIRED",
+                        "customerName", booking.getContactName(),
+                        "message", "Đơn " + booking.getBookingCode() + " cần xử lý hoàn tiền (" + payment.getAmount() + " đ)"
+                    ));
+                }
+            } catch (Exception ignored) {}
         }
-        if(Set.of("FAILED","EXPIRED").contains(payment.getStatus()))
+        if(Set.of("FAILED","EXPIRED").contains(payment.getStatus())) {
             notifications.booking(booking,"PAYMENT:"+orderId+":"+payment.getStatus(),"Giao dịch chưa thanh toán thành công","Giao dịch đã được xác minh thất bại hoặc hết hạn. Mở chi tiết đơn để kiểm tra bước tiếp theo; chưa có xác nhận thanh toán thành công.");
+            try {
+                if (webSocketHandler != null) {
+                    webSocketHandler.broadcast("PAYMENT_FAILED", Map.of(
+                        "bookingId", booking.getId(),
+                        "bookingCode", booking.getBookingCode(),
+                        "orderId", orderId,
+                        "amount", payment.getAmount(),
+                        "method", method,
+                        "status", payment.getStatus(),
+                        "customerName", booking.getContactName(),
+                        "message", "Giao dịch đơn " + booking.getBookingCode() + " " + ("EXPIRED".equals(payment.getStatus()) ? "đã hết hạn." : "thanh toán không thành công.")
+                    ));
+                }
+            } catch (Exception ignored) {}
+        }
         return snapshot(payment);
     }
 

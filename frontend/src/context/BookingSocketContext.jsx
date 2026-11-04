@@ -97,11 +97,34 @@ export function BookingSocketProvider({ children }) {
                 link: `/my-bookings/${data.payload?.bookingId}`,
               });
             } else if (data.type === "PAYMENT_SUCCESS") {
+              const amountStr = data.payload?.amount ? Number(data.payload.amount).toLocaleString("vi-VN") + " đ" : "";
               addToast({
                 type: "PAYMENT_SUCCESS",
                 title: "✨ Thanh toán thành công!",
-                message: `Đơn ${data.payload?.bookingCode} vừa thanh toán thành công qua ${data.payload?.method || "VNPAY"}`,
+                message: `Đơn ${data.payload?.bookingCode} vừa hoàn tất thanh toán ${amountStr} qua ${data.payload?.method || "VNPAY"}`,
                 link: `/my-bookings/${data.payload?.bookingId}`,
+              });
+            } else if (data.type === "PAYMENT_FAILED") {
+              addToast({
+                type: "PAYMENT_FAILED",
+                title: "⚠️ Thanh toán chưa hoàn tất",
+                message: `Đơn ${data.payload?.bookingCode} ${data.payload?.status === 'EXPIRED' ? 'đã hết hạn phiên thanh toán.' : 'thanh toán không thành công.'}`,
+                link: `/my-bookings/${data.payload?.bookingId}`,
+              });
+            } else if (data.type === "PAYMENT_REFUND_REQUIRED") {
+              const amountStr = data.payload?.amount ? Number(data.payload.amount).toLocaleString("vi-VN") + " đ" : "";
+              addToast({
+                type: "PAYMENT_REFUND_REQUIRED",
+                title: "🔄 Giao dịch cần hoàn tiền",
+                message: `Đơn ${data.payload?.bookingCode} cần đối soát hoàn tiền (${amountStr})`,
+                link: `/admin/payments?status=REFUND_REQUIRED`,
+              });
+            } else if (data.type === "NEW_REVIEW") {
+              addToast({
+                type: "NEW_REVIEW",
+                title: `⭐ Đánh giá mới (${data.payload?.rating || 5} sao)`,
+                message: `Khách ${data.payload?.authorName || "du lịch"} vừa đánh giá tour "${data.payload?.tourTitle}"`,
+                link: `/admin/reviews`,
               });
             } else if (data.type === "BOOKING_APPROVED") {
               addToast({
@@ -109,6 +132,13 @@ export function BookingSocketProvider({ children }) {
                 title: "✅ Điều kiện tham gia đã duyệt",
                 message: `Đơn ${data.payload?.bookingCode} đã sẵn sàng thanh toán!`,
                 link: `/my-bookings/${data.payload?.bookingId}`,
+              });
+            } else if (data.type === "BOOKING_CANCELLED") {
+              addToast({
+                type: "BOOKING_CANCELLED",
+                title: "❌ Đơn đặt tour đã hủy",
+                message: `Đơn ${data.payload?.bookingCode} đã hủy. Số chỗ trống đã được hoàn lại.`,
+                link: `/admin/bookings`,
               });
             }
           } catch (e) {

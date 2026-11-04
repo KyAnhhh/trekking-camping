@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, TrendingUp, ShieldCheck, RefreshCw, Wallet } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, ShieldCheck, RefreshCw, Wallet, BarChart3, Award } from 'lucide-react';
 import { money } from '../../utils/tour';
 import '../../styles/dashboard-charts.css';
 
@@ -253,6 +253,151 @@ function PaymentChart({ successfulAmount, refundRequiredAmount }) {
   );
 }
 
+function RevenueColumnChart({ monthlyRevenue = [], tourRevenue = [], totalAmount = 0 }) {
+  const [activeTab, setActiveTab] = useState('monthly'); // 'monthly' | 'tour'
+
+  const rawItems = activeTab === 'monthly'
+    ? (monthlyRevenue && monthlyRevenue.length > 0 ? monthlyRevenue : [
+        { label: 'Tháng 6/26', amount: 0, orderCount: 0 },
+        { label: 'Tháng 7/26', amount: 0, orderCount: 0 },
+        { label: 'Tháng 8/26', amount: 0, orderCount: 0 },
+        { label: 'Tháng 9/26', amount: 0, orderCount: 0 },
+        { label: 'Tháng 10/26', amount: 0, orderCount: 0 },
+        { label: 'Tháng 11/26', amount: totalAmount || 0, orderCount: 1 },
+      ])
+    : (tourRevenue && tourRevenue.length > 0 ? tourRevenue.map(t => ({ label: t.tourTitle, amount: t.amount, orderCount: t.orderCount })) : [
+        { label: 'Chưa có dữ liệu tour', amount: 0, orderCount: 0 }
+      ]);
+
+  const maxVal = Math.max(...rawItems.map(i => Number(i.amount) || 0), 1000000);
+  const peakItem = rawItems.reduce((prev, curr) => (Number(curr.amount) > Number(prev.amount) ? curr : prev), rawItems[0] || {});
+  const totalInView = rawItems.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const totalOrdersInView = rawItems.reduce((acc, curr) => acc + (Number(curr.orderCount) || 0), 0);
+
+  const formatShortMoney = (val) => {
+    const num = Number(val) || 0;
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + ' tr';
+    if (num >= 1000) return (num / 1000).toFixed(0) + ' k';
+    return num.toLocaleString('vi-VN');
+  };
+
+  return (
+    <section className="panel dashboard-chart revenue-column-card" aria-labelledby="revenue-column-title">
+      <header className="revenue-column-toolbar">
+        <div>
+          <p className="eyebrow"><BarChart3 size={13} style={{ display: 'inline', verticalAlign: '-1px' }} /> THỐNG KÊ DOANH THU THEO CỘT</p>
+          <h2 id="revenue-column-title">Biểu Đồ Cột Doanh Thu Thực Nhận</h2>
+        </div>
+
+        <div className="chart-tab-group" role="tablist">
+          <button
+            type="button"
+            className={`chart-tab-btn ${activeTab === 'monthly' ? 'active' : ''}`}
+            onClick={() => setActiveTab('monthly')}
+            role="tab"
+            aria-selected={activeTab === 'monthly'}
+          >
+            Theo tháng (6 tháng)
+          </button>
+          <button
+            type="button"
+            className={`chart-tab-btn ${activeTab === 'tour' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tour')}
+            role="tab"
+            aria-selected={activeTab === 'tour'}
+          >
+            Theo Tour (Top 5)
+          </button>
+        </div>
+      </header>
+
+      {/* Column Chart Stage */}
+      <div className="column-chart-stage" aria-label="Biểu đồ cột thống kê doanh thu">
+        <div className="column-chart-grid-lines" aria-hidden="true">
+          <div className="chart-grid-line">
+            <span>{formatShortMoney(maxVal)}</span>
+            <hr />
+          </div>
+          <div className="chart-grid-line">
+            <span>{formatShortMoney(maxVal * 0.75)}</span>
+            <hr />
+          </div>
+          <div className="chart-grid-line">
+            <span>{formatShortMoney(maxVal * 0.5)}</span>
+            <hr />
+          </div>
+          <div className="chart-grid-line">
+            <span>{formatShortMoney(maxVal * 0.25)}</span>
+            <hr />
+          </div>
+          <div className="chart-grid-line">
+            <span>0 đ</span>
+            <hr />
+          </div>
+        </div>
+
+        <div className="column-chart-bars-area">
+          {rawItems.map((item, idx) => {
+            const num = Number(item.amount) || 0;
+            const heightPercent = maxVal > 0 ? Math.max(num > 0 ? 12 : 3, (num / maxVal) * 100) : 3;
+            const isPeak = num > 0 && num === Number(peakItem.amount);
+
+            return (
+              <div
+                key={idx}
+                className={`column-bar-group ${isPeak ? 'is-peak' : ''}`}
+                tabIndex={0}
+                aria-label={`${item.label}: ${money(num)}, ${item.orderCount || 0} đơn`}
+              >
+                <div className="column-bar-tooltip">
+                  <strong>{item.label}</strong>
+                  <span>Doanh thu: {money(num)}</span>
+                  <span>Lượt thanh toán: {item.orderCount || 0} đơn</span>
+                  {totalInView > 0 && (
+                    <small>Chiếm {((num / totalInView) * 100).toFixed(1)}% toàn kỳ</small>
+                  )}
+                </div>
+
+                <div className="column-bar-val-badge">
+                  {num > 0 ? formatShortMoney(num) : ''}
+                </div>
+
+                <div className="column-bar-track" style={{ height: `${heightPercent}%` }}>
+                  <div className="column-bar-fill" style={{ height: '100%' }} />
+                </div>
+
+                <span className="column-bar-label" title={item.label}>
+                  {item.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Summary KPI footer */}
+      <div className="column-chart-stats-summary">
+        <div className="chart-stat-item">
+          <span className="stat-title"><Award size={13} style={{ display: 'inline', verticalAlign: '-1px', color: '#b88232' }} /> Doanh thu cao điểm</span>
+          <strong className="stat-num">{money(peakItem?.amount || 0)}</strong>
+          <small style={{ fontSize: '0.72rem', color: '#64748b' }}>{peakItem?.label || 'Chưa ghi nhận'}</small>
+        </div>
+        <div className="chart-stat-item">
+          <span className="stat-title">Doanh thu trung bình ({activeTab === 'monthly' ? 'tháng' : 'tour'})</span>
+          <strong className="stat-num">
+            {money(rawItems.length > 0 ? Math.round(totalInView / rawItems.length) : 0)}
+          </strong>
+        </div>
+        <div className="chart-stat-item">
+          <span className="stat-title">Tổng đơn hoàn tất thanh toán</span>
+          <strong className="stat-num">{totalOrdersInView} đơn</strong>
+          <small style={{ fontSize: '0.72rem', color: '#16a34a' }}>Đã xác nhận & đối soát</small>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function DashboardCharts({ data }) {
   return (
     <div className="dashboard-analytics-container">
@@ -263,7 +408,14 @@ export default function DashboardCharts({ data }) {
         bookings={data.bookings}
       />
 
-      {/* 2. Side-by-side Booking structure & Cash flow status */}
+      {/* 2. New Column Chart (Biểu đồ cột thống kê doanh thu) */}
+      <RevenueColumnChart
+        monthlyRevenue={data.monthlyRevenue}
+        tourRevenue={data.tourRevenue}
+        totalAmount={data.successfulAmount}
+      />
+
+      {/* 3. Side-by-side Booking structure & Cash flow status */}
       <div className="dashboard-charts">
         <BookingChart bookings={data.bookings} />
         <PaymentChart

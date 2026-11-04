@@ -1,12 +1,33 @@
-﻿import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { operationsService } from '../../api/operationsService';
 import useResource from '../../hooks/useResource';
+import { useBookingSocket } from '../../hooks/useBookingSocket';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import DashboardCharts from '../../components/admin/DashboardCharts';
+
 const load = async () => (await operationsService.overview()).data.data;
+
 export default function Dashboard() {
   const { data, loading, error, reload } = useResource(load);
+  const { subscribe } = useBookingSocket();
+
+  useEffect(() => {
+    const unsubscribe = subscribe((event) => {
+      if (
+        event?.type === 'NEW_BOOKING' ||
+        event?.type === 'PAYMENT_SUCCESS' ||
+        event?.type === 'PAYMENT_REFUND_REQUIRED' ||
+        event?.type === 'PAYMENT_FAILED' ||
+        event?.type === 'BOOKING_CANCELLED' ||
+        event?.type === 'NEW_REVIEW'
+      ) {
+        reload();
+      }
+    });
+    return unsubscribe;
+  }, [reload, subscribe]);
   return <>
     <header className="admin-page-heading"><div><p className="eyebrow">ĐIỀU HÀNH CHUYẾN ĐI</p><h1>Tổng quan nghiệp vụ.</h1><p className="muted">Ưu tiên các đơn và giao dịch cần xử lý.</p></div><button className="btn btn-outline" onClick={reload} disabled={loading}>Tải lại</button></header>
     {loading ? <LoadingSpinner /> : error ? <EmptyState error title="Chưa tải được tổng quan" description={error} onRetry={reload} /> : data && <>

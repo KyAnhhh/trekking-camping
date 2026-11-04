@@ -13,5 +13,7 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     java.util.Optional<PaymentTransaction> findByTransactionCode(String transactionCode);
     @org.springframework.data.jpa.repository.Query("select p.booking.id from PaymentTransaction p where p.transactionCode = :code")
     java.util.Optional<Long> findBookingIdByTransactionCode(@org.springframework.data.repository.query.Param("code") String code);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths={"booking", "booking.schedule", "booking.schedule.tour"})
+    List<PaymentTransaction> findByStatus(String status);
     List<PaymentTransaction> findByBookingIdOrderByIdDesc(Long bookingId);
 }

@@ -39,6 +39,18 @@
   border-left-color: #dc2626;
 }
 
+.realtime-toast-card.type-failed {
+  border-left-color: #ea580c;
+}
+
+.realtime-toast-card.type-refund {
+  border-left-color: #b88232;
+}
+
+.realtime-toast-card.type-review {
+  border-left-color: #eab308;
+}
+
 .realtime-toast-icon-wrap {
   width: 36px;
   height: 36px;
@@ -59,6 +71,26 @@
 .type-approved .realtime-toast-icon-wrap {
   background: #ecfdf5;
   color: #059669;
+}
+
+.type-failed .realtime-toast-icon-wrap {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.type-refund .realtime-toast-icon-wrap {
+  background: #fefce8;
+  color: #b88232;
+}
+
+.type-review .realtime-toast-icon-wrap {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.type-cancel .realtime-toast-icon-wrap {
+  background: #fef2f2;
+  color: #dc2626;
 }
 
 .realtime-toast-content {

@@ -15,12 +15,17 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class AdminOperationsService {
+    public record MonthlyRevenue(String month, String label, BigDecimal amount, long orderCount) {}
+    public record TourRevenue(String tourTitle, BigDecimal amount, long orderCount) {}
     public record Overview(Map<String,Long> bookings,long awaitingReview,long pendingPayments,long refundRequired,
-            BigDecimal successfulAmount,BigDecimal refundRequiredAmount,long visibleReviews,long hiddenReviews) {}
+            BigDecimal successfulAmount,BigDecimal refundRequiredAmount,long visibleReviews,long hiddenReviews,
+            List<MonthlyRevenue> monthlyRevenue, List<TourRevenue> tourRevenue) {}
     public record PageResult<T>(List<T> items,int page,int totalPages,long totalElements) {
         public static <T> PageResult<T> of(Page<T> p) { return new PageResult<>(p.getContent(),p.getNumber(),p.getTotalPages(),p.getTotalElements()); }
     }
@@ -44,13 +49,61 @@ public class AdminOperationsService {
     }
     @Transactional(readOnly=true)
     public Overview overview(String email) {
-        admin(email);Map<String,Long> counts=new LinkedHashMap<>();
+        admin(email);
+        Map<String,Long> counts=new LinkedHashMap<>();
         for(String state:List.of("PENDING","CONFIRMED","COMPLETED","CANCELLED"))counts.put(state,0L);
         for(Object[] row:bookings.statusCounts())counts.put(Objects.toString(row[0],"UNKNOWN"),((Number)row[1]).longValue());
         long visible=reviews.countByIsApprovedTrue();
+
+        List<PaymentTransaction> successfulPayments = payments.findByStatus("SUCCESS");
+        LocalDate currentMonth = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).withDayOfMonth(1);
+        Map<String, BigDecimal> monthAmounts = new LinkedHashMap<>();
+        Map<String, Long> monthCounts = new LinkedHashMap<>();
+        DateTimeFormatter keyFmt = DateTimeFormatter.ofPattern("yyyy-MM");
+        DateTimeFormatter labelFmt = DateTimeFormatter.ofPattern("'Tháng' M/yy");
+
+        for (int i = 5; i >= 0; i--) {
+            LocalDate m = currentMonth.minusMonths(i);
+            String k = m.format(keyFmt);
+            monthAmounts.put(k, BigDecimal.ZERO);
+            monthCounts.put(k, 0L);
+        }
+
+        Map<String, BigDecimal> tourAmounts = new HashMap<>();
+        Map<String, Long> tourCounts = new HashMap<>();
+
+        for (PaymentTransaction p : successfulPayments) {
+            if (p.getPaidAt() != null) {
+                String k = p.getPaidAt().format(keyFmt);
+                if (monthAmounts.containsKey(k)) {
+                    monthAmounts.put(k, monthAmounts.get(k).add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO));
+                    monthCounts.put(k, monthCounts.get(k) + 1);
+                }
+            }
+            if (p.getBooking() != null && p.getBooking().getSchedule() != null && p.getBooking().getSchedule().getTour() != null) {
+                String tourTitle = p.getBooking().getSchedule().getTour().getTitle();
+                tourAmounts.put(tourTitle, tourAmounts.getOrDefault(tourTitle, BigDecimal.ZERO).add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO));
+                tourCounts.put(tourTitle, tourCounts.getOrDefault(tourTitle, 0L) + 1);
+            }
+        }
+
+        List<MonthlyRevenue> monthlyRevenue = monthAmounts.entrySet().stream()
+                .map(e -> {
+                    LocalDate m = LocalDate.parse(e.getKey() + "-01");
+                    return new MonthlyRevenue(e.getKey(), m.format(labelFmt), e.getValue(), monthCounts.get(e.getKey()));
+                })
+                .toList();
+
+        List<TourRevenue> tourRevenue = tourAmounts.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .limit(5)
+                .map(e -> new TourRevenue(e.getKey(), e.getValue(), tourCounts.get(e.getKey())))
+                .toList();
+
         return new Overview(counts,bookings.countByStatusAndParticipationStatus("PENDING","REVIEW_REQUIRED"),
                 payments.countByStatus("PENDING"),payments.countByStatus("REFUND_REQUIRED"),
-                payments.totalAmountByStatus("SUCCESS"),payments.totalAmountByStatus("REFUND_REQUIRED"),visible,reviews.count()-visible);
+                payments.totalAmountByStatus("SUCCESS"),payments.totalAmountByStatus("REFUND_REQUIRED"),visible,reviews.count()-visible,
+                monthlyRevenue, tourRevenue);
     }
     @Transactional(readOnly=true)
     public PageResult<BookingRow> bookings(String email,String queue,int page) {

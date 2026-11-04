@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { ArrowUp, Compass, Sparkles, Calendar, BookmarkCheck, ArrowRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowUp, Compass, Sparkles, Calendar, BookmarkCheck, ArrowRight, ChevronDown, ChevronUp, X, Lightbulb } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
@@ -40,6 +40,9 @@ export default function ChatPanel({
     draft: input,
     setDraft: setInput,
   } = useChat();
+
+  const [promptsDismissed, setPromptsDismissed] = useState(false);
+  const [promptsCollapsed, setPromptsCollapsed] = useState(false);
 
   const list = useRef(null);
 
@@ -180,49 +183,117 @@ export default function ChatPanel({
       )}
 
       {/* Contextual Quick Pills from latest AI response */}
-      {contextualPills && contextualPills.length > 0 && !loading && (
-        <div className="chat-quick-prompts contextual-quick-prompts">
-          <div className="chat-quick-prompts-label">
-            <Sparkles size={13} style={{ color: '#10b981' }} />
-            <span>Gợi ý câu hỏi tiếp theo:</span>
-          </div>
-          <div className="chat-quick-prompts-list">
-            {contextualPills.map((prompt) => (
+      {contextualPills && contextualPills.length > 0 && !loading && !promptsDismissed && (
+        <div className={`chat-quick-prompts contextual-quick-prompts ${promptsCollapsed ? 'is-collapsed' : ''}`}>
+          <div className="chat-quick-prompts-header">
+            <div className="chat-quick-prompts-label">
+              <Sparkles size={13} style={{ color: '#10b981' }} />
+              <span>Gợi ý câu hỏi tiếp theo ({contextualPills.length}):</span>
+            </div>
+            <div className="chat-quick-prompts-actions">
               <button
-                key={prompt}
                 type="button"
-                className="chat-prompt-pill"
-                style={{ borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.08)' }}
-                disabled={loading}
-                onClick={() => handleQuickPrompt(prompt)}
+                className="chat-prompt-action-btn"
+                onClick={() => setPromptsCollapsed(!promptsCollapsed)}
+                title={promptsCollapsed ? 'Mở rộng gợi ý câu hỏi' : 'Thu nhỏ gợi ý câu hỏi'}
+                aria-label={promptsCollapsed ? 'Mở rộng' : 'Thu nhỏ'}
               >
-                {prompt}
+                {promptsCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                <span className="btn-text">{promptsCollapsed ? 'Mở rộng' : 'Thu nhỏ'}</span>
               </button>
-            ))}
+              <button
+                type="button"
+                className="chat-prompt-action-btn close-btn"
+                onClick={() => setPromptsDismissed(true)}
+                title="Tắt các gợi ý này để khung chat rộng rãi hơn"
+                aria-label="Đóng gợi ý"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
+          {!promptsCollapsed && (
+            <div className="chat-quick-prompts-list">
+              {contextualPills.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="chat-prompt-pill"
+                  style={{ borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.08)' }}
+                  disabled={loading}
+                  onClick={() => handleQuickPrompt(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Initial Quick Prompt Suggestions Pills */}
-      {!contextualPills && messages.length <= 2 && (
-        <div className="chat-quick-prompts">
-          <div className="chat-quick-prompts-label">
-            <Sparkles size={13} />
-            <span>{plannerMode ? 'Gợi ý yêu cầu lịch trình:' : 'Gợi ý câu hỏi nhanh:'}</span>
-          </div>
-          <div className="chat-quick-prompts-list">
-            {activePrompts.map((prompt) => (
+      {!contextualPills && messages.length <= 2 && !promptsDismissed && (
+        <div className={`chat-quick-prompts ${promptsCollapsed ? 'is-collapsed' : ''}`}>
+          <div className="chat-quick-prompts-header">
+            <div className="chat-quick-prompts-label">
+              <Sparkles size={13} />
+              <span>{plannerMode ? 'Gợi ý yêu cầu lịch trình:' : 'Gợi ý câu hỏi nhanh:'}</span>
+            </div>
+            <div className="chat-quick-prompts-actions">
               <button
-                key={prompt}
                 type="button"
-                className="chat-prompt-pill"
-                disabled={loading}
-                onClick={() => handleQuickPrompt(prompt)}
+                className="chat-prompt-action-btn"
+                onClick={() => setPromptsCollapsed(!promptsCollapsed)}
+                title={promptsCollapsed ? 'Mở rộng gợi ý' : 'Thu nhỏ gợi ý'}
+                aria-label={promptsCollapsed ? 'Mở rộng' : 'Thu nhỏ'}
               >
-                {prompt}
+                {promptsCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                <span className="btn-text">{promptsCollapsed ? 'Mở rộng' : 'Thu nhỏ'}</span>
               </button>
-            ))}
+              <button
+                type="button"
+                className="chat-prompt-action-btn close-btn"
+                onClick={() => setPromptsDismissed(true)}
+                title="Tắt các gợi ý này để khung chat rộng rãi hơn"
+                aria-label="Đóng gợi ý"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
+          {!promptsCollapsed && (
+            <div className="chat-quick-prompts-list">
+              {activePrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="chat-prompt-pill"
+                  disabled={loading}
+                  onClick={() => handleQuickPrompt(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Re-open subtle chip if user previously dismissed prompts */}
+      {promptsDismissed && (
+        <div className="chat-prompts-reopen-bar">
+          <button
+            type="button"
+            className="chat-reopen-prompts-btn"
+            onClick={() => {
+              setPromptsDismissed(false);
+              setPromptsCollapsed(false);
+            }}
+            title="Nhấn để mở lại các gợi ý câu hỏi"
+          >
+            <Lightbulb size={13} />
+            <span>Mở lại gợi ý câu hỏi</span>
+          </button>
         </div>
       )}
 

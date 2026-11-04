@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, CheckCircle2, Compass, X } from "lucide-react";
+import { Sparkles, CheckCircle2, Compass, X, AlertTriangle, RefreshCw, Star, Ban } from "lucide-react";
 import { useBookingSocket } from "../../hooks/useBookingSocket";
 import "../../styles/realtime-toast.css";
 
@@ -12,8 +12,16 @@ export default function RealtimeBookingToast() {
     switch (type) {
       case "PAYMENT_SUCCESS":
         return <Sparkles size={18} />;
+      case "PAYMENT_FAILED":
+        return <AlertTriangle size={18} />;
+      case "PAYMENT_REFUND_REQUIRED":
+        return <RefreshCw size={18} />;
+      case "NEW_REVIEW":
+        return <Star size={18} />;
       case "BOOKING_APPROVED":
         return <CheckCircle2 size={18} />;
+      case "BOOKING_CANCELLED":
+        return <Ban size={18} />;
       default:
         return <Compass size={18} />;
     }
@@ -23,6 +31,12 @@ export default function RealtimeBookingToast() {
     switch (type) {
       case "PAYMENT_SUCCESS":
         return "type-payment";
+      case "PAYMENT_FAILED":
+        return "type-failed";
+      case "PAYMENT_REFUND_REQUIRED":
+        return "type-refund";
+      case "NEW_REVIEW":
+        return "type-review";
       case "BOOKING_APPROVED":
         return "type-approved";
       case "BOOKING_CANCELLED":

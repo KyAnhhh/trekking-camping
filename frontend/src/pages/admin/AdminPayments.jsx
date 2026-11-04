@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { operationsService } from '../../api/operationsService';
 import useResource from '../../hooks/useResource';
+import { useBookingSocket } from '../../hooks/useBookingSocket';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import AdminPager from '../../components/common/AdminPager';
@@ -13,6 +14,20 @@ export default function AdminPayments() {
   const status = params.get('status') || 'PENDING', page = Math.max(0, Number(params.get('page')) || 0);
   const load = useCallback(async () => (await operationsService.payments(status, page)).data.data, [status, page]);
   const { data, loading, error, reload } = useResource(load);
+  const { subscribe } = useBookingSocket();
+
+  useEffect(() => {
+    const unsubscribe = subscribe((event) => {
+      if (
+        event?.type === 'PAYMENT_SUCCESS' ||
+        event?.type === 'PAYMENT_FAILED' ||
+        event?.type === 'PAYMENT_REFUND_REQUIRED'
+      ) {
+        reload();
+      }
+    });
+    return unsubscribe;
+  }, [reload, subscribe]);
   const [selected, setSelected] = useState(null), [busy, setBusy] = useState(false), [failure, setFailure] = useState(''), [notice, setNotice] = useState('');
   async function reconcile() {
     if (busy) return;

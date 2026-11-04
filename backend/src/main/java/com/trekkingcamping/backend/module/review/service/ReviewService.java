@@ -26,15 +26,23 @@ public class ReviewService {
     private final TourReviewRepository reviews; private final BookingRepository bookings;
     private final TourRepository tours; private final EntityManager em;
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler webSocketHandler;
 
     public ReviewService(TourReviewRepository reviews, BookingRepository bookings, TourRepository tours, EntityManager em) {
-        this(reviews, bookings, tours, em, null);
+        this(reviews, bookings, tours, em, null, null);
+    }
+
+    public ReviewService(TourReviewRepository reviews, BookingRepository bookings, TourRepository tours, EntityManager em,
+                         org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this(reviews, bookings, tours, em, jdbc, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
     public ReviewService(TourReviewRepository reviews, BookingRepository bookings, TourRepository tours, EntityManager em,
-                         org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                         org.springframework.jdbc.core.JdbcTemplate jdbc,
+                         com.trekkingcamping.backend.module.booking.websocket.BookingWebSocketHandler webSocketHandler) {
         this.reviews=reviews; this.bookings=bookings; this.tours=tours; this.em=em; this.jdbc=jdbc;
+        this.webSocketHandler = webSocketHandler;
     }
 
     @Transactional(readOnly=true) public Summary list(Long tourId, int page) {
@@ -71,7 +79,24 @@ public class ReviewService {
         if (reviews.findByBookingId(bookingId).isPresent()) throw new ResponseStatusException(HttpStatus.CONFLICT,"Mỗi đơn chỉ được đánh giá một lần.");
         var review=new TourReview(); review.setBooking(booking); review.setTour(booking.getSchedule().getTour()); review.setUser(booking.getUser());
         review.setRating(input.rating()); review.setComment(input.comment().trim()); review.setIsVerifiedBuyer(true); review.setIsApproved(true);
-        return item(reviews.save(review));
+        TourReview saved = reviews.save(review);
+
+        try {
+            if (webSocketHandler != null) {
+                String authorName = booking.getUser() != null && booking.getUser().getFullName() != null
+                        ? booking.getUser().getFullName() : booking.getContactName();
+                webSocketHandler.broadcast("NEW_REVIEW", Map.of(
+                        "reviewId", saved.getId(),
+                        "tourTitle", review.getTour().getTitle(),
+                        "rating", saved.getRating(),
+                        "authorName", authorName != null ? authorName : "Khách du lịch",
+                        "comment", saved.getComment(),
+                        "message", "Khách " + (authorName != null ? authorName : "du lịch") + " vừa để lại đánh giá " + saved.getRating() + "⭐ cho tour \"" + review.getTour().getTitle() + "\""
+                ));
+            }
+        } catch (Exception ignored) {}
+
+        return item(saved);
     }
     private boolean completed(Booking b) {
         return "COMPLETED".equals(b.getStatus()) && b.getSchedule().getReturnDate()!=null
