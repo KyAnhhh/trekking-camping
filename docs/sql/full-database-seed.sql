@@ -60,13 +60,13 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- 2. Khởi tạo Users
--- Mật khẩu mặc định: admin123 / guide123 / user123 (BCrypt hash)
--- $2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa
+-- Mật khẩu mặc định: Password@123 (BCrypt hash $2a$10$CzZDX.Pm.0jHPlKyqcZzpO8dEIUA1Y.vyKvfMmLLDnlUcKu13DhuW)
+-- Hoặc mật khẩu phụ: admin123 (BCrypt hash $2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa)
 INSERT INTO users (id, email, password, full_name, phone, role_id, is_active, auth_version, created_at, updated_at)
 VALUES
-    (1, 'admin@trekkingcamping.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Quản Trị Viên Hệ Thống', '0901234567', 2, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (2, 'guide@trekkingcamping.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Nguyễn Hoàng Nam (Lead Guide)', '0912345678', 1, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (3, 'user@trekkingcamping.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Nguyễn Văn Khám Phá', '0987654321', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (1, 'admin@trekkingcamping.com', '$2a$10$CzZDX.Pm.0jHPlKyqcZzpO8dEIUA1Y.vyKvfMmLLDnlUcKu13DhuW', 'Quản Trị Viên Hệ Thống', '0901234567', 2, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (2, 'guide@trekkingcamping.com', '$2a$10$CzZDX.Pm.0jHPlKyqcZzpO8dEIUA1Y.vyKvfMmLLDnlUcKu13DhuW', 'Nguyễn Hoàng Nam (Lead Guide)', '0912345678', 1, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (3, 'user@trekkingcamping.com', '$2a$10$CzZDX.Pm.0jHPlKyqcZzpO8dEIUA1Y.vyKvfMmLLDnlUcKu13DhuW', 'Nguyễn Văn Khám Phá', '0987654321', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (4, 'hoangminh@gmail.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Trần Hoàng Minh', '0918123456', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (5, 'thuytien.le@gmail.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Lê Thủy Tiên', '0934567890', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (6, 'ducduy.photo@gmail.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Trần Đức Duy', '0977889900', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
@@ -74,7 +74,8 @@ VALUES
     (8, 'tuananh.hiker@gmail.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Phạm Tuấn Anh', '0966445566', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (9, 'khanhly.travel@gmail.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Nguyễn Khánh Ly', '0988776655', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (10, 'guide_long@trekkingcamping.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Lê Hoàng Long (Alpine Guide)', '0938112233', 1, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (11, 'guide_linh@trekkingcamping.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Phạm Vũ Linh (Forest Specialist)', '0945223344', 1, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (11, 'guide_linh@trekkingcamping.com', '$2a$10$7E2vsrmoJqT8EkvuEa0LE.Zu3X8jxesRswaAVhQ5eIzO.wJUb0fQa', 'Phạm Vũ Linh (Forest Specialist)', '0945223344', 1, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (12, 'phankyanh@example.com', '$2a$10$CzZDX.Pm.0jHPlKyqcZzpO8dEIUA1Y.vyKvfMmLLDnlUcKu13DhuW', 'Phan Kỳ Anh', '0901234567', 3, true, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE SET 
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
