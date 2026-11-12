@@ -586,10 +586,11 @@
   }
   .chat-composer {
     margin-inline: 12px;
-    padding: 8px;
+    padding: 12px 12px 10px;
   }
+  .chat-composer-textarea,
   .chat-composer input {
-    font-size: 0.7rem;
+    font-size: 0.86rem;
   }
   .chat-suggestions {
     padding-inline: 12px;

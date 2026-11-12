@@ -308,3 +308,40 @@
   color: var(--muted);
 }
 
+/* Dark mode overrides for Editorial & Handbook */
+[data-theme="dark"] .field-journal {
+  color: #e6f0eb;
+}
+[data-theme="dark"] .journal-heading h1 span {
+  color: #b6db6c;
+}
+[data-theme="dark"] .journal-next {
+  background: #14241b;
+  border-left-color: #b6db6c;
+}
+[data-theme="dark"] .checklist-card {
+  background: #14241b;
+  border-color: #22372c;
+  color: #e6f0eb;
+}
+[data-theme="dark"] .checklist-item-btn {
+  background: #101c15;
+  border-color: #22372c;
+  color: #e6f0eb;
+}
+[data-theme="dark"] .checklist-item-btn:hover {
+  background: #192d21;
+}
+[data-theme="dark"] .checklist-item-btn.checked {
+  background: #12281c;
+  border-color: #245733;
+}
+[data-theme="dark"] .checklist-item-btn.checked .checklist-item-text {
+  color: #b6db6c;
+}
+[data-theme="dark"] .handbook-gear-card {
+  background: #14241b;
+  border-color: #22372c;
+}
+
+

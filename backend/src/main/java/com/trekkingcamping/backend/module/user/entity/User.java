@@ -22,9 +22,25 @@ public class User {
     @Column(name = "auth_version", nullable = false, columnDefinition = "bigint default 0")
     private Long authVersion = 0L;
 
+    @Column(name = "auth_provider")
+    private String authProvider = "LOCAL";
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(name = "google_id")
+    private String googleId;
+
     @com.fasterxml.jackson.annotation.JsonIgnore
     public Long getAuthVersion() { return authVersion == null ? 0L : authVersion; }
     public void setAuthVersion(Long authVersion) { this.authVersion = authVersion; }
+
+    public String getAuthProvider() { return authProvider; }
+    public void setAuthProvider(String authProvider) { this.authProvider = authProvider; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public String getGoogleId() { return googleId; }
+    public void setGoogleId(String googleId) { this.googleId = googleId; }
 
     @ManyToOne
     @JoinColumn(name = "role_id")

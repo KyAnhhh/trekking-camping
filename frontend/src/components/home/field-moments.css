@@ -445,6 +445,7 @@
   margin: 0 0 16px;
 }
 
+.regional-season,
 .regional-season-box {
   display: flex;
   align-items: center;
@@ -453,6 +454,14 @@
   border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 16px;
+  font-size: 0.78rem;
+  color: #435e4b;
+}
+
+.regional-season svg,
+.regional-season-box svg {
+  flex-shrink: 0;
+  color: #1b6b3b;
 }
 
 .regional-season-box small {
@@ -461,6 +470,7 @@
   color: #657e6e;
 }
 
+.regional-season strong,
 .regional-season-box strong {
   font-size: 0.78rem;
   color: var(--forest, #1b382b);
@@ -472,12 +482,15 @@
   padding-top: 14px;
 }
 
+.spots-title,
 .regional-spots small {
-  display: block;
-  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #637d6c;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -503,4 +516,172 @@
   .regional-cards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Dark Mode for Field Moments 3D & Regional Guide Cards */
+[data-theme="dark"] .field-filter-pill {
+  background: #16291f;
+  border-color: #294234;
+  color: #cfe0d5;
+}
+
+[data-theme="dark"] .field-filter-pill:hover {
+  background: #1e3629;
+  border-color: #427559;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .field-filter-pill.active {
+  background: #2b6447;
+  border-color: #3b825e;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .field-3d-card {
+  background: #14241b;
+  border-color: #243a2d;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .field-3d-card:hover {
+  border-color: #3d6b52;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .badge-top-right {
+  background: rgba(16, 30, 22, 0.88);
+  color: #e6f0eb;
+  border: 1px solid #2b4738;
+}
+
+[data-theme="dark"] .field-location {
+  color: #9bb4a5;
+}
+
+[data-theme="dark"] .field-duration-pill {
+  background: #193827;
+  color: #86efac;
+}
+
+[data-theme="dark"] .field-title {
+  color: #f0f7f3;
+}
+
+[data-theme="dark"] .field-subtitle {
+  color: #a6bfb0;
+}
+
+[data-theme="dark"] .field-tag-chip {
+  background: #182b20;
+  color: #cfe0d5;
+  border: 1px solid #263f31;
+}
+
+[data-theme="dark"] .field-card-footer {
+  border-top-color: #243a2d;
+}
+
+[data-theme="dark"] .field-diff-badge {
+  color: #b6db6c;
+}
+
+[data-theme="dark"] .field-view-action {
+  color: #8ee09c;
+}
+
+[data-theme="dark"] .field-modal-card {
+  background: #14241b;
+  border: 1px solid #243a2d;
+  color: #e4efe8;
+}
+
+[data-theme="dark"] .field-modal-quote {
+  background: #182b20;
+  color: #d6e6dc;
+  border-left-color: #4ade80;
+}
+
+[data-theme="dark"] .meta-box {
+  background: #101f17;
+  border-color: #243a2d;
+}
+
+[data-theme="dark"] .meta-box small {
+  color: #9cb4a6;
+}
+
+[data-theme="dark"] .meta-box strong,
+[data-theme="dark"] .field-modal-body h4 {
+  color: #f0f7f3;
+}
+
+[data-theme="dark"] .field-highlights-list li {
+  color: #d0e1d6;
+}
+
+[data-theme="dark"] .regional-card {
+  background: #14241b;
+  border-color: #243a2d;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"] .regional-card:hover {
+  border-color: #3d6b52;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .regional-badge {
+  background: #193827;
+  color: #86efac;
+  border: 1px solid #29593e;
+}
+
+[data-theme="dark"] .regional-card h3 {
+  color: #f2f8f4;
+}
+
+[data-theme="dark"] .regional-tag {
+  color: #9de2ab;
+}
+
+[data-theme="dark"] .regional-desc {
+  color: #c9dbd0;
+}
+
+[data-theme="dark"] .regional-season,
+[data-theme="dark"] .regional-season-box {
+  background: #182b20;
+  border: 1px solid #294234;
+  color: #d3e4d9;
+}
+
+[data-theme="dark"] .regional-season svg,
+[data-theme="dark"] .regional-season-box svg {
+  color: #86efac;
+}
+
+[data-theme="dark"] .regional-season-box small {
+  color: #9cb4a6;
+}
+
+[data-theme="dark"] .regional-season strong,
+[data-theme="dark"] .regional-season-box strong {
+  color: #f0f7f3;
+}
+
+[data-theme="dark"] .regional-spots {
+  border-top-color: #243a2d;
+}
+
+[data-theme="dark"] .spots-title,
+[data-theme="dark"] .regional-spots small {
+  color: #9cb4a6;
+}
+
+[data-theme="dark"] .regional-spots li {
+  color: #dfece4;
+}
+
+[data-theme="dark"] .regional-spots li svg {
+  color: #86efac;
 }

@@ -112,7 +112,7 @@ public class TourService {
         return withCovers(List.of(tour)).getFirst();
     }
 
-    private List<Tour> withCovers(List<Tour> tours) {
+    public List<Tour> withCovers(List<Tour> tours) {
         if (tours.isEmpty()) return tours;
         var covers = imageRepository.findByTourIdInAndIsCoverTrue(tours.stream().map(Tour::getId).toList());
         var urls = new java.util.HashMap<Long, String>();

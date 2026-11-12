@@ -100,6 +100,8 @@ public class UserService {
         );
         response.setActive(Boolean.TRUE.equals(user.getIsActive()));
         response.setUpdatedAt(user.getUpdatedAt());
+        response.setAvatarUrl(user.getAvatarUrl());
+        response.setAuthProvider(user.getAuthProvider());
         return response;
     }
 }

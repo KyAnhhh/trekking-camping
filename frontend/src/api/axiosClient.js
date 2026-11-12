@@ -18,6 +18,7 @@ const PUBLIC_PREFIXES = [
   '/api/media',
   '/api/guides',
   '/api/chat',
+  '/api/ai',
 ];
 
 function isPublicEndpoint(url) {

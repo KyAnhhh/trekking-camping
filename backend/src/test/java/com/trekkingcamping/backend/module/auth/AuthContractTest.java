@@ -2,6 +2,7 @@ package com.trekkingcamping.backend.module.auth;
 
 import com.trekkingcamping.backend.common.exception.GlobalExceptionHandler;
 import com.trekkingcamping.backend.module.auth.controller.AuthController;
+import com.trekkingcamping.backend.module.auth.service.GoogleAuthService;
 import com.trekkingcamping.backend.module.user.dto.*;
 import com.trekkingcamping.backend.module.user.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AuthContractTest {
     private final UserService service = mock(UserService.class);
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new AuthController(service))
+    private final GoogleAuthService googleAuthService = mock(GoogleAuthService.class);
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new AuthController(service, googleAuthService))
             .setControllerAdvice(new GlobalExceptionHandler()).build();
 
     @Test
@@ -45,5 +47,18 @@ class AuthContractTest {
         mvc.perform(post("/api/auth/login").contentType("application/json").content("{}"))
                 .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value(401))
                 .andExpect(jsonPath("$.message").value("Sai thông tin đăng nhập."));
+    }
+
+    @Test
+    void googleLoginExposesTokenInsideDataEnvelope() throws Exception {
+        UserResponseDto user = new UserResponseDto();
+        user.setEmail("google.user@example.test");
+        user.setRole("ROLE_USER");
+        when(googleAuthService.authenticateWithGoogle(any())).thenReturn(new LoginResponseDto("google-jwt-token", user));
+        mvc.perform(post("/api/auth/google").contentType("application/json")
+                .content("{\"idToken\":\"fake-google-token\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(1000))
+                .andExpect(jsonPath("$.data.token").value("google-jwt-token"))
+                .andExpect(jsonPath("$.data.user.email").value("google.user@example.test"));
     }
 }

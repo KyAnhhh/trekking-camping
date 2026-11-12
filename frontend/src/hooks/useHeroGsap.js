@@ -38,7 +38,7 @@ export default function useHeroGsap({
       // Stagger elements in content
       const liveBadge = hero.querySelector('.hero-live-pill');
       const eyebrow = hero.querySelector('.eyebrow');
-      const titleLines = hero.querySelectorAll('#home-title > *');
+      const titleLines = hero.querySelectorAll('.hero-title-line');
       const desc = hero.querySelector('.hero-description');
       const cta = hero.querySelector('.hero-cta-group');
 

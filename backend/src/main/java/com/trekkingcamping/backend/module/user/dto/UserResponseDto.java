@@ -12,6 +12,13 @@ public class UserResponseDto {
     private LocalDateTime createdAt;
     private Boolean active;
     private LocalDateTime updatedAt;
+    private String avatarUrl;
+    private String authProvider;
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public String getAuthProvider() { return authProvider; }
+    public void setAuthProvider(String authProvider) { this.authProvider = authProvider; }
 
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }

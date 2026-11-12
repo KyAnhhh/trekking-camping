@@ -23,6 +23,7 @@ import TourTimeline from "../../components/tour/TourTimeline";
 import GuideTeam from "../../components/tour/GuideTeam";
 import TourReviews from "../../components/tour/TourReviews";
 import TourSummary from "../../components/tour/TourSummary";
+import TourWeatherWidget from "../../components/tour/TourWeatherWidget";
 import {
   dateLabel,
   duration,
@@ -132,6 +133,7 @@ export default function TourDetail() {
         </div>
       )}
       <TourSummary tour={tour} />
+      <TourWeatherWidget location={tour.location} title={tour.title} />
       <div className="detail-layout">
         <div className="detail-sections">
           {partialError && (

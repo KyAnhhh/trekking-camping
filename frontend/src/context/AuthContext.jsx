@@ -14,11 +14,23 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
     const username = localStorage.getItem("username");
+    const fullName = localStorage.getItem("fullName");
+    const email = localStorage.getItem("email");
+    const avatarUrl = localStorage.getItem("avatarUrl");
+    const authProvider = localStorage.getItem("authProvider");
 
     if (token && isTokenExpired(token)) {
       expireSession(token);
     } else if (token && token !== "undefined" && token !== "null" && role) {
-      setUser({ token, role, username, email: username });
+      setUser({
+        token,
+        role,
+        username,
+        email: email || username,
+        fullName: fullName || username,
+        avatarUrl: avatarUrl || null,
+        authProvider: authProvider || "LOCAL",
+      });
     }
     setLoading(false);
     const onExpired = () => setUser(null);
@@ -42,15 +54,27 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", authData.token);
     localStorage.setItem("role", authData.role);
     localStorage.setItem("username", authData.username || "Traveler");
+    if (authData.fullName) localStorage.setItem("fullName", authData.fullName);
+    if (authData.email) localStorage.setItem("email", authData.email);
+    if (authData.avatarUrl) {
+      localStorage.setItem("avatarUrl", authData.avatarUrl);
+    } else {
+      localStorage.removeItem("avatarUrl");
+    }
+    if (authData.authProvider) localStorage.setItem("authProvider", authData.authProvider);
     setUser(authData);
     setLogoutError("");
     window.dispatchEvent(new Event("auth:changed"));
   };
 
-  const updateProfile = (profile) =>
+  const updateProfile = (profile) => {
+    if (profile?.fullName) localStorage.setItem("fullName", profile.fullName);
+    if (profile?.avatarUrl) localStorage.setItem("avatarUrl", profile.avatarUrl);
     setUser((current) => (current ? { ...current, ...profile } : current));
+  };
+
   const clearSession = () => {
-    ["token", "role", "username"].forEach((key) =>
+    ["token", "role", "username", "fullName", "email", "avatarUrl", "authProvider"].forEach((key) =>
       localStorage.removeItem(key),
     );
     setUser(null);
@@ -73,7 +97,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoggingOut(false);
     }
-    ["token", "role", "username"].forEach((key) =>
+    ["token", "role", "username", "fullName", "email", "avatarUrl", "authProvider"].forEach((key) =>
       localStorage.removeItem(key),
     );
     setUser(null);

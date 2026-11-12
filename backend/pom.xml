@@ -75,6 +75,18 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Google API Client for Google Identity Services (GIS) Token Verification -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-gson</artifactId>
+            <version>1.45.3</version>
+        </dependency>
+
         <!-- 4. Spring AI OpenAI Starter -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

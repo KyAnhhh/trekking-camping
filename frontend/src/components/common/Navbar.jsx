@@ -1,12 +1,15 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Mountain, Menu, X, UserRound, ChevronDown } from "lucide-react";
+import { Mountain, Menu, X, UserRound, ChevronDown, Sun, Moon } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
+import { useLanguage } from "../../context/LanguageContext";
 import AccountMenu from "./AccountMenu";
 import HeaderNavigation from "./HeaderNavigation";
 import NotificationBell from "./NotificationBell";
 
 export function Brand({ admin = false }) {
+  const { t } = useLanguage();
   return (
     <Link
       className="brand"
@@ -18,13 +21,16 @@ export function Brand({ admin = false }) {
       </span>
       <span>
         TREK<span className="brand-and">&</span>CAMP
-        <small>{admin ? "KHÔNG GIAN QUẢN TRỊ" : "BƯỚC RA THIÊN NHIÊN"}</small>
+        <small>{admin ? t("nav.brand_admin") : t("nav.brand_slogan")}</small>
       </span>
     </Link>
   );
 }
+
 export default function Navbar() {
   const { user, logout, loggingOut, logoutError } = useContext(AuthContext);
+  const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage, t } = useLanguage();
   const [open, setOpen] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const marker = useRef(null);
@@ -34,6 +40,7 @@ export default function Navbar() {
   const loginLink = useRef(null);
   const location = useLocation();
   const identity = user ? `${user.username || user.email}:${user.role}` : null;
+
   useEffect(() => setOpen(null), [location.key, identity]);
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return;
@@ -83,12 +90,12 @@ export default function Navbar() {
   }, [open]);
 
   const close = () => setOpen(null);
-  const toggle = (name) => setOpen((current) => current === name ? null : name);
+  const toggle = (name) => setOpen((current) => (current === name ? null : name));
   const handleLogout = async () => {
     await logout();
-    // On failure the account remains present and the error stays in the dropdown.
     requestAnimationFrame(() => loginLink.current?.focus());
   };
+
   return (
     <>
       <span ref={marker} className="header-scroll-marker" aria-hidden="true" />
@@ -97,15 +104,45 @@ export default function Navbar() {
         <div className="container header-shell">
           <div onClick={close}><Brand /></div>
           <HeaderNavigation open={open === "navigation"} onNavigate={close} />
+          
           <div className="header-actions">
+            {/* Quick theme and language toggles */}
+            <div className="header-util-actions">
+              <button
+                type="button"
+                className="theme-toggle-btn"
+                onClick={toggleTheme}
+                aria-label={t("nav.theme_toggle")}
+                title={theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
+              >
+                {theme === "dark" ? (
+                  <Sun size={18} aria-hidden="true" />
+                ) : (
+                  <Moon size={18} aria-hidden="true" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="lang-toggle-btn"
+                onClick={toggleLanguage}
+                aria-label={t("nav.lang_toggle")}
+                title={language === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+              >
+                <span className="lang-flag">{language === "vi" ? "🇻🇳" : "🇬🇧"}</span>
+                <span className="lang-code">{language === "vi" ? "VI" : "EN"}</span>
+              </button>
+            </div>
+
             <NotificationBell />
+
             {user ? (
               <div className="header-account">
                 <button
                   ref={accountTrigger}
                   type="button"
                   className="header-account-trigger"
-                  aria-label={open === "account" ? "Đóng menu tài khoản" : "Mở menu tài khoản"}
+                  aria-label={open === "account" ? t("nav.close_menu") : t("nav.open_menu")}
                   aria-controls="account-navigation"
                   aria-expanded={open === "account"}
                   onClick={() => toggle("account")}
@@ -116,23 +153,51 @@ export default function Navbar() {
                     }
                   }}
                 >
-                  <UserRound size={21} aria-hidden="true" />
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.fullName || user.username || "Avatar"}
+                      className="header-avatar-img"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <UserRound size={21} aria-hidden="true" />
+                  )}
                   <ChevronDown size={14} aria-hidden="true" />
                 </button>
-                {open === "account" && <AccountMenu user={user} onNavigate={close}
-                  onLogout={handleLogout} loggingOut={loggingOut} logoutError={logoutError} />}
+                {open === "account" && (
+                  <AccountMenu
+                    user={user}
+                    onNavigate={close}
+                    onLogout={handleLogout}
+                    loggingOut={loggingOut}
+                    logoutError={logoutError}
+                  />
+                )}
               </div>
             ) : (
-              <Link ref={loginLink} className="header-login" to="/login" onClick={close}
+              <Link
+                ref={loginLink}
+                className="header-login"
+                to="/login"
+                onClick={close}
                 state={location.pathname === "/login" ? location.state : { from: location.pathname + location.search }}
-                aria-label="Đăng nhập">
-                <UserRound size={21} aria-hidden="true" /><span>Đăng nhập</span>
+                aria-label={t("nav.login")}
+              >
+                <UserRound size={21} aria-hidden="true" />
+                <span>{t("nav.login")}</span>
               </Link>
             )}
-            <button ref={navigationTrigger} type="button" className="header-menu-trigger"
-              aria-label={open === "navigation" ? "Đóng menu" : "Mở menu"}
-              aria-controls="main-navigation" aria-expanded={open === "navigation"}
-              onClick={() => toggle("navigation")}>
+
+            <button
+              ref={navigationTrigger}
+              type="button"
+              className="header-menu-trigger"
+              aria-label={open === "navigation" ? t("nav.close_menu") : t("nav.open_menu")}
+              aria-controls="main-navigation"
+              aria-expanded={open === "navigation"}
+              onClick={() => toggle("navigation")}
+            >
               {open === "navigation" ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
             </button>
           </div>

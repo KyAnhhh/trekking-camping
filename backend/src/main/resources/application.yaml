@@ -18,6 +18,11 @@ spring:
   application:
     name: trekking-camping-backend
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/trekking_camping_db}
     username: ${DB_USERNAME:postgres}
@@ -35,6 +40,8 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:}
+google:
+  client-id: ${GOOGLE_CLIENT_ID:454601127943-6hc8m8v0gcgstafovi5ibmoingg48825.apps.googleusercontent.com}
 gemini:
   api-key: ${GEMINI_API_KEY:}
   models: ${GEMINI_MODELS:}

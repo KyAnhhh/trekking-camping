@@ -69,6 +69,17 @@ export const tourApi = {
   // 2. Lấy danh sách tất cả Tour
   getAllTours: (signal) => axiosClient.get("/api/tours", signal ? { signal } : undefined),
 
+  // 2b. Tìm kiếm ngữ nghĩa kết hợp AI Vector + Intent
+  semanticSearch: ({ q, difficulty, duration, signal } = {}) =>
+    axiosClient.get("/api/tours/semantic-search", {
+      params: {
+        q: q || "",
+        ...(difficulty ? { difficulty } : {}),
+        ...(duration ? { duration } : {}),
+      },
+      ...(signal ? { signal } : {}),
+    }),
+
   // 3. Lấy thông tin Tour theo Slug
   getTourBySlug: (slug, signal) => axiosClient.get(`/api/tours/${encodeURIComponent(slug)}`, signal ? { signal } : undefined),
 

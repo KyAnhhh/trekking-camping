@@ -49,9 +49,9 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/chat/models").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/chat", "/api/chat/stream", "/api/chat/history").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chat", "/api/chat/stream", "/api/chat/history", "/api/ai/gear-check").permitAll()
                 .requestMatchers("/api/chat/sessions", "/api/chat/sessions/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/guide-invitations/preview", "/api/guide-invitations/accept").permitAll()
                 // The gateway authenticates this callback with HMAC, not a user's JWT.

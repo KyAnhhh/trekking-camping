@@ -85,3 +85,90 @@
   right: 4px;
   top: 3px;
 }
+
+/* Google Authentication & Auth Divider */
+.google-auth-wrapper {
+  margin-block: 6px 14px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.google-gis-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.google-gis-container:not(:empty) + .btn-google-auth {
+  display: none; /* Khi GIS iframe đã tải thành công thì ẩn nút fallback */
+}
+
+.btn-google-auth {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 11px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-google-auth:hover {
+  background: var(--bg-hover);
+  border-color: var(--sage);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn-google-auth .google-icon {
+  flex-shrink: 0;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin-block: 18px 16px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--line);
+}
+
+.auth-divider span {
+  padding: 0 14px;
+}
+
+[data-theme="dark"] .btn-google-auth {
+  background: #14241b;
+  border-color: #243a2d;
+  color: #e6f0eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .btn-google-auth:hover {
+  background: #1b2f24;
+  border-color: #3b5e48;
+}
+
+[data-theme="dark"] .auth-divider::before,
+[data-theme="dark"] .auth-divider::after {
+  border-color: #243a2d;
+}

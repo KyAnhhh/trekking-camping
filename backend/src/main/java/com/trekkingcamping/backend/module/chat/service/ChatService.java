@@ -372,12 +372,25 @@ public class ChatService {
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI chưa hoàn tất câu trả lời. Vui lòng thử lại.");
     }
 
+    public String generateMultimodalJsonReply(String prompt, String mimeType, String base64Image, String preferredModel) {
+        List<Map<String, Object>> parts = List.of(
+                Map.of("text", prompt),
+                Map.of("inlineData", Map.of("mimeType", mimeType, "data", base64Image))
+        );
+        return generateReplyFromParts(parts, true, Map.of(), ChatService::extractReply, preferredModel);
+    }
+
     private String generateReply(String fullPrompt, boolean structured,Map<String,Object> extra,
             java.util.function.Function<Map<?,?>,String> extract) {
         return generateReply(fullPrompt,structured,extra,extract,null);
     }
     private String generateReply(String fullPrompt, boolean structured,Map<String,Object> extra,
             java.util.function.Function<Map<?,?>,String> extract,String selectedModel) {
+        return generateReplyFromParts(List.of(Map.of("text", fullPrompt)), structured, extra, extract, selectedModel);
+    }
+
+    private String generateReplyFromParts(List<Map<String, Object>> parts, boolean structured, Map<String, Object> extra,
+            java.util.function.Function<Map<?, ?>, String> extract, String selectedModel) {
         if (gemini.configurationIssue() != null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         String botReply = null;
         ResponseStatusException failure = new ResponseStatusException(HttpStatus.BAD_GATEWAY,
@@ -388,7 +401,7 @@ public class ChatService {
         headers.set("x-goog-api-key", gemini.getApiKey());
         Map<String, Object> requestBody = new HashMap<>(Map.of(
                 "contents", List.of(
-                        Map.of("parts", List.of(Map.of("text", fullPrompt)))
+                        Map.of("role", "user", "parts", parts)
                 )
         ));
         if (structured) requestBody.put("generationConfig", Map.of("responseMimeType", "application/json"));

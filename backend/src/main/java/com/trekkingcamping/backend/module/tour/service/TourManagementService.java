@@ -28,6 +28,12 @@ public class TourManagementService {
     private final TourItineraryRepository itineraries; private final TourGearRepository gears;
     private final BookingRepository bookings; private final ScheduleGuideRepository assignments;
     private final GuideService guides; private final EntityManager em;
+    private com.trekkingcamping.backend.module.chat.service.DataIngestionService ingestionService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setIngestionService(com.trekkingcamping.backend.module.chat.service.DataIngestionService ingestionService) {
+        this.ingestionService = ingestionService;
+    }
     public TourManagementService(TourRepository tours, TourScheduleRepository schedules, TourItineraryRepository itineraries,
             TourGearRepository gears, BookingRepository bookings, ScheduleGuideRepository assignments, GuideService guides, EntityManager em) {
         this.tours=tours; this.schedules=schedules; this.itineraries=itineraries; this.gears=gears;
@@ -61,7 +67,9 @@ public class TourManagementService {
         t.setDifficultyLevel(r.getDifficultyLevel()); t.setSummary(r.getSummary()); t.setDescription(r.getDescription());
         t.setSafetyTips(r.getSafetyTips()); t.setRequiredGear(r.getRequiredGear()); t.setInsuranceInfo(r.getInsuranceInfo());
         t.setEmergencyHotline(r.getEmergencyHotline()); t.setUpdatedAt(LocalDateTime.now());
-        return tours.save(t);
+        Tour saved = tours.save(t);
+        scheduleVectorSync();
+        return saved;
     }
     @Caching(evict = { @CacheEvict(value = CacheConfig.CACHE_TOURS, allEntries = true), @CacheEvict(value = CacheConfig.CACHE_TOUR_DETAIL, allEntries = true) })
     @Transactional public Tour active(Long id, Active input) {
@@ -70,7 +78,23 @@ public class TourManagementService {
         if (!input.active() && rows.stream().anyMatch(s -> s.getReturnDate()!=null && !s.getReturnDate().isBefore(today())
                 && bookings.existsByScheduleIdAndStatusNot(s.getId(),"CANCELLED")))
             throw conflict("Tour còn khách đã đặt cho chuyến chưa kết thúc. Cần xử lý các booking trước khi ngừng mở bán.");
-        t.setIsActive(input.active()); t.setUpdatedAt(LocalDateTime.now()); return tours.save(t);
+        t.setIsActive(input.active()); t.setUpdatedAt(LocalDateTime.now());
+        Tour saved = tours.save(t);
+        scheduleVectorSync();
+        return saved;
+    }
+
+    private void scheduleVectorSync() {
+        if (ingestionService == null) return;
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() {
+                        java.util.concurrent.CompletableFuture.runAsync(() -> {
+                            try { ingestionService.ingestTourDataToVectorStore(); } catch (Exception ignored) {}
+                        });
+                    }
+                }
+        );
     }
     @Transactional public void updateSchedule(Long tourId, Long scheduleId, ScheduleEdit input) {
         Tour t=locked(tourId);

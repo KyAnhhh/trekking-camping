@@ -354,3 +354,128 @@
   margin-left: 10px;
   margin-bottom: 8px;
 }
+
+/* Dark Mode overrides for Tour Cards, Inline Images, Quick Prompts, and Booking Panels */
+[data-theme="dark"] .chat-tours-header {
+  color: #cfe0d5;
+}
+
+[data-theme="dark"] .chat-tour-card {
+  background: #14241b;
+  border-color: #243a2d;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .chat-tour-card:hover {
+  border-color: #3d6b52;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
+}
+
+[data-theme="dark"] .chat-tour-badge {
+  background: rgba(16, 30, 22, 0.9);
+  border: 1px solid #2b4738;
+  color: #e2efe7;
+}
+
+[data-theme="dark"] .chat-tour-badge.difficulty {
+  background: rgba(27, 68, 47, 0.92);
+  color: #9ae6b4;
+}
+
+[data-theme="dark"] .chat-tour-badge.duration {
+  background: rgba(20, 38, 29, 0.92);
+  color: #cbe0d3;
+}
+
+[data-theme="dark"] .chat-tour-location {
+  color: #9cb4a6;
+}
+
+[data-theme="dark"] .chat-tour-title a {
+  color: #f0f7f3;
+}
+
+[data-theme="dark"] .chat-tour-title a:hover {
+  color: #93e4a4;
+}
+
+[data-theme="dark"] .chat-tour-meta-row {
+  color: #a9c1b3;
+}
+
+[data-theme="dark"] .chat-tour-completed-note {
+  background: #182b20;
+  border-color: #2b4738;
+  color: #cfe2d6;
+}
+
+[data-theme="dark"] .chat-tour-footer {
+  border-top-color: #243a2d;
+}
+
+[data-theme="dark"] .chat-tour-price small {
+  color: #95ad9f;
+}
+
+[data-theme="dark"] .chat-tour-price strong {
+  color: #b6db6c;
+}
+
+[data-theme="dark"] .chat-inline-figure {
+  background: #14241b;
+  border-color: #243a2d;
+}
+
+[data-theme="dark"] .chat-inline-caption {
+  color: #a6bfb0;
+}
+
+[data-theme="dark"] .chat-quick-prompts {
+  background: #111f17;
+  border-color: #243a2d;
+}
+
+[data-theme="dark"] .chat-quick-prompts-label {
+  color: #a6c1b1;
+}
+
+[data-theme="dark"] .chat-prompt-pill {
+  background: #182b20;
+  border-color: #294234;
+  color: #dbeae0;
+}
+
+[data-theme="dark"] .chat-prompt-pill:hover:not(:disabled) {
+  background: #213a2b;
+  border-color: #45775b;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .chat-booking-expanded {
+  border-top-color: #243a2d;
+  color: #e4efe8;
+}
+
+[data-theme="dark"] .chat-booking-actions input,
+[data-theme="dark"] .chat-form-fields input {
+  background: #0f1c15;
+  border-color: #2b4738;
+  color: #eef6f1;
+}
+
+[data-theme="dark"] .chat-quote-summary {
+  background: #182b20;
+  border-color: #2b4738;
+  color: #dfece4;
+}
+
+[data-theme="dark"] .chat-booking-notice {
+  background: #142b1e;
+  border: 1px solid #28573d;
+  border-radius: 10px;
+  color: #d7f2df;
+}
+
+[data-theme="dark"] .chat-booking-notice svg {
+  color: #4ade80;
+}

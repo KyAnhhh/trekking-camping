@@ -152,6 +152,7 @@ class ApiAuthorizationMatrixTest {
     @MockBean com.trekkingcamping.backend.module.booking.service.PassengerService passengers;
     @MockBean com.trekkingcamping.backend.module.admin.service.AdminOperationsService operations;
     @MockBean UserService userService;
+    @MockBean com.trekkingcamping.backend.module.auth.service.GoogleAuthService googleAuthService;
     @MockBean com.trekkingcamping.backend.module.user.service.AccountService accountService;
     @MockBean com.trekkingcamping.backend.module.planner.service.PlannerService plannerService;
     @MockBean com.trekkingcamping.backend.module.planner.service.PlanStore planStore;
@@ -162,6 +163,7 @@ class ApiAuthorizationMatrixTest {
     @MockBean TourImageService tourImages;
     @MockBean TourImageStorage imageStorage;
     @MockBean TourService tourService;
+    @MockBean com.trekkingcamping.backend.module.tour.service.SemanticTourSearchService semanticSearch;
     @MockBean com.trekkingcamping.backend.module.guide.service.GuideService guideService;
     @MockBean com.trekkingcamping.backend.module.guide.service.GuideImageStorage guideImages;
     @MockBean com.trekkingcamping.backend.module.guide.service.GuideImportService guideImport;

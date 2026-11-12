@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 :root {
   font-family: 'Be Vietnam Pro', sans-serif;
   color: #17291f;
@@ -14,7 +15,456 @@
   --ink: #17291f;
   --muted: #647168;
   --line: #e0e7dd;
+  --line-subtle: #edf2eb;
   --danger: #a6362c;
   --radius: 18px;
   --shadow: 0 12px 36px #163d2c0b;
+
+  --bg-body: #ffffff;
+  --bg-card: #ffffff;
+  --bg-elevated: #f8faf6;
+  --bg-input: #ffffff;
+  --bg-hover: #f1f5ee;
+  --text-primary: #17291f;
+  --text-muted: #647168;
+  --header-bg: #ffffff;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  color: #e6f0eb;
+  background: #0d1712;
+  --forest: #2a6146;
+  --forest-hover: #367958;
+  --sage: #8fa886;
+  --lime: #b6db6c;
+  --mist: #15231c;
+  --ink: #e6f0eb;
+  --muted: #9eb1a6;
+  --line: #22372c;
+  --line-subtle: #192a20;
+  --danger: #e2584c;
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+
+  --bg-body: #0d1712;
+  --bg-card: #14241b;
+  --bg-elevated: #1a2d23;
+  --bg-input: #101c15;
+  --bg-hover: #1b2f24;
+  --text-primary: #e6f0eb;
+  --text-muted: #9eb1a6;
+  --header-bg: #0f1d16;
+}
+
+body {
+  background-color: var(--bg-body);
+  color: var(--ink);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ==========================================================================
+   DARK MODE COMPONENT OVERRIDES
+   ========================================================================== */
+
+/* Solid, opaque site header in dark mode (never bleed through) */
+[data-theme="dark"] .site-header {
+  background: #0f1d16 !important;
+  border-bottom: 1px solid #1f3629 !important;
+}
+
+[data-theme="dark"] .site-header.is-scrolled {
+  background: #0f1d16 !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Page background & sections */
+[data-theme="dark"] .home-page {
+  --home-surface: #0d1712 !important;
+  background: #0d1712 !important;
+  color: #e6f0eb !important;
+}
+
+[data-theme="dark"] .home-page[data-time-theme="morning"],
+[data-theme="dark"] .home-page[data-time-theme="noon"],
+[data-theme="dark"] .home-page[data-time-theme="afternoon"],
+[data-theme="dark"] .home-page[data-time-theme="night"] {
+  --home-surface: #0d1712 !important;
+  background: #0d1712 !important;
+}
+
+[data-theme="dark"] .home-page .experience-section,
+[data-theme="dark"] .home-stories {
+  background: #101c16 !important;
+}
+
+[data-theme="dark"] .home-page .section {
+  color: #e6f0eb !important;
+}
+
+/* Headings and Typography in Dark Mode */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] .section-heading h2 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] p {
+  color: #d1ded6;
+}
+
+[data-theme="dark"] .section-heading .eyebrow,
+[data-theme="dark"] .eyebrow {
+  color: #8fa886 !important;
+}
+
+[data-theme="dark"] .section-heading .muted,
+[data-theme="dark"] .muted,
+[data-theme="dark"] p.muted {
+  color: #9eb1a6 !important;
+}
+
+[data-theme="dark"] .text-link {
+  color: #b6db6c !important;
+}
+
+/* Search Dock & Form in Dark Mode */
+[data-theme="dark"] .trip-search {
+  background: #14241b !important;
+  border-color: #243a2d !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .trip-search label > span {
+  color: #b6db6c !important;
+}
+
+[data-theme="dark"] .trip-search input,
+[data-theme="dark"] .trip-search select {
+  background: #101c15 !important;
+  color: #e6f0eb !important;
+  border-bottom: 1px solid #22372c;
+}
+
+[data-theme="dark"] .trip-search select option {
+  background: #14241b;
+  color: #e6f0eb;
+}
+
+/* Cards, Panels and Surfaces in Dark Mode */
+[data-theme="dark"] .tour-card,
+[data-theme="dark"] .departure-card,
+[data-theme="dark"] .handbook-gear-card,
+[data-theme="dark"] .checklist-card,
+[data-theme="dark"] .guide-card,
+[data-theme="dark"] .guide-admin-card,
+[data-theme="dark"] .booking-card,
+[data-theme="dark"] .soft-panel,
+[data-theme="dark"] .card,
+[data-theme="dark"] .panel,
+[data-theme="dark"] .client-card,
+[data-theme="dark"] .admin-card,
+[data-theme="dark"] .account-dropdown,
+[data-theme="dark"] .modal-shell,
+[data-theme="dark"] .tour-summary-bar,
+[data-theme="dark"] .tour-filter-bar,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .revenue-chart-card,
+[data-theme="dark"] .revenue-column-card,
+[data-theme="dark"] .inbox-popover,
+[data-theme="dark"] .tour-detail-hero,
+[data-theme="dark"] .booking-summary,
+[data-theme="dark"] .editorial-hero,
+[data-theme="dark"] .auth-card {
+  background-color: #14241b !important;
+  border-color: #22372c !important;
+  color: #e6f0eb !important;
+}
+
+[data-theme="dark"] .tour-card h3 a {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .tour-card .tour-summary,
+[data-theme="dark"] .tour-card .tour-duration {
+  color: #9eb1a6 !important;
+}
+
+[data-theme="dark"] .tour-card-bottom {
+  border-top-color: #22372c !important;
+}
+
+[data-theme="dark"] .tour-card-bottom strong {
+  color: #b6db6c !important;
+}
+
+[data-theme="dark"] .tour-card-bottom small {
+  color: #8da094 !important;
+}
+
+/* Principles / Why choose us */
+[data-theme="dark"] .principles article {
+  background: #14241b !important;
+  border: 1px solid #22372c !important;
+  border-radius: 14px;
+  color: #e6f0eb !important;
+}
+
+[data-theme="dark"] .principles article svg {
+  color: #b6db6c !important;
+}
+
+[data-theme="dark"] .principles article h3 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .principles article p {
+  color: #9eb1a6 !important;
+}
+
+/* Booking steps */
+[data-theme="dark"] .booking-steps li {
+  border-top-color: #243a2d !important;
+}
+
+[data-theme="dark"] .booking-steps li > span {
+  color: #b6db6c !important;
+}
+
+[data-theme="dark"] .booking-steps h3 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .booking-steps p {
+  color: #9eb1a6 !important;
+}
+
+/* Reviews on Home Page */
+[data-theme="dark"] .home-review {
+  background: #14241b !important;
+  border-color: #22372c !important;
+  color: #e6f0eb !important;
+}
+
+[data-theme="dark"] .home-review blockquote {
+  color: #d1dfd6 !important;
+}
+
+[data-theme="dark"] .home-review .review-score {
+  color: #b6db6c !important;
+}
+
+[data-theme="dark"] .home-review .review-author {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .home-review > a {
+  color: #8fa886 !important;
+}
+
+/* FAQ Details in Dark Mode */
+[data-theme="dark"] .travel-faq details {
+  border-bottom-color: #22372c !important;
+}
+
+[data-theme="dark"] .travel-faq summary {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .travel-faq details p {
+  color: #9eb1a6 !important;
+}
+
+/* AI Banner on Home Page */
+[data-theme="dark"] .search-field {
+  background-color: var(--bg-card) !important;
+  border-color: var(--line) !important;
+  color: var(--muted) !important;
+}
+
+[data-theme="dark"] .search-field input {
+  background: transparent !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .ai-banner {
+  background: linear-gradient(135deg, #183326 0%, #0f2118 100%) !important;
+  border: 1px solid #244634 !important;
+  color: #e6f0eb !important;
+}
+
+[data-theme="dark"] .ai-banner-icon {
+  color: #b6db6c !important;
+}
+
+[data-theme="dark"] .ai-banner h2 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ai-banner p {
+  color: #d1ded6 !important;
+}
+
+/* Inputs, Selects, Textareas */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: var(--bg-input);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: var(--sage);
+  outline-color: var(--lime);
+}
+
+/* Header Buttons and Toggles */
+[data-theme="dark"] .header-account-trigger,
+[data-theme="dark"] .header-menu-trigger,
+[data-theme="dark"] .header-login,
+[data-theme="dark"] .theme-toggle-btn,
+[data-theme="dark"] .lang-toggle-btn,
+[data-theme="dark"] .notification-bell {
+  background: #14241b !important;
+  border-color: #243a2d !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .header-account-trigger:hover,
+[data-theme="dark"] .header-login:hover,
+[data-theme="dark"] .header-menu-trigger:hover,
+[data-theme="dark"] .theme-toggle-btn:hover,
+[data-theme="dark"] .lang-toggle-btn:hover,
+[data-theme="dark"] .notification-bell:hover {
+  background: #1b2f24 !important;
+  color: #fff !important;
+}
+
+/* Realtime Toasts */
+[data-theme="dark"] .realtime-toast-card {
+  background: rgba(19, 34, 26, 0.98) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .toast-close-btn {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .toast-close-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--ink);
+}
+
+/* Tables in Dark Mode */
+[data-theme="dark"] .table-shell table,
+[data-theme="dark"] table {
+  background-color: var(--bg-card);
+  color: var(--ink);
+}
+
+[data-theme="dark"] table th {
+  background-color: var(--bg-elevated);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] table td {
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+/* Chat in Dark Mode */
+[data-theme="dark"] .chat-shell,
+[data-theme="dark"] .chat-messages,
+[data-theme="dark"] .chat-input-bar {
+  background-color: var(--bg-card);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .chat-message.assistant {
+  background-color: var(--bg-elevated);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+/* Footer in Dark Mode */
+[data-theme="dark"] .site-footer {
+  background-color: #08110d !important;
+  border-top: 1px solid #1a2d23 !important;
+}
+
+[data-theme="dark"] .site-footer p,
+[data-theme="dark"] .site-footer span,
+[data-theme="dark"] .footer-top > div > a {
+  color: #9eb1a6 !important;
+}
+
+[data-theme="dark"] .footer-top h3 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .footer-top > div > a:hover {
+  color: #b6db6c !important;
+}
+
+/* Header utility buttons styling */
+.header-util-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-toggle-btn,
+.lang-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 40px;
+  min-width: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--forest);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.theme-toggle-btn:hover,
+.lang-toggle-btn:hover {
+  background: var(--mist);
+  border-color: var(--sage);
+}
+
+.theme-toggle-btn svg {
+  color: var(--sage);
+  transition: transform 0.25s ease;
+}
+
+.theme-toggle-btn:hover svg {
+  transform: rotate(20deg);
+  color: var(--forest);
+}
+
+[data-theme="dark"] .theme-toggle-btn svg {
+  color: var(--lime);
+}
+
+.lang-flag {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.lang-code {
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }

@@ -3,7 +3,9 @@ package com.trekkingcamping.backend.module.tour.controller;
 import com.trekkingcamping.backend.common.dto.ApiResponse;
 import com.trekkingcamping.backend.module.tour.dto.*;
 import com.trekkingcamping.backend.module.tour.entity.*;
+import com.trekkingcamping.backend.module.tour.service.SemanticTourSearchService;
 import com.trekkingcamping.backend.module.tour.service.TourService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,10 +16,19 @@ public class TourController {
 
     private final TourService tourService;
     private final com.trekkingcamping.backend.module.guide.service.GuideService guides;
+    private final SemanticTourSearchService semanticSearch;
 
     public TourController(TourService tourService, com.trekkingcamping.backend.module.guide.service.GuideService guides) {
+        this(tourService, guides, null);
+    }
+
+    @Autowired
+    public TourController(TourService tourService,
+                          com.trekkingcamping.backend.module.guide.service.GuideService guides,
+                          SemanticTourSearchService semanticSearch) {
         this.tourService = tourService;
         this.guides = guides;
+        this.semanticSearch = semanticSearch;
     }
 
     @PostMapping
@@ -38,6 +49,21 @@ public class TourController {
         ApiResponse<List<Tour>> response = new ApiResponse<>();
         response.setData(tours);
 
+        return response;
+    }
+
+    @GetMapping("/semantic-search")
+    public ApiResponse<List<SemanticTourResultDto>> semanticSearch(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false) Integer difficulty,
+            @RequestParam(required = false) String duration) {
+        List<SemanticTourResultDto> results = semanticSearch != null
+                ? semanticSearch.search(q, difficulty, duration)
+                : tourService.filterTours(difficulty, q).stream()
+                        .map(t -> new SemanticTourResultDto(t, 1.0, "KEYWORD", List.of()))
+                        .toList();
+        ApiResponse<List<SemanticTourResultDto>> response = new ApiResponse<>();
+        response.setData(results);
         return response;
     }
 

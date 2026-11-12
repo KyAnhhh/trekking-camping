@@ -22,3 +22,41 @@
 [id^="departure-"] { scroll-margin-top: 110px; }
 @media(max-width:700px) { .departure-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } .departures-grid { grid-template-columns: minmax(0,1fr); } }
 @media(max-width:400px) { .departure-filters { grid-template-columns: minmax(0,1fr); } }
+
+/* Dark mode for Departures */
+[data-theme="dark"] .departure-filters {
+  background: #14241b;
+  border-color: #22372c;
+  color: #e6f0eb;
+}
+[data-theme="dark"] .departure-filters input,
+[data-theme="dark"] .departure-filters select,
+[data-theme="dark"] .departure-toolbar input {
+  background: #101c15;
+  color: #e6f0eb;
+  border-color: #22372c;
+}
+[data-theme="dark"] .departure-card {
+  background: #14241b;
+  border-color: #22372c;
+  color: #e6f0eb;
+}
+[data-theme="dark"] .departure-card h2 a {
+  color: #ffffff;
+}
+[data-theme="dark"] .departure-open {
+  color: #b6db6c;
+}
+[data-theme="dark"] .departure-weekday {
+  background: #1a2d23;
+  color: #e6f0eb;
+}
+[data-theme="dark"] .departure-day {
+  background: #14241b;
+  border-color: #22372c;
+  color: #e6f0eb;
+}
+[data-theme="dark"] .departure-day a {
+  background: #1a2d23;
+  color: #b6db6c;
+}

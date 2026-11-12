@@ -1,12 +1,21 @@
-export function formatDifficulty(level) {
+export function formatDifficulty(level, lang = "vi") {
+  if (lang === "en") {
+    return { 1: "Easy", 2: "Moderate", 3: "Adventurous" }[level] || "TBD";
+  }
   return { 1: "Dễ", 2: "Trung Bình", 3: "Mạo Hiểm" }[level] || "Chưa cập nhật";
 }
 export const money = (value) =>
   value == null
     ? "Đang cập nhật"
     : Number(value).toLocaleString("vi-VN") + " ₫";
-export const duration = (tour) =>
-  (tour.durationDays || 0) + " ngày " + (tour.durationNights || 0) + " đêm";
+export const duration = (tour, lang = "vi") => {
+  const d = tour.durationDays || 0;
+  const n = tour.durationNights || 0;
+  if (lang === "en") {
+    return `${d} ${d === 1 ? "day" : "days"} ${n} ${n === 1 ? "night" : "nights"}`;
+  }
+  return d + " ngày " + n + " đêm";
+};
 export const dateLabel = (value) =>
   value
     ? new Intl.DateTimeFormat("vi-VN").format(new Date(value + "T12:00:00"))

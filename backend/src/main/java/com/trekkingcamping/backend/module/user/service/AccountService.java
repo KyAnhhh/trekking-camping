@@ -14,7 +14,11 @@ import java.time.LocalDateTime;
 
 @Service
 public class AccountService {
-    public record Profile(Long id, String email, String fullName, String phone, String role) {}
+    public record Profile(Long id, String email, String fullName, String phone, String role, String avatarUrl, String authProvider) {
+        public Profile(Long id, String email, String fullName, String phone, String role) {
+            this(id, email, fullName, phone, role, null, "LOCAL");
+        }
+    }
     public record Edit(String fullName, String phone) {}
     public record ChangePassword(String currentPassword, String newPassword) {}
     private final UserRepository users;
@@ -63,6 +67,8 @@ public class AccountService {
     }
     private Profile profile(User u) {
         return new Profile(u.getId(), u.getEmail(), u.getFullName(), u.getPhone(),
-                u.getRole() == null ? "ROLE_USER" : u.getRole().getName());
+                u.getRole() == null ? "ROLE_USER" : u.getRole().getName(),
+                u.getAvatarUrl(),
+                u.getAuthProvider() == null ? "LOCAL" : u.getAuthProvider());
     }
 }

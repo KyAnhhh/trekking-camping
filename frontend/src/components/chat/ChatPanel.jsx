@@ -1,24 +1,46 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Compass, Sparkles, Calendar, BookmarkCheck, ArrowRight, ChevronDown, ChevronUp, X, Lightbulb } from 'lucide-react';
+import { ArrowUp, Camera, Compass, Sparkles, Calendar, BookmarkCheck, ArrowRight, ChevronDown, ChevronUp, X, Lightbulb } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
+import GearVisionCheck from './GearVisionCheck';
+import Modal from '../common/Modal';
+import { useLanguage } from '../../context/LanguageContext';
 
-const GENERAL_QUICK_PROMPTS = [
-  '🌲 Tour cho người mới bắt đầu',
-  '⛰️ Săn mây Tà Năng - Phan Dũng',
-  '🎒 Cần chuẩn bị những gì khi đi tour?',
-  '⛺ Tour cắm trại cuối tuần 2 ngày',
-  '💰 Tour chi phí tiết kiệm nhất',
-];
-
-const PLANNER_QUICK_PROMPTS = [
-  '🏕️ Lịch trình cắm trại Đà Lạt 2N1Đ cuối tuần',
-  '⛰️ Lên kế hoạch trekking Tà Năng - Phan Dũng 2 ngày',
-  '🌲 Lịch trình Bidoup Núi Bà 3N2Đ thể lực vừa',
-  '🌊 Trekking Cực Đông đón bình minh đầu tiên',
-  '💰 Gợi ý lịch trình trekking tiết kiệm dưới 2 triệu',
-];
+const PROMPTS = {
+  vi: {
+    general: [
+      '🌲 Tour cho người mới bắt đầu',
+      '⛰️ Săn mây Tà Năng - Phan Dũng',
+      '🎒 Cần chuẩn bị những gì khi đi tour?',
+      '⛺ Tour cắm trại cuối tuần 2 ngày',
+      '💰 Tour chi phí tiết kiệm nhất',
+    ],
+    planner: [
+      '🏕️ Lịch trình cắm trại Đà Lạt 2N1Đ cuối tuần',
+      '⛰️ Lên kế hoạch trekking Tà Năng - Phan Dũng 2 ngày',
+      '🌲 Lịch trình Bidoup Núi Bà 3N2Đ thể lực vừa',
+      '🌊 Trekking Cực Đông đón bình minh đầu tiên',
+      '💰 Gợi ý lịch trình trekking tiết kiệm dưới 2 triệu',
+    ],
+  },
+  en: {
+    general: [
+      '🌲 Beginner-friendly trekking tours',
+      '⛰️ Cloud hunting in Ta Nang - Phan Dung',
+      '🎒 Essential gear checklist for hiking',
+      '⛺ Weekend 2-day camping getaways',
+      '💰 Most budget-friendly expeditions',
+    ],
+    planner: [
+      '🏕️ Da Lat 2D1N weekend camping plan',
+      '⛰️ 2-day Ta Nang - Phan Dung trek itinerary',
+      '🌲 Bidoup Nui Ba 3D2N moderate fitness trek',
+      '🌊 Mui Doi East Pole sunrise expedition',
+      '💰 Budget trek plan under 2M VND',
+    ],
+  },
+};
 
 export default function ChatPanel({
   compact = false,
@@ -43,10 +65,14 @@ export default function ChatPanel({
 
   const [promptsDismissed, setPromptsDismissed] = useState(false);
   const [promptsCollapsed, setPromptsCollapsed] = useState(false);
+  const [visionOpen, setVisionOpen] = useState(false);
 
   const list = useRef(null);
 
-  const activePrompts = plannerMode ? PLANNER_QUICK_PROMPTS : GENERAL_QUICK_PROMPTS;
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+  const langPrompts = PROMPTS[language] || PROMPTS.vi;
+  const activePrompts = plannerMode ? langPrompts.planner : langPrompts.general;
 
   useEffect(() => {
     if (initialQuestion) setInput(initialQuestion);
@@ -289,45 +315,100 @@ export default function ChatPanel({
               setPromptsDismissed(false);
               setPromptsCollapsed(false);
             }}
-            title="Nhấn để mở lại các gợi ý câu hỏi"
+            title={isEn ? "Click to reopen question suggestions" : "Nhấn để mở lại các gợi ý câu hỏi"}
           >
             <Lightbulb size={13} />
-            <span>Mở lại gợi ý câu hỏi</span>
+            <span>{isEn ? "Reopen suggested prompts" : "Mở lại gợi ý câu hỏi"}</span>
           </button>
         </div>
       )}
 
-      <form className="chat-composer" onSubmit={submit}>
-        <ModelSelector />
-        <label className="sr-only" htmlFor={compact ? 'widget-message' : 'page-message'}>
-          Câu hỏi của bạn
-        </label>
-        <input
-          id={compact ? 'widget-message' : 'page-message'}
-          maxLength={4000}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={
-            plannerMode
-              ? 'Ví dụ: Lên lịch trình cắm trại Đà Lạt 2N1Đ cho 2 người, ngân sách 3 triệu...'
-              : 'Hỏi về tour, kinh nghiệm trekking, trang bị...'
-          }
-        />
-        <button
-          className="icon-btn send-btn"
-          type="submit"
-          disabled={loading || !input.trim()}
-          aria-label="Gửi câu hỏi"
+      {visionOpen && (
+        <Modal
+          title={isEn ? 'AI Gear Vision Check' : 'AI Kiểm tra Hành trang qua Ảnh'}
+          onClose={() => setVisionOpen(false)}
         >
-          <ArrowUp size={20} />
-        </button>
+          <GearVisionCheck inModal onClose={() => setVisionOpen(false)} />
+        </Modal>
+      )}
+
+      <form className="chat-composer" onSubmit={submit}>
+        <div className="chat-composer-input-row">
+          <label className="sr-only" htmlFor={compact ? 'widget-message' : 'page-message'}>
+            {isEn ? 'Your question' : 'Câu hỏi của bạn'}
+          </label>
+          <textarea
+            id={compact ? 'widget-message' : 'page-message'}
+            className="chat-composer-textarea"
+            rows={1}
+            maxLength={4000}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!loading && input.trim()) {
+                  submit(e);
+                  e.target.style.height = 'auto';
+                }
+              }
+            }}
+            placeholder={
+              plannerMode
+                ? (isEn
+                    ? 'Ask AI to plan a 2D1N Da Lat camping trip for 2 people...'
+                    : 'Ví dụ: Lên lịch trình cắm trại Đà Lạt 2N1Đ cho 2 người, ngân sách 3 triệu...')
+                : (isEn
+                    ? 'Ask Trek & Camp AI about trails, gear, weather...'
+                    : 'Hỏi Trek & Camp AI về cung đường, kinh nghiệm trekking, trang bị...')
+            }
+          />
+        </div>
+
+        <div className="chat-composer-toolbar">
+          <div className="chat-composer-tools">
+            <button
+              type="button"
+              className={`chat-tool-btn ${visionOpen ? 'is-active' : ''}`}
+              onClick={() => setVisionOpen((v) => !v)}
+              aria-pressed={visionOpen}
+              title={isEn ? 'Inspect gear photo with AI' : 'Kiểm tra ảnh hành trang bằng AI'}
+              aria-label={isEn ? 'AI Gear Vision' : 'Kiểm tra ảnh hành trang'}
+            >
+              <Camera size={18} />
+              {!compact && (
+                <span>{isEn ? 'Gear Vision' : 'Kiểm tra ảnh'}</span>
+              )}
+            </button>
+          </div>
+
+          <div className="chat-composer-actions">
+            <ModelSelector />
+            <button
+              className="icon-btn send-btn"
+              type="submit"
+              disabled={loading || !input.trim()}
+              aria-label={isEn ? 'Send question' : 'Gửi câu hỏi'}
+            >
+              <ArrowUp size={18} />
+            </button>
+          </div>
+        </div>
       </form>
 
       {!compact && (
         <p className="chat-disclaimer">
           {plannerMode
-            ? 'Lịch trình do AI đề xuất dựa trên kinh nghiệm trekking thực tế. Bạn có thể nhấn "Lưu thành Lịch trình" để quản lý trong danh sách cá nhân.'
-            : 'Trợ lý AI hỗ trợ tư vấn dựa trên dữ liệu hệ thống. Vui lòng đối chiếu lịch khởi hành và yêu cầu thể lực trước khi tạo đơn.'}
+            ? (isEn
+                ? 'AI-suggested itinerary based on real field knowledge. Click "Save to Itinerary" to manage in your profile.'
+                : 'Lịch trình do AI đề xuất dựa trên kinh nghiệm trekking thực tế. Bạn có thể nhấn "Lưu thành Lịch trình" để quản lý trong danh sách cá nhân.')
+            : (isEn
+                ? 'AI assistant provides insights based on verified database. Please check departure dates and fitness requirements before booking.'
+                : 'Trợ lý AI hỗ trợ tư vấn dựa trên dữ liệu hệ thống. Vui lòng đối chiếu lịch khởi hành và yêu cầu thể lực trước khi tạo đơn.')}
         </p>
       )}
     </div>
