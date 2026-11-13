@@ -10,6 +10,7 @@ import {
   Scale,
   CloudSun,
   ShieldCheck,
+  Plus,
 } from 'lucide-react';
 import ChatPanel from '../../components/chat/ChatPanel';
 
@@ -89,6 +90,15 @@ export default function ChatPage() {
           </div>
 
           <div className="chat-page-header-actions">
+            <button
+              type="button"
+              className="chat-header-new-chat-btn"
+              onClick={() => window.dispatchEvent(new Event('chat:reset'))}
+              title="Bắt đầu cuộc trò chuyện mới"
+            >
+              <Plus size={15} />
+              <span>Cuộc trò chuyện mới</span>
+            </button>
             <span className="ai-label">
               <ShieldCheck size={13} style={{ display: 'inline', verticalAlign: '-1px', marginRight: '4px' }} />
               AI Assistant

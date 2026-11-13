@@ -188,6 +188,49 @@
   }
 }
 
+/* ==========================================================================
+   Compact / Widget Mode: Horizontal Scroll Snap for Weather Metrics
+   ========================================================================== */
+.compact .chat-weather-card,
+.chat-popup .chat-weather-card {
+  margin-top: 0.5rem;
+  border-radius: 0.75rem;
+}
+
+.compact .chat-weather-header,
+.chat-popup .chat-weather-header {
+  padding: 0.65rem 0.85rem;
+}
+
+.compact .chat-weather-grid,
+.chat-popup .chat-weather-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  gap: 0.5rem !important;
+  padding: 0.6rem 0.85rem !important;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.compact .chat-weather-grid::-webkit-scrollbar,
+.chat-popup .chat-weather-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.compact .chat-weather-cell,
+.chat-popup .chat-weather-cell {
+  flex: 0 0 115px !important;
+  scroll-snap-align: start !important;
+  padding: 0.5rem 0.65rem !important;
+}
+
+.compact .chat-weather-card-checklist,
+.chat-popup .chat-weather-card-checklist {
+  padding: 0.6rem 0.85rem !important;
+}
+
 .chat-weather-cell {
   background: var(--bg-surface, rgba(0, 0, 0, 0.02));
   border: 1px solid var(--border, rgba(0, 0, 0, 0.07));

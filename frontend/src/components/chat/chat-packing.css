@@ -391,3 +391,39 @@
 .chat-packing-btn-primary:hover {
   background: #059669;
 }
+
+/* Compact Widget Overrides */
+.compact .chat-packing-card,
+.chat-popup .chat-packing-card {
+  margin-top: 0.5rem;
+  border-radius: 0.75rem;
+}
+
+.compact .chat-packing-header,
+.chat-popup .chat-packing-header {
+  padding: 0.65rem 0.85rem;
+}
+
+.compact .chat-packing-nav,
+.chat-popup .chat-packing-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  scrollbar-width: none;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+}
+
+.compact .chat-packing-nav-pill,
+.chat-popup .chat-packing-nav-pill {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.compact .chat-packing-body,
+.chat-popup .chat-packing-body {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.65rem 0.85rem;
+}

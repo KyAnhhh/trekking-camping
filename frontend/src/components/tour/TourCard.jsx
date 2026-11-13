@@ -6,18 +6,41 @@ import { ArrowUpRight, Clock3, MapPin, Mountain, Sparkles } from 'lucide-react';
 import { duration, formatDifficulty, money, tourImage, landscape } from '../../utils/tour';
 import use3DTilt from '../../hooks/use3DTilt';
 import { useLanguage } from '../../context/LanguageContext';
+import { useChat } from '../../context/ChatContext';
 
 export default function TourCard({ tour, aiMatch }) {
   const { language, t } = useLanguage();
+  const { setTourContext } = useChat() || {};
   const cardRef = useRef(null);
+  const hoverTimer = useRef(null);
   use3DTilt(cardRef, { maxTilt: 6, scale: 1.02 });
 
   const [failedImage, setFailedImage] = useState(null);
   const source = tourImage(tour);
   const fallback = !tour.bannerUrl || failedImage === source;
 
+  const handleMouseEnter = () => {
+    if (!setTourContext || !tour) return;
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      setTourContext(tour, 'hover');
+    }, 500);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+  };
+
   return (
-    <article className="tour-card" ref={cardRef}>
+    <article
+      className="tour-card"
+      ref={cardRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <Link className="tour-image" to={'/tours/' + tour.slug} tabIndex={-1} aria-hidden="true">
         <img
           loading="lazy"

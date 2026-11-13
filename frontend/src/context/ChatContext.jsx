@@ -19,6 +19,30 @@ export function ChatProvider({ children }) {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
   const [retry, setRetry] = useState(null);
+  const [activeTourContext, setActiveTourContext] = useState(null);
+
+  const setTourContext = useCallback((tour, source = 'hover') => {
+    if (!tour) return;
+    setActiveTourContext((prev) => {
+      // Prioritize tour detail page context over accidental card hover
+      if (source === 'hover' && prev?.source === 'detail') {
+        return prev;
+      }
+      return {
+        id: tour.id || tour.tourId,
+        title: tour.title,
+        slug: tour.slug,
+        location: tour.location,
+        difficulty: tour.difficulty,
+        price: tour.price,
+        source,
+      };
+    });
+  }, []);
+
+  const clearTourContext = useCallback(() => {
+    setActiveTourContext(null);
+  }, []);
 
   const credentials = useRef(null);
   const busy = useRef(false);
@@ -240,6 +264,12 @@ export function ChatProvider({ children }) {
         sessionId: c.sessionId,
         sessionToken: c.sessionToken,
         settingsRevision: choice.current.revision,
+        activeTourContext: activeTourContext ? {
+          id: activeTourContext.id,
+          title: activeTourContext.title,
+          slug: activeTourContext.slug,
+          location: activeTourContext.location
+        } : null,
         signal: controller.current.signal,
         onDelta: (delta) => {
           if (version !== generation.current) return;
@@ -354,6 +384,9 @@ export function ChatProvider({ children }) {
         stop: () => controller.current?.abort(),
         draft,
         setDraft,
+        activeTourContext,
+        setTourContext,
+        clearTourContext,
       }}
     >
       {children}

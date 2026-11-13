@@ -70,7 +70,7 @@ public class ChatSessions {
         if(s.getNextTurnAt()!=null && s.getNextTurnAt().isAfter(now))
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"Vui lòng chờ vài giây trước câu hỏi tiếp theo.");
         s.setTurn(s.getTurn()+1); s.setBusyUntil(now.plusSeconds(120)); s.setNextTurnAt(null);
-        var history=new ArrayList<>(messages.findTop6BySessionIdOrderByCreatedAtDescIdDesc(id));
+        var history=new ArrayList<>(messages.findTop14BySessionIdOrderByCreatedAtDescIdDesc(id));
         Collections.reverse(history);
         return new Turn(id,s.getTurn(),user,history,model);
     }

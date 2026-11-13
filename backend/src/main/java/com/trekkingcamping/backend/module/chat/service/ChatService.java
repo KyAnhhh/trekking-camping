@@ -100,8 +100,8 @@ public class ChatService {
                 ? "Không đọc được danh mục. Không xác nhận giá, lịch, còn chỗ hoặc tour đang được bán."
                 : catalog.text());
 
-        // 3. Tải tối đa 6 tin nhắn gần nhất để tránh nhiễu ngữ cảnh cũ
-        List<ChatMessage> recentHistory = new ArrayList<>(chatMessageRepository.findTop6BySessionIdOrderByCreatedAtDescIdDesc(sessionId));
+        // 3. Tải tối đa 14 tin nhắn gần nhất để duy trì ngữ cảnh phiên hội thoại liền mạch
+        List<ChatMessage> recentHistory = new ArrayList<>(chatMessageRepository.findTop14BySessionIdOrderByCreatedAtDescIdDesc(sessionId));
         Collections.reverse(recentHistory);
 
         StringBuilder historyBuilder = new StringBuilder();
@@ -168,19 +168,22 @@ public class ChatService {
     /** Read-only tool loop. The caller supplies an allowlisted dispatcher; no write tool is exposed. */
     public String converse(String system,String prompt,List<Map<String,Object>> declarations,
             java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher) {
-        return converse(system,prompt,declarations,dispatcher,null);
+        return converse(system,prompt,null,declarations,dispatcher,null);
     }
     public String converse(String system,String prompt,List<Map<String,Object>> declarations,
             java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher,String model) {
+        return converse(system,prompt,null,declarations,dispatcher,model);
+    }
+    public String converse(String system,String prompt,List<ChatMessage> history,List<Map<String,Object>> declarations,
+            java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher,String model) {
         ChatCallBudget.CURRENT.set(new ChatCallBudget(model!=null && model.startsWith("gemma-")));
-        try { return converseWithinBudget(system,prompt,declarations,dispatcher,model); }
+        try { return converseWithinBudget(system,prompt,history,declarations,dispatcher,model); }
         finally { ChatCallBudget.CURRENT.remove(); }
     }
-    private String converseWithinBudget(String system,String prompt,List<Map<String,Object>> declarations,
+    private String converseWithinBudget(String system,String prompt,List<ChatMessage> history,List<Map<String,Object>> declarations,
             java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher,String model) {
         var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
-        List<Object> contents=new ArrayList<>();
-        contents.add(Map.of("role","user","parts",List.of(Map.of("text",prompt))));
+        List<Object> contents=buildMultiTurnContents(prompt, history);
         for(int round=0;round<3;round++) {
             ChatCallBudget.CURRENT.get().remaining();
             if(Thread.currentThread().isInterrupted())throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,"Lượt chat đã hết thời gian chờ.");
@@ -230,23 +233,29 @@ public class ChatService {
             java.util.function.BiFunction<String, Map<String, Object>, Object> dispatcher, String model,
             java.util.function.Consumer<String> tokenConsumer,
             java.util.function.Consumer<String> statusConsumer) {
+        return streamConverse(system, prompt, null, declarations, dispatcher, model, tokenConsumer, statusConsumer);
+    }
+
+    public String streamConverse(String system, String prompt, List<ChatMessage> history, List<Map<String, Object>> declarations,
+            java.util.function.BiFunction<String, Map<String, Object>, Object> dispatcher, String model,
+            java.util.function.Consumer<String> tokenConsumer,
+            java.util.function.Consumer<String> statusConsumer) {
         ChatCallBudget.CURRENT.set(new ChatCallBudget(model != null && model.startsWith("gemma-")));
         try {
-            return streamConverseWithinBudget(system, prompt, declarations, dispatcher, model, tokenConsumer, statusConsumer);
+            return streamConverseWithinBudget(system, prompt, history, declarations, dispatcher, model, tokenConsumer, statusConsumer);
         } finally {
             ChatCallBudget.CURRENT.remove();
         }
     }
 
-    private String streamConverseWithinBudget(String system, String prompt, List<Map<String, Object>> declarations,
+    private String streamConverseWithinBudget(String system, String prompt, List<ChatMessage> history, List<Map<String, Object>> declarations,
             java.util.function.BiFunction<String, Map<String, Object>, Object> dispatcher, String model,
             java.util.function.Consumer<String> tokenConsumer,
             java.util.function.Consumer<String> statusConsumer) {
         if (gemini.configurationIssue() != null)
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
-        List<Object> contents = new ArrayList<>();
-        contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", prompt))));
+        List<Object> contents = buildMultiTurnContents(prompt, history);
         StringBuilder fullAnswer = new StringBuilder();
 
         for (int round = 0; round < 3; round++) {
@@ -370,6 +379,51 @@ public class ChatService {
             return fullAnswer.toString().trim();
         }
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "AI chưa hoàn tất câu trả lời. Vui lòng thử lại.");
+    }
+
+    private List<Object> buildMultiTurnContents(String prompt, List<ChatMessage> history) {
+        List<Object> contents = new ArrayList<>();
+        if (history != null && !history.isEmpty()) {
+            for (ChatMessage msg : history) {
+                String role = "USER".equalsIgnoreCase(msg.getSender()) ? "user" : "model";
+                String text = msg.getMessage();
+                if (text == null || text.isBlank()) continue;
+                if (text.length() > 2000) text = text.substring(0, 2000);
+
+                if (!contents.isEmpty()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> prev = (Map<String, Object>) contents.get(contents.size() - 1);
+                    if (role.equals(prev.get("role"))) {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> prevParts = (List<Map<String, Object>>) prev.get("parts");
+                        List<Map<String, Object>> newParts = new ArrayList<>(prevParts);
+                        newParts.add(Map.of("text", text));
+                        contents.set(contents.size() - 1, Map.of("role", role, "parts", newParts));
+                        continue;
+                    }
+                } else if ("model".equals(role)) {
+                    continue;
+                }
+                contents.add(Map.of("role", role, "parts", List.of(Map.of("text", text))));
+            }
+        }
+
+        if (!contents.isEmpty()) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> prev = (Map<String, Object>) contents.get(contents.size() - 1);
+            if ("user".equals(prev.get("role"))) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> prevParts = (List<Map<String, Object>>) prev.get("parts");
+                List<Map<String, Object>> newParts = new ArrayList<>(prevParts);
+                newParts.add(Map.of("text", prompt));
+                contents.set(contents.size() - 1, Map.of("role", "user", "parts", newParts));
+            } else {
+                contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", prompt))));
+            }
+        } else {
+            contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", prompt))));
+        }
+        return contents;
     }
 
     public String generateMultimodalJsonReply(String prompt, String mimeType, String base64Image, String preferredModel) {

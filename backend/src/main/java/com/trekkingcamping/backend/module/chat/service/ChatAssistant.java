@@ -93,7 +93,7 @@ public class ChatAssistant {
         workers.submit(() -> {
             String failure = null;
             try {
-                Answer result = answerStream(request.getMessage(), turn, emitter);
+                Answer result = answerStream(request, turn, emitter);
                 sessions.finish(turn, request.getMessage(), result.reply(), result.sources());
                 completed.set(true);
                 emitter.send(SseEmitter.event().name("done").data(result));
@@ -123,7 +123,7 @@ public class ChatAssistant {
         long started=System.nanoTime();String failure=null;
         Future<Answer> work=null;
         try {
-            work=workers.submit(() -> answer(request.getMessage(),turn));
+            work=workers.submit(() -> answer(request,turn));
             var result=work.get(90,TimeUnit.SECONDS);
             sessions.finish(turn,request.getMessage(),result.reply(),result.sources());return result;
         } catch(RejectedExecutionException e) { failure="429";throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"Trợ lý đang xử lý nhiều yêu cầu. Vui lòng thử lại sau."); }
@@ -151,12 +151,17 @@ public class ChatAssistant {
             TourComparisonService.TourTimelineCard[] timelineCard,
             WeatherSafetyService.TourWeatherSafetyCard[] weatherCard,
             List<String> quickPills,
+            ChatRequestDto.ActiveTourContext activeTourContext,
             java.util.function.BiFunction<String,Map<String,Object>,Object> dispatcher) {}
 
-    private TurnPreparation prepareTurn(String question, ChatSessions.Turn turn) {
+    private TurnPreparation prepareTurn(ChatRequestDto request, ChatSessions.Turn turn) {
+        String question = request.getMessage();
+        ChatRequestDto.ActiveTourContext activeTour = request.getActiveTourContext();
         List<String> notices=new ArrayList<>();List<Source> sources=new ArrayList<>();
         String query=question;
-        if(question.length()<300 && question.toLowerCase(Locale.ROOT).matches("(?s).*(tour đó|chuyến đó|còn nó|vậy còn|ở đó|bao nhiêu tiền|ngày nào).*")) {
+        if (activeTour != null && activeTour.getTitle() != null && !activeTour.getTitle().isBlank()) {
+            query = activeTour.getTitle() + "\n" + question;
+        } else if(question.length()<300 && question.toLowerCase(Locale.ROOT).matches("(?s).*(tour đó|chuyến đó|còn nó|vậy còn|ở đó|bao nhiêu tiền|ngày nào).*")) {
             for(int i=turn.history().size()-1;i>=0;i--)if("USER".equals(turn.history().get(i).getSender())) {
                 query=clip(turn.history().get(i).getMessage(),800)+"\n"+question;break;
             }
@@ -178,8 +183,18 @@ public class ChatAssistant {
         final List<String> quickPills=new ArrayList<>();
         StringBuilder history=new StringBuilder();
         for(var m:turn.history())history.append(m.getSender()).append(": ").append(clip(m.getMessage(),1000)).append('\n');
+
+        String activeTourNote = "";
+        if (activeTour != null && activeTour.getTitle() != null && !activeTour.getTitle().isBlank()) {
+            activeTourNote = "\n[NGỮ CẢNH TOUR ĐANG XEM]: Người dùng đang trực tiếp xem hoặc rê chuột vào tour: \""
+                    + activeTour.getTitle() + "\" (Slug: \"" + activeTour.getSlug() + "\", ID: " + activeTour.getId() + ").\n"
+                    + "Nếu câu hỏi có đại từ chỉ định như 'tour này', 'chuyến này', 'đặt chỗ', 'thời tiết ở đây',... BẠN PHẢI HIỂU LÀ ĐANG HỎI VỀ TOUR \""
+                    + activeTour.getTitle() + "\". Trong câu trả lời, hãy đính kèm slug của tour dưới dạng /tours/" + activeTour.getSlug() + " hoặc [tour:" + activeTour.getSlug() + "].\n";
+        }
+
         String prompt="NGÀY VIỆT NAM: "+LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))+"\nNGUỒN:\n"+context
-                +"\nMÃ NGUỒN RAG ĐƯỢC PHÉP TRONG LƯỢT NÀY: "+encode(sources.stream().map(Source::id).toList())
+                +activeTourNote
+                +"\nMÃ NGUỒN RAG ĐƯỢC PHÉP TRONG LƯỢN NÀY: "+encode(sources.stream().map(Source::id).toList())
                 +"\nNếu danh sách mã nguồn rỗng, không được viết bất kỳ ký hiệu [Sx] nào. Kết quả DB/tool không có mã nguồn RAG."
                 +"\nLỊCH SỬ (có thể không còn đúng):\n"+history+"\nDANH SÁCH TOUR CÔNG KHAI (có hình ảnh và link):\n"+encode(modelOptions(options))
                 +"\nTRẠNG THÁI: "+encode(notices)+"\nCÂU HỎI MỚI NHẤT:\n"+question;
@@ -304,14 +319,15 @@ public class ChatAssistant {
             } catch(IllegalArgumentException e) { return Map.of("error","Bộ lọc hoặc tham số chưa hợp lệ. Hỏi khách làm rõ, không tự nới điều kiện bắt buộc."); }
             catch(Exception e) { notices.add("Tra cứu lịch tour chưa thành công; hãy thử lại trước khi đặt.");options.clear();proposal[0]=null;return Map.of("error","Không đọc được dữ liệu hiện tại. Không xác nhận giá/chỗ."); }
         };
-        return new TurnPreparation(prompt, options, proposal, searched, sources, notices, packingCard, comparisonCard, timelineCard, weatherCard, quickPills, dispatcher);
+        return new TurnPreparation(prompt, options, proposal, searched, sources, notices, packingCard, comparisonCard, timelineCard, weatherCard, quickPills, activeTour, dispatcher);
     }
 
-    private Answer answer(String question,ChatSessions.Turn turn) {
-        var prep = prepareTurn(question, turn);
+    private Answer answer(ChatRequestDto request, ChatSessions.Turn turn) {
+        String question = request.getMessage();
+        var prep = prepareTurn(request, turn);
         String reply;
         try {
-            reply=turn.modelId()==null?gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher()):gemini.converse(SYSTEM,prep.prompt(),tools(),prep.dispatcher(),turn.modelId());
+            reply = gemini.converse(SYSTEM, prep.prompt(), turn.history(), tools(), prep.dispatcher(), turn.modelId());
         } catch(Exception ex) {
             log.warn("Gemini converse failed or timed out ({}: {}), activating intelligent Rule-Based Fallback",
                     ex.getClass().getSimpleName(), ex.getMessage());
@@ -320,11 +336,12 @@ public class ChatAssistant {
         return finalizeAnswer(question, reply, turn, prep);
     }
 
-    private Answer answerStream(String question, ChatSessions.Turn turn, SseEmitter emitter) {
-        var prep = prepareTurn(question, turn);
+    private Answer answerStream(ChatRequestDto request, ChatSessions.Turn turn, SseEmitter emitter) {
+        String question = request.getMessage();
+        var prep = prepareTurn(request, turn);
         String reply;
         try {
-            reply = gemini.streamConverse(SYSTEM, prep.prompt(), tools(), prep.dispatcher(), turn.modelId(),
+            reply = gemini.streamConverse(SYSTEM, prep.prompt(), turn.history(), tools(), prep.dispatcher(), turn.modelId(),
                     token -> {
                         try {
                             emitter.send(SseEmitter.event().name("delta").data(Map.of("delta", token)));
@@ -431,10 +448,14 @@ public class ChatAssistant {
 
         List<String> finalPills = new ArrayList<>(prep.quickPills());
         if (finalPills.isEmpty() && !matchedTours.isEmpty()) {
-            String firstTitle = matchedTours.get(0).title();
-            finalPills.add("Thời tiết & an toàn " + firstTitle);
-            finalPills.add("So sánh " + firstTitle + " với cung khác");
-            finalPills.add("Lịch trình chi tiết các ngày");
+            finalPills.add("🌤️ Thời tiết & an toàn");
+            finalPills.add("⚖️ So sánh với cung khác");
+            finalPills.add("📅 Lịch trình chi tiết");
+            finalPills.add("🎒 Cần chuẩn bị gì?");
+        }
+
+        if (reply != null) {
+            reply = reply.replaceAll("\\[tour:[^\\]]+\\]", "").replaceAll("[ \\t]{2,}", " ").trim();
         }
 
         return new Answer(turn.sessionId(),reply,evidence,matchedTours,finalProposal,List.copyOf(prep.notices()),turn.modelId(),finalPackingCard,finalComparisonCard,finalTimelineCard,finalWeatherCard,finalPills);
@@ -495,24 +516,101 @@ public class ChatAssistant {
         return 1;
     }
 
+    public static String stripAccents(String s) {
+        if (s == null || s.isBlank()) return "";
+        String normalized = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        return pattern.matcher(normalized).replaceAll("")
+                .toLowerCase(Locale.ROOT)
+                .replace('đ', 'd')
+                .replace('Đ', 'd')
+                .replaceAll("[^a-z0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
     private List<ChatCatalog.Option> selectRelevantTours(String reply, TurnPreparation prep) {
-        if(prep.searched()[0] && !prep.options().isEmpty()) {
+        if (prep.searched()[0] && !prep.options().isEmpty()) {
             return List.copyOf(prep.options());
         }
-        if(prep.options().isEmpty()) return List.of();
+        if (prep.options().isEmpty()) return List.of();
 
-        String combined = (reply == null ? "" : reply).toLowerCase(Locale.ROOT);
         List<ChatCatalog.Option> matched = new ArrayList<>();
-        for(var opt : prep.options()) {
-            String title = opt.title() == null ? "" : opt.title().toLowerCase(Locale.ROOT);
-            String loc = opt.location() == null ? "" : opt.location().toLowerCase(Locale.ROOT);
-            String slug = opt.slug() == null ? "" : opt.slug().toLowerCase(Locale.ROOT);
-            if((!title.isEmpty() && combined.contains(title))
-                    || (!loc.isEmpty() && combined.contains(loc))
-                    || (!slug.isEmpty() && combined.contains(slug))) {
-                matched.add(opt);
+        Set<Long> addedIds = new HashSet<>();
+
+        // 1. Ưu tiên khớp theo activeTourContext từ Frontend (người dùng đang xem/hover tour)
+        var activeTour = prep.activeTourContext();
+        if (activeTour != null) {
+            for (var opt : prep.options()) {
+                boolean matchId = activeTour.getId() != null && activeTour.getId().equals(opt.tourId());
+                boolean matchSlug = activeTour.getSlug() != null && activeTour.getSlug().equalsIgnoreCase(opt.slug());
+                boolean matchTitle = activeTour.getTitle() != null && stripAccents(opt.title()).contains(stripAccents(activeTour.getTitle()));
+                if (matchId || matchSlug || matchTitle) {
+                    if (addedIds.add(opt.tourId())) {
+                        matched.add(opt);
+                    }
+                    break;
+                }
             }
         }
+
+        // 2. Trích xuất trực tiếp slug hoặc ID tour do Gemini chỉ định trong câu trả lời (/tours/slug hoặc [tour:slug])
+        if (reply != null && !reply.isBlank()) {
+            var slugMatcher = java.util.regex.Pattern.compile("(?:/tours/|\\[tour:)([a-z0-9-]+)").matcher(reply);
+            while (slugMatcher.find()) {
+                String mentionedSlug = slugMatcher.group(1).toLowerCase(Locale.ROOT);
+                for (var opt : prep.options()) {
+                    if (opt.slug() != null && opt.slug().equalsIgnoreCase(mentionedSlug)) {
+                        if (addedIds.add(opt.tourId())) {
+                            matched.add(opt);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Khớp chuỗi chuẩn hóa tiếng Việt không dấu (accent-insensitive & landmark keyword matching)
+        String rawReply = reply == null ? "" : reply.toLowerCase(Locale.ROOT);
+        String strippedReply = stripAccents(reply);
+
+        for (var opt : prep.options()) {
+            if (addedIds.contains(opt.tourId())) continue;
+
+            String optTitle = opt.title() == null ? "" : opt.title().toLowerCase(Locale.ROOT);
+            String optSlug = opt.slug() == null ? "" : opt.slug().toLowerCase(Locale.ROOT);
+            String optLoc = opt.location() == null ? "" : opt.location().toLowerCase(Locale.ROOT);
+
+            String strippedTitle = stripAccents(optTitle);
+            String strippedSlug = optSlug.replace("-", " ");
+            String strippedLoc = stripAccents(optLoc);
+
+            boolean matchedRaw = (!optTitle.isEmpty() && rawReply.contains(optTitle))
+                    || (!optSlug.isEmpty() && rawReply.contains(optSlug))
+                    || (!optLoc.isEmpty() && rawReply.contains(optLoc));
+
+            boolean matchedStripped = (!strippedTitle.isEmpty() && strippedReply.contains(strippedTitle))
+                    || (!strippedSlug.isEmpty() && strippedReply.contains(strippedSlug))
+                    || (!strippedLoc.isEmpty() && strippedReply.contains(strippedLoc));
+
+            // Khớp các từ khóa địa danh cốt lõi (landmark keywords)
+            boolean matchedKeyword = false;
+            if (!strippedTitle.isEmpty()) {
+                String[] keyLandmarks = {"fansipan", "ta nang", "bidoup", "bach moc", "ta xua", "cuc dong", "chua chan", "ba den", "cat tien", "lao than", "putaleng", "ky co", "tuyen lam", "co to"};
+                for (String landmark : keyLandmarks) {
+                    if (strippedTitle.contains(landmark) && strippedReply.contains(landmark)) {
+                        matchedKeyword = true;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedRaw || matchedStripped || matchedKeyword) {
+                if (addedIds.add(opt.tourId())) {
+                    matched.add(opt);
+                }
+            }
+        }
+
         return matched.stream().limit(4).toList();
     }
 
@@ -559,10 +657,13 @@ public class ChatAssistant {
         }
         List<String> fallbackPills = new ArrayList<>(prep.quickPills());
         if (fallbackPills.isEmpty() && !matchedTours.isEmpty()) {
-            String firstTitle = matchedTours.get(0).title();
-            fallbackPills.add("Thời tiết & an toàn " + firstTitle);
-            fallbackPills.add("So sánh tour này với các cung khác");
-            fallbackPills.add("Lịch trình chi tiết các ngày");
+            fallbackPills.add("🌤️ Thời tiết & an toàn");
+            fallbackPills.add("⚖️ So sánh với cung khác");
+            fallbackPills.add("📅 Lịch trình chi tiết");
+            fallbackPills.add("🎒 Cần chuẩn bị gì?");
+        }
+        if (generatedReply != null) {
+            generatedReply = generatedReply.replaceAll("\\[tour:[^\\]]+\\]", "").replaceAll("[ \\t]{2,}", " ").trim();
         }
         return new Answer(turn.sessionId(), generatedReply, List.of(), matchedTours, fallbackProposal, List.copyOf(prep.notices()), "smart-fallback", fallbackPackingCard, fallbackComparisonCard, fallbackTimelineCard, fallbackWeatherCard, fallbackPills);
     }
@@ -618,35 +719,65 @@ public class ChatAssistant {
         }
         List<String> fallbackPills = new ArrayList<>(prep.quickPills());
         if (fallbackPills.isEmpty() && !matchedTours.isEmpty()) {
-            String firstTitle = matchedTours.get(0).title();
-            fallbackPills.add("Thời tiết & an toàn " + firstTitle);
-            fallbackPills.add("So sánh tour này với các cung khác");
-            fallbackPills.add("Lịch trình chi tiết các ngày");
+            fallbackPills.add("🌤️ Thời tiết & an toàn");
+            fallbackPills.add("⚖️ So sánh với cung khác");
+            fallbackPills.add("📅 Lịch trình chi tiết");
+            fallbackPills.add("🎒 Cần chuẩn bị gì?");
+        }
+        if (generatedReply != null) {
+            generatedReply = generatedReply.replaceAll("\\[tour:[^\\]]+\\]", "").replaceAll("[ \\t]{2,}", " ").trim();
         }
         return new Answer(turn.sessionId(), generatedReply, List.of(), matchedTours, fallbackProposal, List.copyOf(prep.notices()), "smart-fallback", fallbackPackingCard, fallbackComparisonCard, fallbackTimelineCard, fallbackWeatherCardStream, fallbackPills);
     }
 
     private List<ChatCatalog.Option> selectFallbackTours(String question, TurnPreparation prep) {
         if (prep.options().isEmpty()) return List.of();
-        String q = question.toLowerCase(Locale.ROOT);
         List<ChatCatalog.Option> matched = new ArrayList<>();
+        Set<Long> addedIds = new HashSet<>();
+
+        // 1. Prioritize activeTourContext
+        var activeTour = prep.activeTourContext();
+        if (activeTour != null) {
+            for (var opt : prep.options()) {
+                boolean matchId = activeTour.getId() != null && activeTour.getId().equals(opt.tourId());
+                boolean matchSlug = activeTour.getSlug() != null && activeTour.getSlug().equalsIgnoreCase(opt.slug());
+                boolean matchTitle = activeTour.getTitle() != null && stripAccents(opt.title()).contains(stripAccents(activeTour.getTitle()));
+                if (matchId || matchSlug || matchTitle) {
+                    if (addedIds.add(opt.tourId())) {
+                        matched.add(opt);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 2. Unaccented matching on question
+        String qRaw = question.toLowerCase(Locale.ROOT);
+        String qStripped = stripAccents(question);
         for (var opt : prep.options()) {
+            if (addedIds.contains(opt.tourId())) continue;
             String title = opt.title() == null ? "" : opt.title().toLowerCase(Locale.ROOT);
             String loc = opt.location() == null ? "" : opt.location().toLowerCase(Locale.ROOT);
-            if ((!title.isEmpty() && q.contains(title)) || (!loc.isEmpty() && q.contains(loc))) {
-                matched.add(opt);
+            String strippedTitle = stripAccents(title);
+            String strippedLoc = stripAccents(loc);
+
+            if ((!title.isEmpty() && (qRaw.contains(title) || qStripped.contains(strippedTitle)))
+                    || (!loc.isEmpty() && (qRaw.contains(loc) || qStripped.contains(strippedLoc)))) {
+                if (addedIds.add(opt.tourId())) {
+                    matched.add(opt);
+                }
             }
         }
         if (matched.isEmpty()) {
-            if (q.contains("dễ") || q.contains("người mới") || q.contains("mới")) {
+            if (qRaw.contains("dễ") || qRaw.contains("người mới") || qRaw.contains("mới")) {
                 matched = prep.options().stream().filter(o -> o.difficulty() <= 1).limit(3).toList();
-            } else if (q.contains("khó") || q.contains("mạo hiểm")) {
+            } else if (qRaw.contains("khó") || qRaw.contains("mạo hiểm")) {
                 matched = prep.options().stream().filter(o -> o.difficulty() >= 3).limit(3).toList();
             } else {
                 matched = prep.options().stream().limit(3).toList();
             }
         }
-        return matched.isEmpty() ? prep.options().stream().limit(3).toList() : matched;
+        return matched.isEmpty() ? prep.options().stream().limit(3).toList() : matched.stream().limit(4).toList();
     }
 
     private String buildRuleBasedFallbackReply(String question, TurnPreparation prep) {

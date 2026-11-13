@@ -27,6 +27,31 @@
   gap: 16px;
 }
 
+/* Compact Widget Mode: Horizontal Scroll Snap for Tours */
+.compact .chat-tours-grid,
+.chat-popup .chat-tours-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  gap: 12px !important;
+  padding-bottom: 8px !important;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.compact .chat-tour-card,
+.chat-popup .chat-tour-card {
+  flex: 0 0 88% !important;
+  min-width: 260px !important;
+  scroll-snap-align: start !important;
+}
+
+.compact .chat-tour-img-wrap,
+.chat-popup .chat-tour-img-wrap {
+  max-height: 140px !important;
+}
+
 /* 2. Visual Tour Card */
 .chat-tour-card {
   border: 1px solid #d1ded8;

@@ -1,8 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import FavoriteButton from '../../components/tour/FavoriteButton';
 import CompareButton from '../../components/tour/CompareButton';
 import { mediaUrl } from "../../utils/tour";
 import { Link, useParams } from "react-router-dom";
+import { useChat } from "../../context/ChatContext";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -60,6 +61,15 @@ export default function TourDetail() {
     ttl: 300000,
     persist: true,
   });
+
+  const { setTourContext } = useChat() || {};
+
+  useEffect(() => {
+    if (data?.tour && setTourContext) {
+      setTourContext(data.tour, 'detail');
+    }
+  }, [data?.tour, setTourContext]);
+
   if (loading) return <LoadingSpinner label="Đang mở hành trình..." />;
   if (error || !data)
     return (

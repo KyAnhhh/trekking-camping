@@ -37,7 +37,12 @@ function ChatImage({ src, alt }) {
   );
 }
 
-export default function ChatMessage({ message, previousMessage }) {
+export function cleanTourMarkup(text) {
+  if (!text) return '';
+  return text.replace(/\[tour:[^\]]+\]/g, '').replace(/[ \t]{2,}/g, ' ').trim();
+}
+
+export default function ChatMessage({ message, previousMessage, onPromptClick }) {
   const panelId = useId();
   const [selected, setSelected] = useState(null);
   const sources = message.sources || [];
@@ -115,7 +120,7 @@ export default function ChatMessage({ message, previousMessage }) {
                     remarkPlugins={[remarkGfm, citations]}
                     components={{ a: sourceLink, img: ChatImage }}
                   >
-                    {message.text}
+                    {cleanTourMarkup(message.text)}
                   </ReactMarkdown>
                 )}
                 {message.streaming && (
@@ -173,6 +178,22 @@ export default function ChatMessage({ message, previousMessage }) {
                   />
                 );
               })}
+            </div>
+          </div>
+        )}
+        {!!message.quickPills?.length && (
+          <div className="chat-inline-quick-pills">
+            <div className="chat-inline-pills-scroll">
+              {message.quickPills.map((pill) => (
+                <button
+                  key={pill}
+                  type="button"
+                  className="chat-prompt-pill"
+                  onClick={() => onPromptClick && onPromptClick(pill)}
+                >
+                  {pill}
+                </button>
+              ))}
             </div>
           </div>
         )}

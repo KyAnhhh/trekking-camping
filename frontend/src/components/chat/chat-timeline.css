@@ -380,3 +380,22 @@
   color: #ffffff;
   transform: translateY(-1px);
 }
+
+/* Compact Widget Overrides */
+.compact .chat-timeline-card,
+.chat-popup .chat-timeline-card {
+  margin-top: 0.5rem;
+  border-radius: 0.75rem;
+}
+
+.compact .chat-timeline-header,
+.chat-popup .chat-timeline-header {
+  padding: 0.65rem 0.85rem;
+}
+
+.compact .chat-timeline-body,
+.chat-popup .chat-timeline-body {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.75rem 0.85rem;
+}

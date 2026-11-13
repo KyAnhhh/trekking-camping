@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, X, Maximize2 } from 'lucide-react';
+import { Compass, X, Maximize2, Plus } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -49,6 +49,14 @@ export default function ChatWidget() {
               {popupTitle}
             </span>
             <div>
+              <button
+                className="icon-btn"
+                onClick={() => window.dispatchEvent(new Event('chat:reset'))}
+                aria-label={language === 'en' ? 'New chat' : 'Cuộc trò chuyện mới'}
+                title={language === 'en' ? 'New chat' : 'Cuộc trò chuyện mới'}
+              >
+                <Plus size={17} />
+              </button>
               <Link
                 className="icon-btn"
                 to="/chat"

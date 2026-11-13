@@ -10,9 +10,9 @@ export const chatService = {
   select: (id, data) => axiosClient.patch(`/api/chat/sessions/${encodeURIComponent(id)}/settings`, data),
   createSession: () => axiosClient.post("/api/chat/sessions"),
   history: (credentials) => axiosClient.post("/api/chat/history", credentials),
-  sendMessage: (message, sessionId, sessionToken, settingsRevision, signal) =>
-    axiosClient.post("/api/chat", { message, sessionId, sessionToken, settingsRevision }, { timeout: 100000, signal }),
-  streamMessage: async ({ message, sessionId, sessionToken, settingsRevision, onDelta, onStatus, onDone, signal }) => {
+  sendMessage: (message, sessionId, sessionToken, settingsRevision, activeTourContext, signal) =>
+    axiosClient.post("/api/chat", { message, sessionId, sessionToken, settingsRevision, activeTourContext }, { timeout: 100000, signal }),
+  streamMessage: async ({ message, sessionId, sessionToken, settingsRevision, activeTourContext, onDelta, onStatus, onDone, signal }) => {
     const token = localStorage.getItem('token');
     const headers = { 'Content-Type': 'application/json' };
     if (token && token !== 'undefined' && token !== 'null') {
@@ -26,7 +26,7 @@ export const chatService = {
     const res = await fetch(`${BASE_URL}/api/chat/stream`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message, sessionId, sessionToken, settingsRevision }),
+      body: JSON.stringify({ message, sessionId, sessionToken, settingsRevision, activeTourContext }),
       signal
     });
 

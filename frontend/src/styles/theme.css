@@ -468,3 +468,71 @@ body {
   letter-spacing: 0.05em;
   font-weight: 700;
 }
+
+/* ==========================================================================
+   Destinations Regional Cards Theme Sync
+   ========================================================================== */
+.regional-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--line, #e0e7dd);
+  color: var(--text-primary, #17291f);
+}
+
+[data-theme="dark"] .regional-card {
+  background: var(--bg-card, #14241b) !important;
+  border-color: var(--line, #22372c) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .regional-card h3 {
+  color: #f2f8f4 !important;
+}
+
+[data-theme="dark"] .regional-tag {
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .regional-desc {
+  color: #c9dbd0 !important;
+}
+
+[data-theme="dark"] .regional-badge {
+  background: #193827 !important;
+  color: #86efac !important;
+  border: 1px solid #29593e !important;
+}
+
+[data-theme="dark"] .regional-season,
+[data-theme="dark"] .regional-season-box {
+  background: #182b20 !important;
+  border: 1px solid #294234 !important;
+  color: #d3e4d9 !important;
+}
+
+[data-theme="dark"] .regional-season svg,
+[data-theme="dark"] .regional-season-box svg {
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .regional-season strong,
+[data-theme="dark"] .regional-season-box strong {
+  color: #f0f7f3 !important;
+}
+
+[data-theme="dark"] .regional-spots {
+  border-top-color: #243a2d !important;
+}
+
+[data-theme="dark"] .spots-title,
+[data-theme="dark"] .regional-spots small {
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .regional-spots li {
+  color: #dfece4 !important;
+}
+
+[data-theme="dark"] .regional-spots li svg {
+  color: #86efac !important;
+}
+
