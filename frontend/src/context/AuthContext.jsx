@@ -38,7 +38,8 @@ export const AuthProvider = ({ children }) => {
     const onStorage = (event) => {
       if (event.key === "token" || event.key === null) {
         setUser(null);
-        window.dispatchEvent(new Event("auth:changed"));
+        window.dispatchEvent(new CustomEvent("auth:changed", { detail: { action: "logout" } }));
+        window.dispatchEvent(new Event("auth:logout"));
       }
     };
     window.addEventListener("storage", onStorage);
@@ -64,7 +65,8 @@ export const AuthProvider = ({ children }) => {
     if (authData.authProvider) localStorage.setItem("authProvider", authData.authProvider);
     setUser(authData);
     setLogoutError("");
-    window.dispatchEvent(new Event("auth:changed"));
+    window.dispatchEvent(new CustomEvent("auth:changed", { detail: { action: "login", user: authData } }));
+    window.dispatchEvent(new CustomEvent("auth:login", { detail: authData }));
   };
 
   const updateProfile = (profile) => {
@@ -78,7 +80,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem(key),
     );
     setUser(null);
-    window.dispatchEvent(new Event("auth:changed"));
+    window.dispatchEvent(new CustomEvent("auth:changed", { detail: { action: "logout" } }));
+    window.dispatchEvent(new Event("auth:logout"));
   };
 
   const logout = async () => {

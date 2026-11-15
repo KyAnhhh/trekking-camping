@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   ArrowUpRight,
   Calendar,
@@ -23,6 +23,7 @@ import {
 
 export default function ChatBookingCard({ tour, suggestedPeople = 1 }) {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
   const [people, setPeople] = useState(suggestedPeople);
   const [quote, setQuote] = useState(null);
   const [contact, setContact] = useState({});
@@ -40,6 +41,24 @@ export default function ChatBookingCard({ tour, suggestedPeople = 1 }) {
       setPeople(Number(suggestedPeople));
     }
   }, [suggestedPeople, quote]);
+
+  // Seamless Post-Login Booking Intent Resume
+  useEffect(() => {
+    if (!user || quote || inFlight.current) return;
+    try {
+      const savedRaw = sessionStorage.getItem('pending_booking_intent');
+      if (!savedRaw) return;
+      const saved = JSON.parse(savedRaw);
+      const isMatch =
+        saved.scheduleId === tour.scheduleId ||
+        (saved.tourId && (saved.tourId === tour.id || saved.tourId === tour.tourId));
+      if (isMatch && saved.people) {
+        setPeople(Number(saved.people));
+        sessionStorage.removeItem('pending_booking_intent');
+        prepare(false, Number(saved.people));
+      }
+    } catch (e) {}
+  }, [user, tour.scheduleId, tour.id, tour.tourId]);
 
   const imageSrc = tourImage(tour);
 
@@ -208,7 +227,33 @@ export default function ChatBookingCard({ tour, suggestedPeople = 1 }) {
               Chi tiết <ArrowUpRight size={14} />
             </Link>
             {!user ? (
-              <Link className="btn btn-small btn-lime" to="/login">
+              <Link
+                className="btn btn-small btn-lime"
+                to="/login"
+                state={{
+                  from: location.pathname + location.search,
+                  pendingBooking: {
+                    scheduleId: tour.scheduleId,
+                    tourId: tour.id || tour.tourId,
+                    tourTitle: tour.title,
+                    people: Number(people),
+                  },
+                }}
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem(
+                      'pending_booking_intent',
+                      JSON.stringify({
+                        scheduleId: tour.scheduleId,
+                        tourId: tour.id || tour.tourId,
+                        tourTitle: tour.title,
+                        people: Number(people),
+                        timestamp: Date.now(),
+                      })
+                    );
+                  } catch (e) {}
+                }}
+              >
                 Đăng nhập đặt tour
               </Link>
             ) : booking ? (

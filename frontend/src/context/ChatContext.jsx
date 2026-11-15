@@ -10,16 +10,50 @@ export const DEFAULT_MODELS = [
 
 const welcome = [{ sender: 'ai', text: 'Xin chào! Tôi có thể tư vấn tour, lịch trình và trang bị trekking cho bạn.' }];
 const key = 'trek-chat-session';
+const messagesCacheKey = 'trek-chat-messages-cache';
+const tourContextKey = 'trek-chat-tour-context';
 
 export function ChatProvider({ children }) {
-  const [messages, setMessages] = useState(welcome);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(messagesCacheKey) || 'null');
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch (e) {}
+    return welcome;
+  });
   const [loading, setLoading] = useState(false);
   const [models, setModels] = useState(DEFAULT_MODELS);
   const [selection, setSelection] = useState({ modelId: 'gemini-3.5-flash-lite', revision: 0 });
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
   const [retry, setRetry] = useState(null);
-  const [activeTourContext, setActiveTourContext] = useState(null);
+  const [activeTourContext, setActiveTourContext] = useState(() => {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(tourContextKey) || 'null');
+      if (cached && cached.title) return cached;
+    } catch (e) {}
+    return null;
+  });
+
+  useEffect(() => {
+    try {
+      if (messages && messages.length > 1) {
+        sessionStorage.setItem(messagesCacheKey, JSON.stringify(messages));
+      } else if (messages && messages.length === 1 && messages[0].text === welcome[0].text) {
+        sessionStorage.removeItem(messagesCacheKey);
+      }
+    } catch (e) {}
+  }, [messages]);
+
+  useEffect(() => {
+    try {
+      if (activeTourContext) {
+        sessionStorage.setItem(tourContextKey, JSON.stringify(activeTourContext));
+      } else {
+        sessionStorage.removeItem(tourContextKey);
+      }
+    } catch (e) {}
+  }, [activeTourContext]);
 
   const setTourContext = useCallback((tour, source = 'hover') => {
     if (!tour) return;
@@ -97,8 +131,11 @@ export function ChatProvider({ children }) {
       setError('');
       setDraft('');
       setRetry(null);
+      clearTourContext();
       applySelection({ modelId: 'gemini-3.5-flash-lite', revision: 0 });
       sessionStorage.removeItem(key);
+      sessionStorage.removeItem(messagesCacheKey);
+      sessionStorage.removeItem(tourContextKey);
     };
 
     const restore = async () => {
@@ -116,20 +153,27 @@ export function ChatProvider({ children }) {
         credentials.current = stored;
         const serverModel = state.data.data?.modelId || 'gemini-3.5-flash-lite';
         applySelection({ ...state.data.data, modelId: serverModel });
-        setMessages(
-          history.data.data.length
-            ? history.data.data.map((m) => ({
-                sender: m.sender === 'USER' ? 'user' : 'ai',
-                text: m.message,
-                modelId: m.modelId,
-                sources: m.sources,
-                historical: true,
-              }))
-            : welcome
-        );
-      } catch {
-        if (!disposed && version === generation.current) {
+
+        // Prefer keeping full-featured UI cards from local cache if present
+        const cached = JSON.parse(sessionStorage.getItem(messagesCacheKey) || 'null');
+        if (Array.isArray(cached) && cached.length > 0) {
+          setMessages(cached);
+        } else if (history.data.data.length) {
+          setMessages(
+            history.data.data.map((m) => ({
+              sender: m.sender === 'USER' ? 'user' : 'ai',
+              text: m.message,
+              modelId: m.modelId,
+              sources: m.sources,
+              historical: true,
+            }))
+          );
+        }
+      } catch (err) {
+        if (err.response?.status === 404 && !disposed && version === generation.current) {
           sessionStorage.removeItem(key);
+          sessionStorage.removeItem(messagesCacheKey);
+          sessionStorage.removeItem(tourContextKey);
           credentials.current = null;
         }
       } finally {
@@ -142,17 +186,30 @@ export function ChatProvider({ children }) {
 
     restore();
 
-    ['auth:changed', 'auth:expired', 'chat:reset'].forEach((e) =>
-      window.addEventListener(e, reset)
-    );
+    const handleAuthChanged = (e) => {
+      // Guest-to-User Persistence: When user logs in, DO NOT wipe conversation or credentials!
+      // Instead, trigger restore() to let Backend perform session adoption (claimSession).
+      if (e?.detail?.action === 'login') {
+        restore();
+        return;
+      }
+      // On explicit logout or storage clear, wipe conversation for privacy/security
+      reset();
+    };
+
+    window.addEventListener('auth:changed', handleAuthChanged);
+    window.addEventListener('auth:logout', reset);
+    window.addEventListener('auth:expired', reset);
+    window.addEventListener('chat:reset', reset);
 
     return () => {
       disposed = true;
       generation.current++;
       controller.current?.abort();
-      ['auth:changed', 'auth:expired', 'chat:reset'].forEach((e) =>
-        window.removeEventListener(e, reset)
-      );
+      window.removeEventListener('auth:changed', handleAuthChanged);
+      window.removeEventListener('auth:logout', reset);
+      window.removeEventListener('auth:expired', reset);
+      window.removeEventListener('chat:reset', reset);
     };
   }, [fetchModels]);
 

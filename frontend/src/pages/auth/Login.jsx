@@ -41,10 +41,12 @@ export default function Login() {
         avatarUrl: user.avatarUrl,
         authProvider: user.authProvider || "LOCAL",
       });
-      navigate(
-        location.state?.from || (role === "ROLE_ADMIN" ? "/admin" : role === "ROLE_GUIDE" ? "/guide-workspace" : "/"),
-        { replace: true }
-      );
+      const destination =
+        location.state?.from || (role === "ROLE_ADMIN" ? "/admin" : role === "ROLE_GUIDE" ? "/guide-workspace" : "/");
+      navigate(destination, {
+        replace: true,
+        state: location.state?.pendingBooking ? { pendingBooking: location.state.pendingBooking } : undefined,
+      });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

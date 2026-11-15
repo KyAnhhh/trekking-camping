@@ -103,8 +103,22 @@ public class ChatSessions {
     private ChatSession authorized(String id,String token,User user) {
         if(id==null || id.length()!=36 || token==null || token.length()>100) throw missing();
         var s=sessions.locked(id).orElseThrow(ChatSessions::missing);
-        if(!Objects.equals(s.getUserId(),user==null?null:user.getId()) || !s.getExpiresAt().isAfter(Instant.now())
-                || !MessageDigest.isEqual(s.getSecretHash().getBytes(StandardCharsets.UTF_8),hash(token).getBytes(StandardCharsets.UTF_8))) throw missing();
+        if(!s.getExpiresAt().isAfter(Instant.now())
+                || !MessageDigest.isEqual(s.getSecretHash().getBytes(StandardCharsets.UTF_8),hash(token).getBytes(StandardCharsets.UTF_8))) {
+            throw missing();
+        }
+
+        // Guest-to-User Session Adoption / Claiming:
+        // If the session was created by an anonymous guest (s.getUserId() == null) and is now
+        // accessed with a verified sessionToken by an authenticated user, adopt the session.
+        if (s.getUserId() == null && user != null) {
+            s.setUserId(user.getId());
+            sessions.save(s);
+            messages.claimSessionMessages(id, user);
+        } else if (!Objects.equals(s.getUserId(), user == null ? null : user.getId())) {
+            throw missing();
+        }
+
         return s;
     }
     private User owner(String email) {
