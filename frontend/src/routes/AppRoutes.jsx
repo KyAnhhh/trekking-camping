@@ -15,6 +15,8 @@ const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
 const GuideInvitation = lazy(() => import("../pages/auth/GuideInvitation"));
 const ChatPage = lazy(() => import("../pages/client/ChatPage"));
+const GearVisionPage = lazy(() => import("../pages/client/GearVisionPage"));
+const CertificateVerifyPage = lazy(() => import("../pages/client/CertificateVerifyPage"));
 const Handbook = lazy(() => import("../pages/client/Handbook"));
 const About = lazy(() => import("../pages/client/About"));
 const Destinations = lazy(() => import("../pages/client/Destinations"));
@@ -91,6 +93,11 @@ export default function AppRoutes() {
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="chat" element={<ChatPage />} />
+          <Route path="gear-check" element={<GearVisionPage />} />
+          <Route path="gear-vision" element={<Navigate to="/gear-check" replace />} />
+          <Route path="certificate/verify/:code" element={<CertificateVerifyPage />} />
+          <Route path="certificates/verify/:code" element={<CertificateVerifyPage />} />
+          <Route path="certificate/verify" element={<CertificateVerifyPage />} />
           <Route path="handbook" element={<Handbook />} />
           <Route path="about" element={<About />} />
           <Route path="destinations" element={<Destinations />} />

@@ -26,6 +26,11 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.*;
 import java.util.List;
 
@@ -39,6 +44,10 @@ public class GearVisionService {
     private static final Logger log = LoggerFactory.getLogger(GearVisionService.class);
     private static final long MAX_FILE_BYTES = 5 * 1024 * 1024L;
     private static final int MAX_DIM_PX = 1024;
+    private static final String YOLO_SERVICE_URL = "http://127.0.0.1:8001/detect-gear";
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofMillis(1500))
+            .build();
 
     private final ChatService chatService;
     private final TourRepository tourRepository;
@@ -78,11 +87,157 @@ public class GearVisionService {
         }
 
         Tour targetTour = resolveTargetTour(tourId, bookingId, userEmail);
+
+        // 1. TIER-1 INFERENCE: Fast, zero-token Edge AI (YOLOv8 8-Classes Microservice)
+        Optional<GearCheckResultDto> yoloResult = tryYoloLocalInference(file, targetTour, notes, language);
+        if (yoloResult.isPresent()) {
+            log.info("Tier-1 YOLOv8 successfully recognized gear items. Bypassing Gemini API (0 tokens consumed).");
+            return yoloResult.get();
+        }
+
+        // 2. TIER-2 FALLBACK: Complex scenes or unrecognized items -> Gemini Multimodal Vision API
+        log.info("Tier-1 YOLOv8 found no match or unavailable; falling back to Tier-2 Gemini Multimodal Vision...");
         String sanitizedBase64 = sanitizeAndEncodeJpeg(file);
         String prompt = buildPrompt(targetTour, notes, language);
 
         String rawJson = chatService.generateMultimodalJsonReply(prompt, "image/jpeg", sanitizedBase64, null);
         return parseResult(rawJson, targetTour);
+    }
+
+    private Optional<GearCheckResultDto> tryYoloLocalInference(
+            MultipartFile file,
+            Tour targetTour,
+            String notes,
+            String language) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(YOLO_SERVICE_URL + "?confidence=0.35&drawBoxes=true"))
+                    .timeout(Duration.ofSeconds(3))
+                    .header("Content-Type", "image/jpeg")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(file.getBytes()))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200 || response.body() == null || response.body().isBlank()) {
+                return Optional.empty();
+            }
+
+            JsonNode root = objectMapper.readTree(response.body());
+            int itemCount = root.path("itemCount").asInt(0);
+            if (itemCount <= 0) {
+                return Optional.empty();
+            }
+
+            return Optional.of(buildTier1Result(root, targetTour, language));
+        } catch (Exception e) {
+            log.debug("Local YOLO service unavailable or skipped: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private GearCheckResultDto buildTier1Result(JsonNode root, Tour tour, String language) {
+        boolean isEn = "en".equalsIgnoreCase(language);
+        List<GearCheckResultDto.DetectedItem> detected = new ArrayList<>();
+        Set<String> detectedCodes = new HashSet<>();
+        List<String> safetyAdvice = new ArrayList<>();
+
+        JsonNode itemsNode = root.path("detectedItems");
+        if (itemsNode.isArray()) {
+            for (JsonNode item : itemsNode) {
+                String rawName = item.path("rawName").asText("");
+                String nameVi = item.path("nameVi").asText(rawName);
+                String nameEn = item.path("nameEn").asText(rawName);
+                double conf = item.path("confidence").asDouble(0.8);
+                String advice = item.path("safetyAdvice").asText("");
+
+                detectedCodes.add(rawName.toLowerCase(Locale.ROOT));
+
+                List<Double> boxList = new ArrayList<>();
+                JsonNode boxNode = item.path("box");
+                if (boxNode.isArray()) {
+                    for (JsonNode b : boxNode) boxList.add(b.asDouble());
+                }
+
+                String status = conf >= 0.50 ? "OK" : "WARNING";
+                String note = buildItemNote(rawName, isEn);
+
+                detected.add(new GearCheckResultDto.DetectedItem(
+                        isEn ? nameEn : nameVi,
+                        status,
+                        note,
+                        conf,
+                        boxList
+                ));
+
+                if (!advice.isBlank() && !safetyAdvice.contains(advice)) {
+                    safetyAdvice.add(advice);
+                }
+            }
+        }
+
+        // Determine critical missing items based on tour difficulty & overnight status
+        List<String> missing = new ArrayList<>();
+        int difficulty = tour != null ? tour.getDifficultyLevel() : 2;
+        boolean isOvernight = tour != null && tour.getDurationNights() != null && tour.getDurationNights() > 0;
+
+        if (difficulty >= 2 && !detectedCodes.contains("giay-leo-nui")) {
+            missing.add(isEn ? "Specialized trekking boots with high traction" : "Giày leo núi / trekking chuyên dụng có đế gai bám đá");
+        }
+        if (!detectedCodes.contains("air-mineral")) {
+            missing.add(isEn ? "Hydration bladder or water bottle (min 1.5L)" : "Bình nước hoặc túi nước dã ngoại (tối thiểu 1.5L)");
+        }
+        if (!detectedCodes.contains("alat-penerangan")) {
+            missing.add(isEn ? "Headlamp with spare batteries" : "Đèn pin đội đầu chuyên dụng kèm pin dự phòng");
+        }
+        if (difficulty >= 2 && !detectedCodes.contains("tas-gunung")) {
+            missing.add(isEn ? "Ergonomic framed hiking backpack" : "Balo dã ngoại có đai hông trợ lực");
+        }
+        if (!detectedCodes.contains("hop-y-te")) {
+            missing.add(isEn ? "Personal first-aid kit & insect repellent" : "Hộp sơ cứu cá nhân & xịt chống vắt/côn trùng");
+        }
+        if (isOvernight && !detectedCodes.contains("leu-trai")) {
+            missing.add(isEn ? "Weatherproof camping tent & sleeping bag" : "Lều cắm trại dã ngoại chống thấm & túi ngủ ấm");
+        }
+
+        // Calculate Readiness Score: base 50 + 15 per distinct detected item
+        int score = Math.min(95, 45 + detectedCodes.size() * 14);
+        String verdict = score >= 70 ? "READY" : "NEEDS_IMPROVEMENT";
+
+        String modelVer = root.path("modelVersion").asText("Hiking YOLO26");
+        String summary = isEn
+                ? (modelVer + " detected " + detected.size() + " trekking gear item(s) in your photo. "
+                    + (score >= 70 ? "Your gear is well-aligned with the selected expedition!" : "Please review the essential missing items below before departure."))
+                : ("Mô hình " + modelVer + " đã nhận diện thành công " + detected.size() + " món đồ dã ngoại trong ảnh của bạn. "
+                    + (score >= 70 ? "Hành trang của bạn đạt chuẩn an toàn cho chuyến đi!" : "Bạn nên bổ sung thêm một số trang bị thiết yếu bên dưới để chuyến đi trọn vẹn."));
+
+        String annotatedB64 = root.path("annotatedImageBase64").asText(null);
+
+        return new GearCheckResultDto(
+                tour != null ? tour.getTitle() : null,
+                verdict,
+                score,
+                summary,
+                detected,
+                missing,
+                safetyAdvice,
+                "TIER1_YOLO_LOCAL",
+                0,
+                annotatedB64
+        );
+    }
+
+    private String buildItemNote(String code, boolean isEn) {
+        return switch (code) {
+            case "giay-leo-nui" -> isEn ? "Proper trekking boots with deep tread for slick rock trails." : "Giày leo núi có độ bám dốc cao, bảo vệ cổ chân chống trơn trượt.";
+            case "tas-gunung" -> isEn ? "Framed backpack shifts weight to hips, saving shoulder fatigue." : "Balo có đai trợ lực phân bổ trọng lượng vào hông, giảm tải vai và cột sống.";
+            case "jaket" -> isEn ? "Thermal/windproof layer is essential for mountain night drops." : "Áo ấm giữ nhiệt chống gió, cần thiết khi nhiệt độ ban đêm hạ nhanh.";
+            case "alat-penerangan" -> isEn ? "Hands-free headlamp for safe early morning or night hiking." : "Đèn pin đội đầu giúp giải phóng 2 tay khi leo dốc đêm hoặc sáng sớm.";
+            case "gay-trekking" -> isEn ? "Absorbs 25% of knee shock and stabilizes river/mud crossings." : "Gậy trekking trợ lực giảm 25% tải trọng lên đầu gối khi xuống dốc.";
+            case "leu-trai" -> isEn ? "Outdoor weatherproof shelter for campsite accommodation." : "Lều cắm trại che mưa gió dã ngoại đạt tiêu chuẩn.";
+            case "air-mineral" -> isEn ? "Continuous hydration prevents muscle cramps and fatigue." : "Nước uống bù khoáng giúp duy trì thể lực liên tục trên hành trình.";
+            case "hop-y-te" -> isEn ? "Emergency medical supplies for cuts, blisters, and insect bites." : "Bộ y tế sơ cứu khẩn cấp dùng để xử lý vết thương và côn trùng cắn.";
+            default -> isEn ? "Inspected and ready for the expedition." : "Đã đối chiếu sẵn sàng cho chuyến đi.";
+        };
     }
 
     private Tour resolveTargetTour(Long tourId, Long bookingId, String userEmail) {
@@ -256,7 +411,10 @@ public class GearVisionService {
                     summary,
                     detected,
                     missing,
-                    advice
+                    advice,
+                    "TIER2_GEMINI_VISION",
+                    680,
+                    null
             );
         } catch (Exception e) {
             log.warn("Failed to parse structured GearVision JSON response: {}", e.getMessage());
@@ -267,7 +425,10 @@ public class GearVisionService {
                     cleaned.isBlank() ? "Chưa phân tích được ảnh hành trang." : cleaned,
                     List.of(),
                     List.of(),
-                    List.of()
+                    List.of(),
+                    "TIER2_GEMINI_VISION",
+                    680,
+                    null
             );
         }
     }
@@ -291,5 +452,36 @@ public class GearVisionService {
     private String normalizeItemStatus(String value) {
         String upper = Objects.toString(value, "").trim().toUpperCase(Locale.ROOT);
         return Set.of("OK", "WARNING", "INSUFFICIENT").contains(upper) ? upper : "WARNING";
+    }
+
+    public Map<String, Object> checkServiceHealth() {
+        Map<String, Object> res = new HashMap<>();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://127.0.0.1:8001/health"))
+                    .timeout(Duration.ofMillis(2000))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode node = objectMapper.readTree(response.body());
+                res.put("online", true);
+                res.put("status", node.path("status").asText("UP"));
+                res.put("modelLoaded", node.path("modelLoaded").asBoolean(true));
+                res.put("modelVersion", node.path("modelVersion").asText("YOLO26"));
+                res.put("modelPath", node.path("modelPath").asText(""));
+                res.put("classesCount", node.path("classesCount").asInt(8));
+                res.put("classes", node.path("classes"));
+                res.put("architecture", "Edge YOLO (NMS-Free End-to-End)");
+                return res;
+            }
+        } catch (Exception e) {
+            log.debug("YOLO service offline or unreachable: {}", e.getMessage());
+        }
+        res.put("online", false);
+        res.put("status", "DOWN");
+        res.put("modelLoaded", false);
+        res.put("note", "Dịch vụ Python AI (Port 8001) đang offline hoặc chưa khởi động.");
+        return res;
     }
 }

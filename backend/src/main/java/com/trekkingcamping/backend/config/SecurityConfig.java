@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/media/tours/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/media/reviews/*", "/api/reviews/*/photos").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/guides/*", "/api/media/guides/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/certificates/verify/*").permitAll()
                 .requestMatchers("/api/tours/**", "/api/tours", "/api/chat/ingest-tours", "/api/admin/**", "/api/users/**", "/api/users").hasRole("ADMIN")
                 .requestMatchers("/api/bookings/**").authenticated()
                 

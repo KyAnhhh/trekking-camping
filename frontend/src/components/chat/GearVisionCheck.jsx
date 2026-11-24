@@ -1,8 +1,11 @@
 import { useEffect, useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   Camera,
   CheckCircle2,
+  Loader2,
+  Maximize2,
   Plus,
   ShieldAlert,
   Sparkles,
@@ -67,6 +70,7 @@ export default function GearVisionCheck({
   tourTitle = '',
   compact = false,
   inModal = false,
+  isPage = false,
   onAddChecklistItem = null,
   onVisionResult = null,
   onClose = null,
@@ -84,6 +88,7 @@ export default function GearVisionCheck({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [showAnnotated, setShowAnnotated] = useState(true);
   const [addedKeys, setAddedKeys] = useState({});
 
   useEffect(() => {
@@ -153,6 +158,9 @@ export default function GearVisionCheck({
       });
       const data = res.data?.data;
       setResult(data);
+      if (data?.annotatedImageBase64) {
+        setShowAnnotated(true);
+      }
       onVisionResult?.(data, previewUrl);
     } catch (err) {
       setError(errorMessage(err));
@@ -198,10 +206,10 @@ export default function GearVisionCheck({
 
   return (
     <section
-      className={`gear-vision-card ${compact ? 'is-compact' : ''} ${inModal ? 'is-in-modal' : ''}`}
+      className={`gear-vision-card ${compact ? 'is-compact' : ''} ${inModal ? 'is-in-modal' : ''} ${isPage ? 'is-page-view' : ''}`}
       aria-label="AI Gear Vision Check"
     >
-      {!inModal ? (
+      {!inModal && !isPage && (
         <div className="gear-vision-header">
           <div>
             <h3>
@@ -229,219 +237,355 @@ export default function GearVisionCheck({
             </button>
           )}
         </div>
-      ) : (
-        <p className="small muted" style={{ margin: '0 0 12px' }}>
-          {isEn
-            ? 'Upload a photo of your trekking gear, footwear or backpack for AI safety & readiness inspection.'
-            : 'Tải lên ảnh giày trekking, balo hoặc lều trại để AI đánh giá độ phù hợp & liệt kê món còn thiếu.'}
-        </p>
       )}
 
-      <form onSubmit={submitCheck}>
-        <label
-          htmlFor={inputId}
-          className={`gear-vision-dropzone ${dragging ? 'is-dragging' : ''}`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            handleSelectFile(e.dataTransfer.files?.[0]);
-          }}
-        >
-          {previewUrl ? (
-            <div className="gear-vision-preview-wrap">
-              <img src={previewUrl} alt={isEn ? 'Gear preview' : 'Xem trước ảnh hành trang'} />
-            </div>
-          ) : (
-            <>
-              <Upload size={26} />
-              <strong>
-                {isEn
-                  ? 'Drop gear photo here or click to choose'
-                  : 'Kéo thả ảnh hành trang vào đây hoặc bấm để chọn'}
-              </strong>
-              <span className="small muted">JPEG / PNG / WebP · {isEn ? 'Auto-optimized' : 'Tự động tối ưu dung lượng'}</span>
-            </>
-          )}
-          <input
-            id={inputId}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(e) => handleSelectFile(e.target.files?.[0])}
-          />
-        </label>
-
-        <div className="gear-vision-controls">
-          {!fixedTourId && !bookingId && tours.length > 0 && (
-            <label className="field">
-              {isEn ? 'Compare against expedition (optional)' : 'Đối chiếu theo tour (tùy chọn)'}
-              <select
-                value={selectedTourId}
-                onChange={(e) => setSelectedTourId(e.target.value)}
-                disabled={busy}
-              >
-                <option value="">
-                  {isEn ? 'General Mountain Trekking & Camping' : 'Chuẩn Trekking & Cắm trại chung'}
-                </option>
-                {tours.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title} ({t.durationDays}N)
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <label className="field">
-            {isEn ? 'Specific question for AI (optional)' : 'Ghi chú / câu hỏi cho AI (tùy chọn)'}
-            <input
-              maxLength={600}
-              value={notes}
-              disabled={busy}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={
-                isEn
-                  ? 'e.g. Are these boots grippy enough for rainy trails?'
-                  : 'VD: Đôi giày này đi cung Tà Năng mùa mưa có ổn không?'
-              }
-            />
-          </label>
-
-          {error && (
-            <p className="notice notice-error" role="alert" style={{ margin: 0 }}>
-              {error}
-            </p>
-          )}
-
-          <div className="gear-vision-actions">
-            <button type="submit" className="btn" disabled={!file || busy}>
-              <Sparkles size={16} />
-              {busy
-                ? isEn
-                  ? 'AI is inspecting gear...'
-                  : 'AI đang phân tích ảnh...'
-                : isEn
-                  ? 'Analyze Gear Photo'
-                  : 'Phân tích hành trang bằng AI'}
-            </button>
-            {file && !busy && (
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => {
-                  setFile(null);
-                  setPreviewUrl('');
-                  setResult(null);
-                  setError('');
-                }}
-              >
-                {isEn ? 'Clear photo' : 'Chọn ảnh khác'}
-              </button>
-            )}
-          </div>
+      {inModal && (
+        <div className="gear-modal-subbar">
+          <p className="small muted gear-vision-modal-subtitle" style={{ margin: 0 }}>
+            {isEn
+              ? 'Upload a photo of your trekking gear, footwear or backpack for AI safety & readiness inspection.'
+              : 'Tải lên ảnh giày trekking, balo hoặc lều trại để AI đánh giá độ phù hợp & liệt kê món còn thiếu.'}
+          </p>
+          <Link
+            to={`/gear-check${selectedTourId ? `?tourId=${selectedTourId}` : ''}`}
+            className="gear-expand-link"
+            onClick={onClose}
+            title={isEn ? 'Open full screen page' : 'Mở giao diện toàn trang'}
+          >
+            <Maximize2 size={13} />
+            <span>{isEn ? 'Full Page' : 'Toàn màn hình'}</span>
+          </Link>
         </div>
-      </form>
+      )}
 
-      {result && (
-        <div className="gear-vision-result" role="region" aria-live="polite">
-          {(() => {
-            const meta = verdictMeta(result.verdict);
-            const VerdictIcon = meta.Icon;
-            return (
-              <div className={`gear-verdict-banner ${meta.cls}`}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <VerdictIcon size={20} />
-                  <div>
-                    <strong>{meta.label}</strong>
-                    {result.tourTitle && <div className="small">{result.tourTitle}</div>}
+      <div className="gear-vision-body-grid">
+        {/* CỘT TRÁI: UPLOAD & ĐIỀU KHIỂN */}
+        <div className="gear-vision-col-left">
+          <form onSubmit={submitCheck} className="gear-vision-form">
+            <label
+              htmlFor={inputId}
+              className={`gear-vision-dropzone ${dragging ? 'is-dragging' : ''} ${previewUrl ? 'has-preview' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                handleSelectFile(e.dataTransfer.files?.[0]);
+              }}
+            >
+              {previewUrl ? (
+                <div className="gear-vision-preview-wrap">
+                  <img src={previewUrl} alt={isEn ? 'Gear preview' : 'Xem trước ảnh hành trang'} />
+                  <div className="gear-vision-preview-overlay">
+                    <Camera size={15} />
+                    <span>{isEn ? 'Click or drop to replace photo' : 'Nhấp hoặc thả để đổi ảnh'}</span>
                   </div>
                 </div>
-                <span className="gear-score-pill">{result.readinessScore}/100%</span>
+              ) : (
+                <div className="gear-vision-dropzone-prompt">
+                  <div className="dropzone-icon-circle">
+                    <Upload size={22} className="dropzone-upload-icon" />
+                  </div>
+                  <strong className="dropzone-title">
+                    {isEn
+                      ? 'Drop gear photo here or click to choose'
+                      : 'Kéo thả ảnh hành trang vào đây hoặc bấm để chọn'}
+                  </strong>
+                  <span className="dropzone-subtext">
+                    JPEG / PNG / WebP · {isEn ? 'Auto-optimized' : 'Tự động tối ưu dung lượng'}
+                  </span>
+                </div>
+              )}
+              <input
+                id={inputId}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => handleSelectFile(e.target.files?.[0])}
+              />
+            </label>
+
+            <div className="gear-vision-controls">
+              {!fixedTourId && !bookingId && tours.length > 0 && (
+                <label className="field">
+                  {isEn ? 'Compare against expedition (optional)' : 'Đối chiếu theo tour (tùy chọn)'}
+                  <select
+                    value={selectedTourId}
+                    onChange={(e) => setSelectedTourId(e.target.value)}
+                    disabled={busy}
+                  >
+                    <option value="">
+                      {isEn ? 'General Mountain Trekking & Camping' : 'Chuẩn Trekking & Cắm trại chung'}
+                    </option>
+                    {tours.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title} ({t.durationDays}N)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <label className="field">
+                {isEn ? 'Specific question for AI (optional)' : 'Ghi chú / câu hỏi cho AI (tùy chọn)'}
+                <input
+                  maxLength={600}
+                  value={notes}
+                  disabled={busy}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={
+                    isEn
+                      ? 'e.g. Are these boots grippy enough for rainy trails?'
+                      : 'VD: Đôi giày này đi cung Tà Năng mùa mưa có ổn không?'
+                  }
+                />
+              </label>
+
+              {error && (
+                <p className="notice notice-error" role="alert" style={{ margin: 0 }}>
+                  {error}
+                </p>
+              )}
+
+              <div className="gear-vision-actions">
+                <button type="submit" className="btn btn-primary" disabled={!file || busy}>
+                  {busy ? <Loader2 size={16} className="spin-icon" /> : <Sparkles size={16} />}
+                  {busy
+                    ? isEn
+                      ? 'AI is inspecting gear...'
+                      : 'AI đang phân tích ảnh...'
+                    : isEn
+                      ? 'Analyze Gear Photo'
+                      : 'Phân tích hành trang bằng AI'}
+                </button>
+                {file && !busy && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => {
+                      setFile(null);
+                      setPreviewUrl('');
+                      setResult(null);
+                      setError('');
+                    }}
+                  >
+                    {isEn ? 'Clear photo' : 'Chọn ảnh khác'}
+                  </button>
+                )}
               </div>
-            );
-          })()}
+            </div>
+          </form>
+        </div>
 
-          <p style={{ margin: 0, lineHeight: 1.5 }}>{result.summary}</p>
+        {/* CỘT PHẢI: KẾT QUẢ ĐÁNH GIÁ (RESPONSE) */}
+        <div className="gear-vision-col-right">
+          {busy ? (
+            <div className="gear-vision-loading-pane">
+              <div className="gear-vision-scanner-ring">
+                <Sparkles size={32} className="spin-slow" />
+              </div>
+              <h4>{isEn ? 'AI is inspecting your gear...' : 'AI đang quét & phân tích hành trang...'}</h4>
+              <p className="small muted">
+                {isEn
+                  ? 'Running YOLO26 object detection & cross-referencing expedition safety criteria.'
+                  : 'Đang chạy mô hình YOLO26 nhận diện vật thể & đối chiếu quy chuẩn an toàn chuyến đi.'}
+              </p>
+              <div className="gear-vision-progress-steps">
+                <div className="progress-step-item">
+                  <span className="step-dot active"></span>
+                  <span>{isEn ? 'Processing high-res image features' : 'Trích xuất đặc trưng hình ảnh'}</span>
+                </div>
+                <div className="progress-step-item">
+                  <span className="step-dot active"></span>
+                  <span>{isEn ? 'Detecting 8 trekking gear classes' : 'Nhận diện 8 danh mục đồ leo núi'}</span>
+                </div>
+                <div className="progress-step-item">
+                  <span className="step-dot active"></span>
+                  <span>{isEn ? 'Evaluating field safety score' : 'Đánh giá điểm an toàn & gợi ý đồ thiếu'}</span>
+                </div>
+              </div>
+            </div>
+          ) : result ? (
+            <div className="gear-vision-result" role="region" aria-live="polite">
+              <div className="gear-ai-engine-row">
+                {result.source === 'TIER1_YOLO_LOCAL' ? (
+                  <span className="gear-ai-engine-badge badge-yolo">
+                    ⚡ {isEn ? 'Edge AI: Hiking YOLO26 (0 Token · Super Fast)' : 'Nhận diện bởi Hiking YOLO26 (Edge AI · 0 Token · Siêu tốc)'}
+                  </span>
+                ) : (
+                  <span className="gear-ai-engine-badge badge-gemini">
+                    ✨ {isEn ? 'Gemini Multimodal Vision API' : 'Phân tích mở rộng bởi Gemini Multimodal Vision'}
+                  </span>
+                )}
+                {result.annotatedImageBase64 && (
+                  <button
+                    type="button"
+                    className="gear-annotated-toggle-btn"
+                    onClick={() => setShowAnnotated((prev) => !prev)}
+                  >
+                    {showAnnotated
+                      ? (isEn ? 'Hide Bounding Boxes' : 'Ẩn khung nhận diện')
+                      : (isEn ? 'View YOLO Bounding Boxes' : 'Xem khung nhận diện (YOLO Boxes)')}
+                  </button>
+                )}
+              </div>
 
-          {result.detectedItems?.length > 0 && (
-            <div>
-              <h4 style={{ margin: '0 0 8px', fontSize: '0.92rem' }}>
-                {isEn ? 'Detected items in photo' : 'Trang bị nhận diện được trong ảnh'}
-              </h4>
-              <ul className="gear-detected-list">
-                {result.detectedItems.map((item, idx) => (
-                  <li className="gear-detected-item" key={idx}>
-                    {renderStatusIcon(item.status)}
-                    <div>
-                      <strong>{item.name}</strong>
-                      {item.note && <div className="small muted">{item.note}</div>}
+              {result.annotatedImageBase64 && showAnnotated && (
+                <div className="gear-annotated-box-preview">
+                  <img
+                    src={`data:image/jpeg;base64,${result.annotatedImageBase64}`}
+                    alt="YOLO Object Detection Bounding Boxes"
+                  />
+                  <span className="gear-annotated-hint">
+                    🎯 {isEn ? 'Object Detection: 8 Trekking Gear Categories (YOLO26)' : 'Khung nhận diện vật thể YOLO26 8 danh mục'}
+                  </span>
+                </div>
+              )}
+
+              {(() => {
+                const meta = verdictMeta(result.verdict);
+                const VerdictIcon = meta.Icon;
+                return (
+                  <div className={`gear-verdict-banner ${meta.cls}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <VerdictIcon size={20} />
+                      <div>
+                        <strong>{meta.label}</strong>
+                        {result.tourTitle && <div className="small">{result.tourTitle}</div>}
+                      </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                    <span className="gear-score-pill">{result.readinessScore}/100%</span>
+                  </div>
+                );
+              })()}
 
-          {result.missingItems?.length > 0 && (
-            <div>
-              <h4 style={{ margin: '0 0 8px', fontSize: '0.92rem' }}>
-                {isEn ? 'Important items still missing' : 'Vật dụng quan trọng nên bổ sung'}
-              </h4>
-              <ul className="gear-missing-list">
-                {result.missingItems.map((item, idx) => (
-                  <li className="gear-missing-item" key={idx}>
-                    <span>{item}</span>
-                    {onAddChecklistItem && (
-                      <button
-                        type="button"
-                        className="text-btn"
-                        disabled={addedKeys[item]}
-                        onClick={() => handleAddChecklist(item)}
-                      >
-                        <Plus size={14} />
-                        {addedKeys[item]
-                          ? isEn
-                            ? 'Added'
-                            : 'Đã thêm'
-                          : isEn
-                            ? 'Add to checklist'
-                            : 'Thêm vào checklist'}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+              <p className="gear-summary-text">{result.summary}</p>
 
-          {result.safetyAdvice?.length > 0 && (
-            <div>
-              <h4
-                style={{
-                  margin: '0 0 6px',
-                  fontSize: '0.92rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <ShieldAlert size={15} />
-                {isEn ? 'Field safety tips' : 'Lưu ý an toàn thực địa'}
-              </h4>
-              <ul className="gear-advice-list">
-                {result.safetyAdvice.map((tip, idx) => (
-                  <li key={idx}>{tip}</li>
-                ))}
-              </ul>
+              {result.detectedItems?.length > 0 && (
+                <div className="gear-result-section">
+                  <h4 className="gear-result-section-title">
+                    {isEn ? 'Detected items in photo' : 'Trang bị nhận diện được trong ảnh'}
+                  </h4>
+                  <ul className="gear-detected-list">
+                    {result.detectedItems.map((item, idx) => (
+                      <li className="gear-detected-item" key={idx}>
+                        {renderStatusIcon(item.status)}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong>{item.name}</strong>
+                            {item.confidence && (
+                              <span className="gear-item-conf">
+                                {Math.round(item.confidence * 100)}%
+                              </span>
+                            )}
+                          </div>
+                          {item.note && <div className="small muted">{item.note}</div>}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result.missingItems?.length > 0 && (
+                <div className="gear-result-section">
+                  <h4 className="gear-result-section-title">
+                    {isEn ? 'Important items still missing' : 'Vật dụng quan trọng nên bổ sung'}
+                  </h4>
+                  <ul className="gear-missing-list">
+                    {result.missingItems.map((item, idx) => (
+                      <li className="gear-missing-item" key={idx}>
+                        <span>{item}</span>
+                        {onAddChecklistItem && (
+                          <button
+                            type="button"
+                            className="text-btn"
+                            disabled={addedKeys[item]}
+                            onClick={() => handleAddChecklist(item)}
+                          >
+                            <Plus size={14} />
+                            {addedKeys[item]
+                              ? isEn
+                                ? 'Added'
+                                : 'Đã thêm'
+                              : isEn
+                                ? 'Add to checklist'
+                                : 'Thêm vào checklist'}
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result.safetyAdvice?.length > 0 && (
+                <div className="gear-result-section">
+                  <h4 className="gear-result-section-title title-with-icon">
+                    <ShieldAlert size={15} />
+                    {isEn ? 'Field safety tips' : 'Lưu ý an toàn thực địa'}
+                  </h4>
+                  <ul className="gear-advice-list">
+                    {result.safetyAdvice.map((tip, idx) => (
+                      <li key={idx}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="gear-vision-placeholder-pane">
+              <div className="gear-vision-placeholder-icon">
+                <Sparkles size={30} />
+              </div>
+              <h4>{isEn ? 'Expedition Gear Inspection' : 'Kết quả Đánh giá Hành trang'}</h4>
+              <p className="small muted">
+                {isEn
+                  ? 'Upload your gear photo on the left and click "Analyze Gear Photo" to receive detailed safety feedback.'
+                  : 'Tải ảnh trang bị bên trái và nhấn "Phân tích hành trang bằng AI" để nhận kết quả đánh giá chi tiết.'}
+              </p>
+              <div className="gear-vision-features">
+                <div className="gear-feature-item">
+                  <span className="feature-badge">⚡</span>
+                  <div>
+                    <strong>{isEn ? 'Local YOLOv8 AI (0 Token)' : 'Nhận diện siêu tốc 0 Token'}</strong>
+                    <div className="small muted">
+                      {isEn
+                        ? 'Detects footwear, trekking poles, tent, medkit, backpack, etc.'
+                        : 'Phát hiện giày trekking, gậy, lều trại, hộp y tế, balo, v.v.'}
+                    </div>
+                  </div>
+                </div>
+                <div className="gear-feature-item">
+                  <span className="feature-badge">🎯</span>
+                  <div>
+                    <strong>{isEn ? 'Expedition Terrain Readiness' : 'Đối chiếu theo độ khó tour'}</strong>
+                    <div className="small muted">
+                      {isEn
+                        ? 'Calculates readiness score based on trail difficulty & overnight duration.'
+                        : 'Tính điểm chuẩn bị sẵn sàng dựa trên địa hình & số ngày đi tour.'}
+                    </div>
+                  </div>
+                </div>
+                <div className="gear-feature-item">
+                  <span className="feature-badge">📋</span>
+                  <div>
+                    <strong>{isEn ? 'Missing Gear Recommendations' : 'Gợi ý đồ dùng còn thiếu'}</strong>
+                    <div className="small muted">
+                      {isEn
+                        ? 'Provides quick checklist items to keep your adventure safe.'
+                        : 'Cảnh báo trang bị thiết yếu còn thiếu và hỗ trợ thêm vào checklist.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      )}
+      </div>
     </section>
   );
 }

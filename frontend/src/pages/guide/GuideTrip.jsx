@@ -14,10 +14,46 @@ export default function GuideTrip() {
   const load = useCallback(async () => (await guideWorkspaceService.roster(id, page)).data.data, [id, page]);
   const { data, loading, error, reload } = useResource(load);
   const [expanded, setExpanded] = useState(null);
+
+  const totalPax = data?.guests?.items?.reduce((sum, g) => sum + (g.people || 0), 0) || 0;
+  const totalPresent = data?.guests?.items?.reduce((sum, g) => sum + (g.presentCount || 0), 0) || 0;
+  const attendanceRate = totalPax > 0 ? Math.round((totalPresent / totalPax) * 100) : 0;
+
   return <div className="container workspace-page">
     <Link className="text-link" to="/guide-workspace">← Lịch dẫn đoàn</Link>
     <header className="page-heading"><p className="eyebrow">DANH SÁCH ĐOÀN</p><h1>{data?.trip.title || 'Khách tham gia chuyến đi'}</h1>{data && <p>{dateLabel(data.trip.departureDate)} – {dateLabel(data.trip.returnDate)} · {data.trip.pickupPoint || 'Chưa có điểm đón'}</p>}</header>
     <p className="notice">Mở từng đơn để xem tên hành khách và điểm danh. Số điện thoại liên hệ và thao tác điểm danh mở từ ngày trước khởi hành đến hết ngày kết thúc.</p>
+    
+    {data?.guests?.items?.length > 0 && (
+      <div className="attendance-summary-card">
+        <div className="attendance-summary-header">
+          <div>
+            <span className="attendance-summary-label">TIẾN ĐỘ ĐIỂM DANH TỔNG ĐOÀN</span>
+            <div className="attendance-summary-pax">
+              <strong>{totalPresent}</strong> / {totalPax} khách đã có mặt
+            </div>
+          </div>
+          <div className="attendance-summary-badge" data-complete={totalPresent === totalPax && totalPax > 0}>
+            {attendanceRate}%
+          </div>
+        </div>
+        <div className="attendance-progress-track">
+          <div 
+            className="attendance-progress-fill" 
+            style={{ width: `${attendanceRate}%` }} 
+          />
+        </div>
+        <div className="attendance-summary-meta">
+          <span>{data.guests.items.length} đơn đặt chỗ trên trang này</span>
+          {totalPresent === totalPax && totalPax > 0 ? (
+            <span className="attendance-status-done">Đã đủ quân số ✓</span>
+          ) : (
+            <span className="attendance-status-pending">Còn thiếu {Math.max(0, totalPax - totalPresent)} khách</span>
+          )}
+        </div>
+      </div>
+    )}
+
     <button className="btn btn-outline btn-small" disabled={loading} onClick={reload}>Tải lại danh sách</button>
     {loading ? <LoadingSpinner /> : error ? <EmptyState error title="Chưa tải được đoàn" description={error} onRetry={reload} /> : <>
       {!data?.guests.items.length ? <EmptyState title="Chưa có đơn đã xác nhận trong đoàn" /> : <div className="workspace-list">{data.guests.items.map(guest => <article className="panel" key={guest.bookingId}>

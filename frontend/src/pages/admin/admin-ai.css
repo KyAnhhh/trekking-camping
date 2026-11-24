@@ -120,3 +120,53 @@
   color: #275239;
   font-family: monospace;
 }
+
+/* Edge AI Vision Admin Styles */
+.vision-classes-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.vision-class-admin-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8faf6;
+  border: 1px solid #dbe5de;
+  border-radius: 10px;
+}
+
+.vision-class-admin-card strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #163d2c;
+  margin-bottom: 2px;
+}
+
+.vision-class-admin-card code {
+  font-size: 0.72rem;
+  background: #eef3eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #15803d;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spin-icon {
+  animation: gearSpin 1s linear infinite;
+}
+
+@keyframes gearSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

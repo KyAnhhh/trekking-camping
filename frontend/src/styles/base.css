@@ -689,6 +689,7 @@ p {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 26px;
+  margin-bottom: 48px;
 }
 .tour-card {
   border: 1px solid var(--line);
@@ -894,7 +895,7 @@ p {
   color: #fff;
   padding: 40px;
   border-radius: 19px;
-  margin-bottom: 85px;
+  margin-block: 56px 85px;
 }
 .ai-banner-icon {
   padding: 21px;
@@ -1149,6 +1150,42 @@ fieldset {
 }
 .soft-panel p {
   margin-bottom: 0;
+}
+.tour-required-gear-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.tour-gear-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--forest);
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--line, #cbd5e1);
+  padding: 5px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.tour-gear-ai-pill:hover {
+  background: var(--forest);
+  color: #ffffff;
+  border-color: var(--forest);
+}
+[data-theme="dark"] .tour-gear-ai-pill {
+  background: #14241b;
+  border-color: #243a2d;
+  color: #86efac;
+}
+[data-theme="dark"] .tour-gear-ai-pill:hover {
+  background: #22573b;
+  color: #ffffff;
 }
 .notice {
   display: flex;

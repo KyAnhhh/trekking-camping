@@ -1,6 +1,7 @@
 import axiosClient from "./axiosClient";
 
 export const aiVisionService = {
+  getHealth: () => axiosClient.get("/api/ai/gear-vision/health"),
   checkGear: ({ file, tourId, bookingId, notes, language = "vi" }) => {
     const formData = new FormData();
     formData.append("file", file);

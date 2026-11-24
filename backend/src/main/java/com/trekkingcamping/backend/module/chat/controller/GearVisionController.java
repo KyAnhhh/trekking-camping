@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -22,6 +23,11 @@ public class GearVisionController {
     public GearVisionController(GearVisionService gearVisionService, ChatRateLimit rateLimit) {
         this.gearVisionService = gearVisionService;
         this.rateLimit = rateLimit;
+    }
+
+    @GetMapping("/gear-vision/health")
+    public ApiResponse<Map<String, Object>> getVisionHealth() {
+        return new ApiResponse<>(1000, "Thành công", gearVisionService.checkServiceHealth());
     }
 
     @PostMapping(value = "/gear-check", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

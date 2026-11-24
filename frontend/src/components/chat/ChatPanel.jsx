@@ -254,6 +254,7 @@ export default function ChatPanel({
         <Modal
           title={isEn ? 'AI Gear Vision Check' : 'AI Kiểm tra Hành trang qua Ảnh'}
           onClose={() => setVisionOpen(false)}
+          className="modal-gear-vision"
         >
           <GearVisionCheck inModal onClose={() => setVisionOpen(false)} />
         </Modal>

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-export default function Modal({ title, onClose, children }) {
+export default function Modal({ title, onClose, children, className = '' }) {
   const ref = useRef(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -9,7 +9,7 @@ export default function Modal({ title, onClose, children }) {
   }, []);
   return (
     <dialog
-      className="modal"
+      className={`modal ${className}`.trim()}
       ref={ref}
       onCancel={(event) => {
         event.preventDefault();

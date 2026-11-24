@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Camera, CheckCircle2, Cpu, ExternalLink, RefreshCw, Sparkles, XCircle, Zap } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
+import { aiVisionService } from '../../api/aiVisionService';
 import './admin-ai.css';
 
 export default function AdminAiModels() {
@@ -10,6 +13,8 @@ export default function AdminAiModels() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [visionHealth, setVisionHealth] = useState(null);
+  const [visionBusy, setVisionBusy] = useState(false);
 
   async function load() {
     const [c, h, m] = await Promise.all([
@@ -22,11 +27,24 @@ export default function AdminAiModels() {
     setMetrics(m.data.data);
   }
 
+  const checkVisionHealth = async () => {
+    setVisionBusy(true);
+    try {
+      const res = await aiVisionService.getHealth();
+      setVisionHealth(res.data?.data || null);
+    } catch {
+      setVisionHealth({ online: false, status: 'DOWN', note: 'Không kết nối được dịch vụ Python AI' });
+    } finally {
+      setVisionBusy(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     load().catch((e) => {
       if (active) setError(e.response?.data?.message || 'Không tải được cấu hình AI.');
     });
+    checkVisionHealth();
     return () => { active = false; };
   }, []);
 
@@ -75,8 +93,9 @@ export default function AdminAiModels() {
 
       <nav className="ai-tabs" aria-label="Quản trị AI">
         {[
-          ['models', 'Danh sách model'],
-          ['activity', 'Hoạt động & phiên bản lưu trữ'],
+          ['models', 'Mô hình Ngôn ngữ (Gemini LLM)'],
+          ['vision', 'Thị giác Máy tính (Edge YOLO)'],
+          ['activity', 'Hoạt động & Thống kê'],
         ].map(([id, title]) => (
           <button
             className={tab === id ? 'btn' : 'btn btn-outline'}
@@ -136,6 +155,108 @@ export default function AdminAiModels() {
                 Lưu cấu hình · phiên bản {config.revision}
               </button>
               <button className="btn btn-outline" disabled={busy} onClick={() => act(load)}>Tải lại</button>
+            </div>
+          )}
+
+          {tab === 'vision' && (
+            <div className="admin-vision-dashboard">
+              {/* Edge AI Status & KPIs */}
+              <div className="ai-kpi-grid">
+                <div className="ai-kpi-card">
+                  <span>Trạng thái dịch vụ Vision</span>
+                  <strong style={{ color: visionHealth?.online ? '#16a34a' : '#dc2626', fontSize: '1.25rem' }}>
+                    {visionHealth?.online ? '🟢 ONLINE (Port 8001)' : '🔴 OFFLINE'}
+                  </strong>
+                </div>
+                <div className="ai-kpi-card">
+                  <span>Kiến trúc mô hình</span>
+                  <strong style={{ fontSize: '1.25rem' }}>{visionHealth?.modelVersion || 'YOLO26'} Nano</strong>
+                </div>
+                <div className="ai-kpi-card">
+                  <span>Số danh mục nhận diện</span>
+                  <strong>{visionHealth?.classesCount || 8}</strong>
+                </div>
+                <div className="ai-kpi-card">
+                  <span>Token AI tiêu tốn</span>
+                  <strong style={{ color: '#16a34a' }}>0 Token</strong>
+                </div>
+              </div>
+
+              {/* Service Details Card */}
+              <article className="ai-model-card" style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <span className="eyebrow">ULTRALYTICS · LOCAL EDGE COMPUTER VISION</span>
+                    <h2>Dịch vụ Nhận diện Hành trang Dã ngoại (Hiking {visionHealth?.modelVersion || 'YOLO26'} Service)</h2>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-small"
+                      disabled={visionBusy}
+                      onClick={checkVisionHealth}
+                    >
+                      <RefreshCw size={14} className={visionBusy ? 'spin-icon' : ''} />
+                      {visionBusy ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
+                    </button>
+                    <Link to="/gear-check" className="btn btn-small" target="_blank" rel="noreferrer">
+                      <ExternalLink size={14} /> Mở trang AI Soát Đồ
+                    </Link>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: '10px', marginTop: '1rem', fontSize: '0.88rem' }}>
+                  <div className="ai-stat-row">
+                    <span>Đường dẫn tệp trọng số (Model Weights)</span>
+                    <code style={{ fontSize: '0.75rem' }}>{visionHealth?.modelPath || 'ai_service/models/hiking_yolo..._best.pt'}</code>
+                  </div>
+                  <div className="ai-stat-row">
+                    <span>Cổng kết nối nội bộ</span>
+                    <strong>http://127.0.0.1:8001/detect-gear</strong>
+                  </div>
+                  <div className="ai-stat-row">
+                    <span>Cơ chế suy luận</span>
+                    <strong>NMS-Free End-to-End Inference (Tối ưu CPU & Edge)</strong>
+                  </div>
+                  <div className="ai-stat-row">
+                    <span>Cơ chế dự phòng (Cascade Tier-2)</span>
+                    <strong>Tự động kích hoạt Gemini Multimodal Vision khi phát hiện 0 vật thể</strong>
+                  </div>
+                  {visionHealth?.note && (
+                    <p className="notice" style={{ margin: '8px 0 0' }}>
+                      ℹ️ {visionHealth.note}. Bạn có thể nhấp đúp vào <code>run-ai-service.bat</code> trong thư mục gốc để khởi chạy dịch vụ.
+                    </p>
+                  )}
+                </div>
+              </article>
+
+              {/* 8 Classes Matrix */}
+              <div className="ai-activity-section" style={{ marginTop: 0 }}>
+                <div className="ai-activity-header">
+                  <h2>8 Danh mục Trang bị Leo núi được Mô hình Huấn luyện</h2>
+                  <span className="ai-badge ai-badge-success">Dataset Chuẩn hóa</span>
+                </div>
+                <div className="vision-classes-admin-grid">
+                  {[
+                    { code: 'giay-leo-nui', label: 'Giày leo núi / Hiking boots chuyên dụng', icon: '🥾' },
+                    { code: 'gay-trekking', label: 'Gậy trekking / leo núi trợ lực', icon: '🦯' },
+                    { code: 'leu-trai', label: 'Lều cắm trại dã ngoại 2 lớp chống nước', icon: '⛺' },
+                    { code: 'hop-y-te', label: 'Hộp sơ cứu / Túi y tế khẩn cấp', icon: '🩹' },
+                    { code: 'tas-gunung', label: 'Balo dã ngoại có đai hông trợ lực', icon: '🎒' },
+                    { code: 'alat-penerangan', label: 'Đèn pin đội đầu chuyên dụng', icon: '🔦' },
+                    { code: 'jaket', label: 'Áo khoác giữ nhiệt / Áo gió chống thấm', icon: '🧥' },
+                    { code: 'air-mineral', label: 'Nước uống / Bình nước dã ngoại', icon: '💧' },
+                  ].map((cls, idx) => (
+                    <div key={cls.code} className="vision-class-admin-card">
+                      <span style={{ fontSize: '1.4rem' }}>{cls.icon}</span>
+                      <div>
+                        <strong>{cls.label}</strong>
+                        <div><code>cls_{idx}: {cls.code}</code></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

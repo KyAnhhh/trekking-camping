@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   CalendarDays,
+  Camera,
   Clock3,
   MapPin,
   Mountain,
@@ -176,8 +177,18 @@ export default function TourDetail() {
           <section id="equipment" className="detail-section">
             <h2>Gói ghém cho chuyến đi</h2>
             {tour.requiredGear && (
-              <div className="soft-panel">
-                <h3>Bạn cần mang theo</h3>
+              <div className="soft-panel tour-required-gear-panel">
+                <div className="tour-required-gear-head">
+                  <h3 style={{ margin: 0 }}>Bạn cần mang theo</h3>
+                  <Link
+                    to={`/gear-check?tourId=${tour.id}`}
+                    className="tour-gear-ai-pill"
+                    title="Chụp ảnh đồ dùng để AI đối chiếu chuẩn bị cho tour này"
+                  >
+                    <Camera size={14} />
+                    <span>Dùng AI soát đồ cho tour này →</span>
+                  </Link>
+                </div>
                 <p className="preserve-lines">{tour.requiredGear}</p>
               </div>
             )}

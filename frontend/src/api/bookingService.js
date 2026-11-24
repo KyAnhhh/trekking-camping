@@ -11,4 +11,8 @@ export const bookingService = {
     axiosClient.post(`/api/${admin ? "admin/" : ""}bookings/${id}/cancel`),
   confirm: (id) => axiosClient.post(`/api/admin/bookings/${id}/confirm`),
   getAll: () => axiosClient.get("/api/admin/bookings"),
+  getCertificates: (id, admin = false) =>
+    axiosClient.get(`/api/${admin ? "admin/" : ""}bookings/${id}/certificates`),
+  verifyCertificate: (code) =>
+    axiosClient.get(`/api/certificates/verify/${code}`),
 };

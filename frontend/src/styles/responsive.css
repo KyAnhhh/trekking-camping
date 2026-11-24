@@ -434,7 +434,7 @@
   }
   .ai-banner {
     padding: 30px 24px;
-    margin-bottom: 50px;
+    margin-block: 36px 50px;
     gap: 24px;
   }
   .ai-banner h2 {

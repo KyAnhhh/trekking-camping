@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Award,
   CalendarDays,
   CreditCard,
   RefreshCw,
@@ -23,6 +24,7 @@ import PassengerPanel from "../../components/tour/PassengerPanel";
 import BookingChanges from "../../components/tour/BookingChanges";
 import TripPreparation from "../../components/tour/TripPreparation";
 import ETicketModal from "../../components/tour/ETicketModal";
+import CertificateModal from "../../components/tour/CertificateModal";
 import {
   money,
   dateLabel,
@@ -57,6 +59,7 @@ export default function BookingDetail({ admin = false }) {
   const [notice, setNotice] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(searchParams.get("ticket") === "open");
+  const [certOpen, setCertOpen] = useState(searchParams.get("certificate") === "open");
   const { subscribe } = useBookingSocket();
 
   useEffect(() => {
@@ -371,6 +374,31 @@ export default function BookingDetail({ admin = false }) {
                   <Ticket size={18} /> Xem & In vé điện tử (PDF QR)
                 </button>
               )}
+              {(data.booking.status === "COMPLETED" ||
+                (data.booking.status === "CONFIRMED" &&
+                  data.booking.returnDate <= todayInVietnam()) ||
+                admin) && (
+                <button
+                  type="button"
+                  className="btn btn-full"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #0d9488 0%, #047857 100%)",
+                    borderColor: "#0f766e",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    margin: "10px 0",
+                    fontWeight: 700,
+                    boxShadow: "0 2px 8px rgba(13, 148, 136, 0.35)",
+                  }}
+                  onClick={() => setCertOpen(true)}
+                >
+                  <Award size={18} /> Giấy Chứng Nhận Chinh Phục Tour
+                </button>
+              )}
               {admin && data.canConfirm && (
                 <button
                   className="btn btn-full"
@@ -449,6 +477,13 @@ export default function BookingDetail({ admin = false }) {
           payments={data.payments}
           leadGuide={data.leadGuide}
           onClose={() => setTicketOpen(false)}
+        />
+      )}
+      {certOpen && (
+        <CertificateModal
+          bookingId={id}
+          admin={admin}
+          onClose={() => setCertOpen(false)}
         />
       )}
     </div>

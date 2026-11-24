@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   ArrowUpRight,
+  Camera,
   Leaf,
   MapPin,
   Mountain,
   Search,
   Sparkles,
   TentTree,
+  Zap,
 } from 'lucide-react';
 import { tourApi } from '../../api/tourService';
 import useResource from '../../hooks/useResource';
@@ -264,6 +266,59 @@ export default function Home() {
             <p>{t('home.step4_desc')}</p>
           </li>
         </ol>
+      </Reveal>
+
+      {/* AI Gear Vision Spotlight Banner */}
+      <Reveal className="container section">
+        <div className="home-ai-vision-banner">
+          <div className="home-ai-vision-content">
+            <div className="home-ai-vision-tags">
+              <span className="ai-tag tag-edge">
+                <Zap size={13} /> Edge YOLO26 AI · 0 Token
+              </span>
+              <span className="ai-tag tag-tech">8 Danh mục Dã ngoại</span>
+            </div>
+            <h2>Chụp ảnh balo, AI thẩm định an toàn tức thì</h2>
+            <p>
+              Tải lên hình ảnh giày trekking, gậy leo núi, balo hay lều cắm trại.
+              Mô hình thị giác máy tính cục bộ sẽ tự động phát hiện vật thể, đo lường độ sẵn sàng và đối chiếu với độ khó của cung đường trước giờ khởi hành.
+            </p>
+            <div className="home-ai-vision-actions">
+              <Link to="/gear-check" className="btn btn-lime">
+                <Camera size={16} /> Thử ngay AI Soát Đồ →
+              </Link>
+              <Link to="/chat" className="btn btn-outline home-ai-ghost-btn">
+                <Sparkles size={16} /> Hỏi Trợ lý Gemini
+              </Link>
+            </div>
+          </div>
+          <div className="home-ai-vision-visual" aria-hidden="true">
+            <div className="ai-vision-demo-card">
+              <div className="demo-card-badge">
+                <span className="demo-dot"></span>
+                <span>YOLO26 Detection · NMS-Free</span>
+                <strong className="demo-score">92% Ready</strong>
+              </div>
+              <div className="demo-items-list">
+                <div className="demo-item">
+                  <span>🥾 Giày trekking bám đá</span>
+                  <span className="demo-conf">94%</span>
+                </div>
+                <div className="demo-item">
+                  <span>🦯 Gậy leo núi trợ lực</span>
+                  <span className="demo-conf">91%</span>
+                </div>
+                <div className="demo-item">
+                  <span>⛺ Lều cắm trại 2 lớp</span>
+                  <span className="demo-conf">89%</span>
+                </div>
+              </div>
+              <div className="demo-card-footer">
+                ⚡ Tốc độ suy luận: ~25ms · 0 Token tiêu tốn
+              </div>
+            </div>
+          </div>
+        </div>
       </Reveal>
 
       <Reveal className="home-stories">
